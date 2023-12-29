@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0eb1de3cd5f7804616594b50683b124e",
+    "content-hash": "830c8d51d214cb83be4c824c83dc46f0",
     "packages": [
         {
             "name": "ajthinking/archetype",
@@ -1943,6 +1943,73 @@
             "time": "2023-10-19T13:18:49+00:00"
         },
         {
+            "name": "jonassiewertsen/statamic-livewire",
+            "version": "v3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/jonassiewertsen/statamic-livewire.git",
+                "reference": "aa890f166e40aeec8474d75e2e08b5fb72c89ead"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/jonassiewertsen/statamic-livewire/zipball/aa890f166e40aeec8474d75e2e08b5fb72c89ead",
+                "reference": "aa890f166e40aeec8474d75e2e08b5fb72c89ead",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^10.0",
+                "livewire/livewire": "^3.0",
+                "php": "^8.1",
+                "statamic/cms": "^4.23.2"
+            },
+            "type": "statamic-addon",
+            "extra": {
+                "statamic": {
+                    "name": "Livewire",
+                    "description": "A Laravel Livewire integration for Statamics Antlers engine"
+                },
+                "laravel": {
+                    "providers": [
+                        "Jonassiewertsen\\Livewire\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Jonassiewertsen\\Livewire\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jonas Siewertsen",
+                    "homepage": "https://jonassiewertsen.com"
+                }
+            ],
+            "description": "A Laravel Livewire integration for Statamics Antlers engine.",
+            "keywords": [
+                "addon",
+                "laravel",
+                "livewire",
+                "statamic"
+            ],
+            "support": {
+                "docs": "https://github.com/jonassiewertsen/statamic-livewire",
+                "issues": "https://github.com/jonassiewertsen/statamic-livewire/issues",
+                "source": "https://github.com/jonassiewertsen/statamic-livewire/tree/v3.0.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/jonassiewertsen",
+                    "type": "github"
+                }
+            ],
+            "time": "2023-10-03T11:21:01+00:00"
+        },
+        {
             "name": "justinrainbow/json-schema",
             "version": "v5.2.13",
             "source": {
@@ -2639,16 +2706,16 @@
         },
         {
             "name": "league/csv",
-            "version": "9.13.0",
+            "version": "9.14.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/thephpleague/csv.git",
-                "reference": "3690cc71bfe8dc3b6daeef356939fac95348f0a8"
+                "reference": "34bf0df7340b60824b9449b5c526fcc3325070d5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/csv/zipball/3690cc71bfe8dc3b6daeef356939fac95348f0a8",
-                "reference": "3690cc71bfe8dc3b6daeef356939fac95348f0a8",
+                "url": "https://api.github.com/repos/thephpleague/csv/zipball/34bf0df7340b60824b9449b5c526fcc3325070d5",
+                "reference": "34bf0df7340b60824b9449b5c526fcc3325070d5",
                 "shasum": ""
             },
             "require": {
@@ -2724,7 +2791,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2023-12-16T11:03:20+00:00"
+            "time": "2023-12-29T07:34:53+00:00"
         },
         {
             "name": "league/flysystem",
@@ -9961,6 +10028,141 @@
             "time": "2023-12-05T19:01:10+00:00"
         },
         {
+            "name": "pestphp/pest-plugin-laravel",
+            "version": "v2.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/pestphp/pest-plugin-laravel.git",
+                "reference": "77a2838c1d3b09d147211e76a48987ba9a758279"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/pestphp/pest-plugin-laravel/zipball/77a2838c1d3b09d147211e76a48987ba9a758279",
+                "reference": "77a2838c1d3b09d147211e76a48987ba9a758279",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^10.18.0|^11.0",
+                "pestphp/pest": "^2.13.0",
+                "php": "^8.1.0"
+            },
+            "require-dev": {
+                "laravel/dusk": "^7.9.3",
+                "orchestra/testbench": "^8.6.3",
+                "pestphp/pest-dev-tools": "^2.14.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Pest\\Laravel\\PestServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/Autoload.php"
+                ],
+                "psr-4": {
+                    "Pest\\Laravel\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "The Pest Laravel Plugin",
+            "keywords": [
+                "framework",
+                "laravel",
+                "pest",
+                "php",
+                "test",
+                "testing",
+                "unit"
+            ],
+            "support": {
+                "source": "https://github.com/pestphp/pest-plugin-laravel/tree/v2.2.0"
+            },
+            "funding": [
+                {
+                    "url": "https://www.paypal.com/paypalme/enunomaduro",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/nunomaduro",
+                    "type": "github"
+                }
+            ],
+            "time": "2023-08-10T15:37:09+00:00"
+        },
+        {
+            "name": "pestphp/pest-plugin-livewire",
+            "version": "v2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/pestphp/pest-plugin-livewire.git",
+                "reference": "e72a2f850f727dfdb6bfa6e2ee6ff478ccc93f97"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/pestphp/pest-plugin-livewire/zipball/e72a2f850f727dfdb6bfa6e2ee6ff478ccc93f97",
+                "reference": "e72a2f850f727dfdb6bfa6e2ee6ff478ccc93f97",
+                "shasum": ""
+            },
+            "require": {
+                "livewire/livewire": "^2.12.3|^3.0",
+                "pestphp/pest": "^2.9.1",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.5.10",
+                "pestphp/pest-dev-tools": "^2.12.0"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/Autoload.php"
+                ],
+                "psr-4": {
+                    "Pest\\Livewire\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "The Pest Livewire Plugin",
+            "keywords": [
+                "framework",
+                "livewire",
+                "pest",
+                "php",
+                "plugin",
+                "test",
+                "testing",
+                "unit"
+            ],
+            "support": {
+                "source": "https://github.com/pestphp/pest-plugin-livewire/tree/v2.1.0"
+            },
+            "funding": [
+                {
+                    "url": "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=66BYDWAT92N6L",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/nunomaduro",
+                    "type": "github"
+                },
+                {
+                    "url": "https://www.patreon.com/nunomaduro",
+                    "type": "patreon"
+                }
+            ],
+            "time": "2023-07-20T16:28:21+00:00"
+        },
+        {
             "name": "phar-io/manifest",
             "version": "2.0.3",
             "source": {
@@ -12176,28 +12378,28 @@
         },
         {
             "name": "ta-tikoma/phpunit-architecture-test",
-            "version": "0.7.5",
+            "version": "0.7.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/ta-tikoma/phpunit-architecture-test.git",
-                "reference": "9eb08437e8f0c0c75cc947a373cf49672c335827"
+                "reference": "a252cd9488fd62f3c8c6cafa303b1b96e9df24e0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/ta-tikoma/phpunit-architecture-test/zipball/9eb08437e8f0c0c75cc947a373cf49672c335827",
-                "reference": "9eb08437e8f0c0c75cc947a373cf49672c335827",
+                "url": "https://api.github.com/repos/ta-tikoma/phpunit-architecture-test/zipball/a252cd9488fd62f3c8c6cafa303b1b96e9df24e0",
+                "reference": "a252cd9488fd62f3c8c6cafa303b1b96e9df24e0",
                 "shasum": ""
             },
             "require": {
-                "nikic/php-parser": "^4.15.4",
+                "nikic/php-parser": "^4.18.0",
                 "php": "^8.1.0",
                 "phpdocumentor/reflection-docblock": "^5.3.0",
-                "phpunit/phpunit": "^10.1.1",
-                "symfony/finder": "^6.2.7 || ^7.0.0"
+                "phpunit/phpunit": "^10.5.5",
+                "symfony/finder": "^6.4.0 || ^7.0.0"
             },
             "require-dev": {
-                "laravel/pint": "^1.9.0",
-                "phpstan/phpstan": "^1.10.13"
+                "laravel/pint": "^1.13.7",
+                "phpstan/phpstan": "^1.10.50"
             },
             "type": "library",
             "autoload": {
@@ -12229,9 +12431,9 @@
             ],
             "support": {
                 "issues": "https://github.com/ta-tikoma/phpunit-architecture-test/issues",
-                "source": "https://github.com/ta-tikoma/phpunit-architecture-test/tree/0.7.5"
+                "source": "https://github.com/ta-tikoma/phpunit-architecture-test/tree/0.7.6"
             },
-            "time": "2023-10-12T15:31:50+00:00"
+            "time": "2023-12-29T13:14:58+00:00"
         },
         {
             "name": "theseer/tokenizer",
@@ -12498,5 +12700,5 @@
     "prefer-lowest": false,
     "platform": [],
     "platform-dev": [],
-    "plugin-api-version": "2.3.0"
+    "plugin-api-version": "2.6.0"
 }

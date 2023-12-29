@@ -1,18 +1,18 @@
 {
-    "name": "reachweb/livewire-filters",
+    "name": "reachweb/statamic-livewire-filters",
     "autoload": {
         "psr-4": {
-            "Reachweb\\LivewireFilters\\": "src"
+            "Reachweb\\StatamicLivewireFilters\\": "src"
         }
     },
     "extra": {
         "statamic": {
-            "name": "Livewire Filters",
-            "description": "Livewire Filters addon"
+            "name": "Statamic Livewire Filters",
+            "description": "Livewire powered live filtering for Statamic collections"
         },
         "laravel": {
             "providers": [
-                "Reachweb\\LivewireFilters\\ServiceProvider"
+                "Reachweb\\StatamicLivewireFilters\\ServiceProvider"
             ]
         }
     },
@@ -20,7 +20,8 @@
         "livewire/livewire": "^3.3",
         "laravel/framework": "^10.0",
         "illuminate/support": "^10.0",
-        "statamic/cms": "4.*"
+        "statamic/cms": "4.*",
+        "jonassiewertsen/statamic-livewire": "^3.0"
     },
     "config": {
         "allow-plugins": {
@@ -30,6 +31,8 @@
     },
     "require-dev": {
         "orchestra/testbench": "^8.19",
-        "pestphp/pest": "^2.30"
+        "pestphp/pest": "^2.30",
+        "pestphp/pest-plugin-laravel": "^2.2",
+        "pestphp/pest-plugin-livewire": "^2.1"
     }
 }

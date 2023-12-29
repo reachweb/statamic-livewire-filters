@@ -1,6 +1,6 @@
 <?php
 
-namespace Reachweb\LivewireFilters;
+namespace Reachweb\StatamicLivewireFilters;
 
 use Statamic\Providers\AddonServiceProvider;
 
