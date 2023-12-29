@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests;
+namespace Reach\StatamicLivewireFilters\Tests;
 
 use Illuminate\View\Factory;
 use Illuminate\View\View;
@@ -8,7 +8,9 @@ use Illuminate\View\View;
 trait FakesViews
 {
     protected $fakeView;
+
     protected $fakeViewFinder;
+
     protected $fakeViewFactory;
 
     public function withFakeViews()
@@ -84,6 +86,7 @@ class FakeViewFactory extends Factory
 class FakeViewEngine extends \Statamic\View\Antlers\Engine
 {
     public $rawContents = [];
+
     public $renderedContents = [];
 
     public function get($path, array $data = [])

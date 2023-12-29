@@ -1,10 +1,6 @@
 <?php
 
-namespace Reacbweb\StatamicLivewireFilters\Tests;
-
-use Illuminate\Testing\Assert as IlluminateAssert;
-use Illuminate\Testing\TestResponse;
-use PHPUnit\Framework\Assert;
+namespace Reach\StatamicLivewireFilters\Tests;
 
 abstract class TestCase extends \Orchestra\Testbench\TestCase
 {
@@ -56,7 +52,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
         ];
 
         foreach ($configs as $config) {
-            $app['config']->set("statamic.$config", require(__DIR__."/../config/{$config}.php"));
+            $app['config']->set("statamic.$config", require(__DIR__."/../vendor/statamic/cms/config/{$config}.php"));
         }
     }
 

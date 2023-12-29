@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests;
+namespace Reach\StatamicLivewireFilters\Tests;
 
 use Facades\Tests\Factories\EntryFactory;
 use Statamic\Facades\Collection;

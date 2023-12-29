@@ -5,18 +5,17 @@ namespace Reach\StatamicLivewireFilters\Tests\Feature;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as SupportCollection;
+use Statamic\Exceptions\CollectionNotFoundException;
 use Statamic\Facades;
 use Statamic\Facades\Antlers;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Entry;
 use Statamic\Structures\CollectionStructure;
 use Statamic\Tags\Collection\Collection;
-use Reach\StatamicLivewireFilters\Exceptions\CollectionNotFoundException;
-use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 
-class LivewireCollectionTest extends TestCase
+class CollectionTest extends TestCase
 {
     use PreventSavingStacheItemsToDisk;
 
@@ -35,10 +34,9 @@ class LivewireCollectionTest extends TestCase
         $this->books = Facades\Collection::make('books')->save();
         $this->foods = Facades\Collection::make('foods')->save();
 
-        $this->collectionTag = (new LivewireCollection)
+        $this->collectionTag = (new Collection)
             ->setParser(Antlers::parser())
             ->setContext([]);
-        dd($this->collectionTag);
     }
 
     protected function makeEntry($collection, $slug)

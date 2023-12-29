@@ -1,6 +1,6 @@
 <?php
 
-namespace Reacbweb\StatamicLivewireFilters\Tests;
+namespace Reach\StatamicLivewireFilters\Tests;
 
 use Statamic\Facades\Path;
 use Statamic\Facades\Stache;
