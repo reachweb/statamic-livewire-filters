@@ -8,6 +8,8 @@ class LivewireCollection extends Tags
 {
     use Concerns\OutputsLivewireComponent;
 
+    protected static $handle = 'livewire-collection';
+
     public function __call($method, $args)
     {
         $this->params['from'] = $this->method;
@@ -28,7 +30,7 @@ class LivewireCollection extends Tags
     protected function output()
     {
         return $this->renderLivewireComponent(
-            'statamic-livewire-filters::collection',
+            'livewire-collection',
             $this->params->all(),
             $this->params->get('key')
         );

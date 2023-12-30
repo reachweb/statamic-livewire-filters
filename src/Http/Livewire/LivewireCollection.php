@@ -8,6 +8,6 @@ class LivewireCollection extends Component
 {
     public function render()
     {
-        return view('livewire.livewire-collection');
+        return view('statamic-livewire-filters::livewire.livewire-collection');
     }
 }

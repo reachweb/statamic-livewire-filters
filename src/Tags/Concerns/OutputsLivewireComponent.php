@@ -6,9 +6,8 @@ use Livewire\Livewire;
 
 trait OutputsLivewireComponent
 {
-
     public function renderLivewireComponent($name, $params = [], $key = null)
     {
-        return Livewire::mount($name, $params)->html();
+        return Livewire::mount($name, $params);
     }
 }

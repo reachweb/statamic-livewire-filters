@@ -3,6 +3,8 @@
 namespace Reach\StatamicLivewireFilters;
 
 use Statamic\Providers\AddonServiceProvider;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
+use Livewire\Livewire;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -12,6 +14,8 @@ class ServiceProvider extends AddonServiceProvider
 
     public function bootAddon()
     {
-        //
+        Livewire::component('livewire-collection', LivewireCollectionComponent::class);
+
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'statamic-livewire-filters');
     }
 }
