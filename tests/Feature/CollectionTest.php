@@ -79,7 +79,6 @@ class CollectionTest extends TestCase
         $this->assertCount(6, $this->collectionTag->index());
 
         $this->setTagParameters(['in' => 'music|art']);
-        ray($this->collectionTag->index());
         $this->assertCount(6, $this->collectionTag->index());
 
         $this->setTagParameters(['folder' => 'music|art']);

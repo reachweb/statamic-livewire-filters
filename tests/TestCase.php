@@ -32,6 +32,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     {
         return [
             \Statamic\Providers\StatamicServiceProvider::class,
+            \Livewire\LivewireServiceProvider::class,
             \Reach\StatamicLivewireFilters\ServiceProvider::class,
             \Spatie\LaravelRay\RayServiceProvider::class,
         ];
