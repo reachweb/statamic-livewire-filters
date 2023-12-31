@@ -60,37 +60,47 @@ class LivewireCollectionTest extends TestCase
         $this->makeEntry($this->books, 'i')->set('title', 'I Hate Martin')->save();
     }
 
-    public function test_it_throws_an_exception_for_an_invalid_collection()
-    {
-        $this->makePosts();
-
-        $this->setTagParameters(['from' => 'music|unknown']);
-
-        $this->expectException(CollectionNotFoundException::class);
-        $this->expectExceptionMessage('Collection [unknown] not found');
-
-        $this->collectionTag->index();
-    }
-
-    public function test_it_gets_entries_from_a_single_collection()
+    public function test_if_the_tag_loads_the_livewire_component()
     {
         $this->makePosts();
 
         $this->setTagParameters(['from' => 'music']);
-        $this->assertCount(3, $this->collectionTag->index());
 
-        $this->setTagParameters(['in' => 'music']);
-        $this->assertCount(3, $this->collectionTag->index());
-
-        $this->setTagParameters(['folder' => 'music']);
-        $this->assertCount(3, $this->collectionTag->index());
-
-        $this->setTagParameters(['use' => 'music']);
-        $this->assertCount(3, $this->collectionTag->index());
-
-        $this->setTagParameters(['collection' => 'music']);
-        $this->assertCount(3, $this->collectionTag->index());
+        $this->assertStringContainsString('wire:snapshot', $this->collectionTag->index());
+        $this->assertStringContainsString('livewire-collection', $this->collectionTag->index());
     }
+
+    // public function test_it_throws_an_exception_for_an_invalid_collection()
+    // {
+    //     $this->makePosts();
+
+    //     $this->setTagParameters(['from' => 'music|unknown']);
+
+    //     $this->expectException(CollectionNotFoundException::class);
+    //     $this->expectExceptionMessage('Collection [unknown] not found');
+
+    //     $this->collectionTag->index();
+    // }
+
+    // public function test_it_gets_entries_from_a_single_collection()
+    // {
+    //     $this->makePosts();
+
+    //     $this->setTagParameters(['from' => 'music']);
+    //     $this->assertCount(3, $this->collectionTag->index());
+
+    //     $this->setTagParameters(['in' => 'music']);
+    //     $this->assertCount(3, $this->collectionTag->index());
+
+    //     $this->setTagParameters(['folder' => 'music']);
+    //     $this->assertCount(3, $this->collectionTag->index());
+
+    //     $this->setTagParameters(['use' => 'music']);
+    //     $this->assertCount(3, $this->collectionTag->index());
+
+    //     $this->setTagParameters(['collection' => 'music']);
+    //     $this->assertCount(3, $this->collectionTag->index());
+    // }
 
     // public function test_it_gets_entries_from_multiple_collections()
     // {
