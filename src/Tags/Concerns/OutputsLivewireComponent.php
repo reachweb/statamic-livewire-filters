@@ -8,6 +8,6 @@ trait OutputsLivewireComponent
 {
     public function renderLivewireComponent($name, $params = [], $key = null)
     {
-        return Livewire::mount($name, $params);
+        return Livewire::mount($name, [$params], $key);
     }
 }

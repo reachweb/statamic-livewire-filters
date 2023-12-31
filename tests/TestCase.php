@@ -1,6 +1,7 @@
 <?php
 
 namespace Reach\StatamicLivewireFilters\Tests;
+
 use Statamic\Extend\Manifest;
 
 abstract class TestCase extends \Orchestra\Testbench\TestCase

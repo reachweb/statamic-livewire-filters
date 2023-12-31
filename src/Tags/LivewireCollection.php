@@ -21,7 +21,7 @@ class LivewireCollection extends Tags
     public function index()
     {
         if (! $this->params->hasAny(['from', 'in', 'folder', 'use', 'collection'])) {
-            return $this->context->value('collection');
+            throw new \Reach\StatamicLivewireFilters\Exceptions\NoCollectionException;
         }
 
         return $this->output();
@@ -35,5 +35,4 @@ class LivewireCollection extends Tags
             $this->params->get('key')
         );
     }
-
 }

@@ -3,26 +3,24 @@
 namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection as SupportCollection;
-use Statamic\Exceptions\CollectionNotFoundException;
-use Statamic\Facades;
-use Statamic\Facades\Antlers;
-use Statamic\Facades\Blueprint;
-use Statamic\Facades\Entry;
-use Statamic\Structures\CollectionStructure;
-use Statamic\Tags\Collection\Collection;
+use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
+use Statamic\Facades;
+use Statamic\Facades\Antlers;
 
-class CollectionTest extends TestCase
+class LivewireCollectionTagTest extends TestCase
 {
     use PreventSavingStacheItemsToDisk;
 
     private $music;
+
     private $art;
+
     private $books;
+
     private $foods;
+
     private $collectionTag;
 
     public function setUp(): void
@@ -34,7 +32,7 @@ class CollectionTest extends TestCase
         $this->books = Facades\Collection::make('books')->save();
         $this->foods = Facades\Collection::make('foods')->save();
 
-        $this->collectionTag = (new Collection)
+        $this->collectionTag = (new LivewireCollection)
             ->setParser(Antlers::parser())
             ->setContext([]);
     }
@@ -59,16 +57,33 @@ class CollectionTest extends TestCase
         $this->makeEntry($this->books, 'i')->set('title', 'I Hate Martin')->save();
     }
 
+    public function test_if_it_throws_an_exception_for_no_collection()
+    {
+        $this->expectException(\Reach\StatamicLivewireFilters\Exceptions\NoCollectionException::class);
+        $this->expectExceptionMessage('You need to specifiy a collection for the livewire-collection tag.');
+
+        $this->setTagParameters(['title:is' => 'I Love Guitars']);
+        $this->collectionTag->index();
+    }
+
     public function test_it_throws_an_exception_for_an_invalid_collection()
     {
         $this->makePosts();
 
         $this->setTagParameters(['from' => 'music|unknown']);
 
-        $this->expectException(CollectionNotFoundException::class);
+        $this->expectException(\Statamic\Exceptions\CollectionNotFoundException::class);
         $this->expectExceptionMessage('Collection [unknown] not found');
 
         $this->collectionTag->index();
+    }
+
+    public function test_it_gets_entries_from_a_single_collection()
+    {
+        $this->makePosts();
+
+        $this->setTagParameters(['from' => 'music']);
+        $this->assertStringContainsString('I Love Guitars', $this->collectionTag->index());
     }
 
     public function test_it_gets_entries_from_multiple_collections()
@@ -76,19 +91,8 @@ class CollectionTest extends TestCase
         $this->makePosts();
 
         $this->setTagParameters(['from' => 'music|art']);
-        $this->assertCount(6, $this->collectionTag->index());
-
-        $this->setTagParameters(['in' => 'music|art']);
-        $this->assertCount(6, $this->collectionTag->index());
-
-        $this->setTagParameters(['folder' => 'music|art']);
-        $this->assertCount(6, $this->collectionTag->index());
-
-        $this->setTagParameters(['use' => 'music|art']);
-        $this->assertCount(6, $this->collectionTag->index());
-
-        $this->setTagParameters(['collection' => 'music|art']);
-        $this->assertCount(6, $this->collectionTag->index());
+        $this->assertStringContainsString('I Love Guitars', $this->collectionTag->index());
+        $this->assertStringContainsString('I Love Drawing', $this->collectionTag->index());
     }
 
     private function setTagParameters($parameters)

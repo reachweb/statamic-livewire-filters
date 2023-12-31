@@ -2,9 +2,9 @@
 
 namespace Reach\StatamicLivewireFilters;
 
-use Statamic\Providers\AddonServiceProvider;
-use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Livewire\Livewire;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
+use Statamic\Providers\AddonServiceProvider;
 
 class ServiceProvider extends AddonServiceProvider
 {
