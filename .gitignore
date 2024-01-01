@@ -7,3 +7,4 @@ coverage
 /node_modules/
 .phpunit.result.cache
 .phpunit.cache/test-results
+vite.hot
