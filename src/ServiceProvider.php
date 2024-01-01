@@ -17,5 +17,9 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('livewire-collection', LivewireCollectionComponent::class);
 
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'statamic-livewire-filters');
+
+        $this->publishes([
+            __DIR__.'/../resources/views' => resource_path('views/vendor/statamic-livewire-filters'),
+        ], 'statamic-livewire-filters');
     }
 }

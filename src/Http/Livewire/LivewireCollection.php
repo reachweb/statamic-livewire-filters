@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Jonassiewertsen\Livewire\WithPagination;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Statamic\Tags\Collection\Entries;
 
@@ -11,6 +12,9 @@ class LivewireCollection extends Component
     use Traits\GenerateParams, WithPagination;
 
     public $params;
+    
+    #[Locked]
+    public $view = 'livewire-collection';
 
     public function mount($params)
     {
@@ -19,6 +23,10 @@ class LivewireCollection extends Component
 
     public function setParameters($params)
     {
+        if (array_key_exists('view', $params)) {
+            $this->view = $params['view'];
+            unset($params['view']);
+        }
         $this->params = $params;
     }
 
@@ -35,7 +43,7 @@ class LivewireCollection extends Component
 
     public function render()
     {
-        return view('statamic-livewire-filters::livewire.livewire-collection')->with([
+        return view('statamic-livewire-filters::livewire.'.$this->view)->with([
             ...$this->entries(),
         ]);
     }
