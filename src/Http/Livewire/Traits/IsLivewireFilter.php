@@ -16,7 +16,9 @@ trait IsLivewireFilter
 
     public $collection;
 
-    public function mountIsLivewireFilter($blueprint, $field)
+    public $condition;
+
+    public function mountIsLivewireFilter($blueprint, $field, $condition)
     {
         [$collection, $blueprint] = explode('.', $blueprint);
         $this->collection = $collection;

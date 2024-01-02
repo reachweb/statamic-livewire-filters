@@ -27,7 +27,11 @@ class LfCheckbox extends Component
 
     public function updatedSelected()
     {
-        $this->dispatch('filterUpdated', field: $this->field, payload: $this->selected)
+        $this->dispatch('filterUpdated',
+            field: $this->field,
+            condition: $this->condition,
+            payload: $this->selected
+        )
             ->to(LivewireCollection::class);
     }
 
