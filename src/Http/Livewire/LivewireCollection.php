@@ -3,7 +3,6 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Jonassiewertsen\Livewire\WithPagination;
-use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Statamic\Tags\Collection\Entries;
 
@@ -12,8 +11,7 @@ class LivewireCollection extends Component
     use Traits\GenerateParams, WithPagination;
 
     public $params;
-    
-    #[Locked]
+
     public $view = 'livewire-collection';
 
     public function mount($params)
