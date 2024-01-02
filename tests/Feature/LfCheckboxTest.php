@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckbox;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -47,6 +49,10 @@ class LfCheckboxTest extends TestCase
             ],
         ]);
         $this->blueprint->setHandle('pages')->setNamespace('collections.'.$this->collection->handle())->save();
+
+        $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->save();
+        $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->save();
+        $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->save();
     }
 
     /** @test */
@@ -93,5 +99,10 @@ class LfCheckboxTest extends TestCase
                 condition: 'is',
                 payload: ['option1', 'option2']
             );
+    }
+
+    protected function makeEntry($collection, $slug)
+    {
+        return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
     }
 }
