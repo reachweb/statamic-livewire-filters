@@ -3,8 +3,8 @@
 namespace Reach\StatamicLivewireFilters;
 
 use Livewire\Livewire;
-use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckbox;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Statamic\Providers\AddonServiceProvider;
 
 class ServiceProvider extends AddonServiceProvider
@@ -13,14 +13,14 @@ class ServiceProvider extends AddonServiceProvider
         \Reach\StatamicLivewireFilters\Tags\LivewireCollection::class,
     ];
 
-    // protected $vite = [ 
+    // protected $vite = [
     //     'input' => [
     //         'resources/js/app.js',
     //         'resources/css/app.css',
     //     ],
     //     'hotFile' => 'vite.hot',
     //     'publicDirectory'=> 'dist',
-    // ]; 
+    // ];
 
     public function bootAddon()
     {
