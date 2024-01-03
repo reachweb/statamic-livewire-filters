@@ -14,11 +14,11 @@ class LfCheckbox extends Component
     public $options;
 
     public $selected = [];
+    public $previousSelected = [];
 
     #[Computed]
     public function filterOptions()
     {
-        ray($this->statamic_field);
         if (isset($this->statamic_field['options'])) {
             return $this->statamic_field['options'];
         } elseif (is_array($this->options)) {
@@ -28,14 +28,32 @@ class LfCheckbox extends Component
 
     public function updatedSelected()
     {
-        ray($this->selected);
-        $this->dispatch('filter-updated',
-            field: $this->field,
-            condition: $this->condition,
-            payload: $this->selected,
-            modifer: $this->modifier,
-        )
-            ->to(LivewireCollection::class);
+        $optionsToAdd = array_diff($this->selected, $this->previousSelected);
+        $optionsToRemove = array_diff($this->previousSelected, $this->selected);
+
+        foreach ($optionsToAdd as $option) {
+            $this->dispatch('filter-updated',
+                field: $this->field,
+                condition: $this->condition,
+                payload: $option,
+                command: 'add',
+                modifer: $this->modifier,
+            )
+                ->to(LivewireCollection::class);
+        }
+
+        foreach ($optionsToRemove as $option) {
+            $this->dispatch('filter-updated',
+                field: $this->field,
+                condition: $this->condition,
+                payload: $option,
+                command: 'remove',
+                modifer: $this->modifier,
+            )
+                ->to(LivewireCollection::class);
+        }    
+
+        $this->previousSelected = $this->selected;
     }
 
     public function render()

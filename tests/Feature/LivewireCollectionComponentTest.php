@@ -47,7 +47,9 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: ['option1']
+                payload: 'option1',
+                command: 'add',
+                modifier: 'any',
             )
             ->assertSet('params', [                
                 'from' => 'music',
@@ -57,7 +59,9 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'title',
                 condition: 'is',
-                payload: 'Test'
+                payload: 'Test',
+                command: 'replace',
+                modifier: 'any',
             )
             ->assertSet('params', [                
                 'from' => 'music',
@@ -67,7 +71,9 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: null
+                payload: 'option1',
+                command: 'remove',
+                modifier: 'any',
             )
             ->assertSet('params', [                
                 'from' => 'music',

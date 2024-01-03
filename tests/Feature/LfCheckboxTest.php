@@ -93,14 +93,16 @@ class LfCheckboxTest extends TestCase
             ->assertDispatched('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: ['option1']
+                payload: 'option1',
+                command: 'add',
             )
             ->set('selected', ['option1', 'option2'])
             ->assertSet('selected', ['option1', 'option2'])
             ->assertDispatched('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: ['option1', 'option2']
+                payload: 'option2',
+                command: 'add',
             );
     }
 
