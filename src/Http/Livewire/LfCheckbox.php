@@ -18,6 +18,7 @@ class LfCheckbox extends Component
     #[Computed]
     public function filterOptions()
     {
+        ray($this->statamic_field);
         if (isset($this->statamic_field['options'])) {
             return $this->statamic_field['options'];
         } elseif (is_array($this->options)) {
@@ -31,7 +32,8 @@ class LfCheckbox extends Component
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
-            payload: $this->selected
+            payload: $this->selected,
+            modifer: $this->modifier,
         )
             ->to(LivewireCollection::class);
     }

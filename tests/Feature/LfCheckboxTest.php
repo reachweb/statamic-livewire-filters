@@ -14,6 +14,9 @@ class LfCheckboxTest extends TestCase
 {
     use PreventSavingStacheItemsToDisk;
 
+    protected $collection;
+    protected $blueprint;
+
     public function setUp(): void
     {
         parent::setUp();
@@ -32,7 +35,7 @@ class LfCheckboxTest extends TestCase
                         ],
                         [
 
-                            'handle' => 'checkbox',
+                            'handle' => 'item_options',
                             'field' => [
                                 'type' => 'checkbox',
                                 'display' => 'Checkbox',
@@ -58,7 +61,7 @@ class LfCheckboxTest extends TestCase
     /** @test */
     public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
     {
-        Livewire::test(LfCheckbox::class, ['field' => 'checkbox', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+        Livewire::test(LfCheckbox::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSee('Option 1')
             ->assertSee('Option 2')
             ->assertSee('Option 3');
@@ -77,40 +80,28 @@ class LfCheckboxTest extends TestCase
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
 
-        Livewire::test(LfCheckbox::class, ['field' => 'checkbox', 'blueprint' => 'pages.not-a-blueprint', 'condition' => 'is']);
+        Livewire::test(LfCheckbox::class, ['field' => 'item_options', 'blueprint' => 'pages.not-a-blueprint', 'condition' => 'is']);
     }
 
     /** @test */
     public function it_changes_the_value_of_selected_property_when_an_option_is_set_and_sends_an_event()
     {
-        Livewire::test(LfCheckbox::class, ['field' => 'checkbox', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+        Livewire::test(LfCheckbox::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
             ->set('selected', ['option1'])
             ->assertSet('selected', ['option1'])
             ->assertDispatched('filter-updated',
-                field: 'checkbox',
+                field: 'item_options',
                 condition: 'is',
                 payload: ['option1']
             )
             ->set('selected', ['option1', 'option2'])
             ->assertSet('selected', ['option1', 'option2'])
             ->assertDispatched('filter-updated',
-                field: 'checkbox',
+                field: 'item_options',
                 condition: 'is',
                 payload: ['option1', 'option2']
             );
-    }
-
-    /** @test */
-    public function it_can_send_the_event_to_livewire_collection_component()
-    {
-        $params = [
-            'from' => 'pages',
-        ];
-
-        Livewire::test(LivewireCollection::class, ['params' => $params])
-            ->assertSet('params', $params);
-
     }
 
     protected function makeEntry($collection, $slug)

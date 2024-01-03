@@ -9,7 +9,7 @@ use Statamic\Tags\Collection\Entries;
 
 class LivewireCollection extends Component
 {
-    use Traits\GenerateParams, WithPagination;
+    use Traits\GenerateParams, Traits\HandleConditions, WithPagination;
 
     public $params;
 
@@ -27,19 +27,30 @@ class LivewireCollection extends Component
             unset($params['view']);
         }
         $this->params = $params;
+        ray($this->params);
     }
 
     #[On('filter-updated')] 
-    public function updateParameters($field, $condition, $payload)
+    public function updateParameters($field, $condition, $payload, $modifier)
     {
-        if (is_array($payload)) {
-            foreach ($payload as $value) {
-                $this->params[$field.':'.$condition] = $value;
-            }
-        } else {
-            $this->params[$field.':'.$condition] = $payload;
+        if ($condition === 'taxonomy') {
+            $this->handleTaxonomyCondition($field, $condition, $payload, $modifier);
+            return;
         }
-        ray($this->params);
+        if ($payload === null || $payload === '' || $payload === []) {
+            unset($this->params[$field.':'.$condition]);
+            return;
+        }
+        if (is_array($payload)) {
+            $payload = implode('|', $payload);
+        }
+        // $this->handleExceptions($field, $condition, $payload);
+        $this->params[$field.':'.$condition] = $payload;
+    }
+
+    protected function handleTaxonomyCondition($field, $condition, $payload, $modifier)
+    {
+        
     }
 
     public function entries()

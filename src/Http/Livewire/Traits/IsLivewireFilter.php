@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Reach\StatamicLivewireFilters\Exceptions\BlueprintNotFoundException;
 use Reach\StatamicLivewireFilters\Exceptions\FieldNotFoundException;
 use Statamic\Facades\Blueprint;
+use Statamic\Facades\Taxonomy;
 
 trait IsLivewireFilter
 {
@@ -18,12 +19,15 @@ trait IsLivewireFilter
 
     public $condition;
 
+    public $modifier = 'any';
+
     public function mountIsLivewireFilter($blueprint, $field, $condition)
     {
         [$collection, $blueprint] = explode('.', $blueprint);
         $this->collection = $collection;
         $this->blueprint = $blueprint;
         $this->field = $field;
+        $this->condition = $condition;
 
         $this->initiateField();
     }
@@ -32,7 +36,24 @@ trait IsLivewireFilter
     {
         $blueprint = $this->getStatamicBlueprint();
         $field = $this->getStatamicField($blueprint);
+        if ($field->type() == 'terms') {
+            $terms = collect();
+            collect($field->config()['taxonomies'])->each(function ($taxonomy) use ($terms) {
+                $terms->push(($this->getTaxonomyTerms($taxonomy)->all()));
+            });
+            $field->setConfig(['options' => $terms->collapse()->all()]);
+        }
         $this->statamic_field = $field->toArray();
+    }
+
+    protected function getTaxonomyTerms($taxonomy_handle)
+    {
+        $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
+        return $taxonomy->queryTerms()->get()->flatMap(function ($term) use ($taxonomy) {
+            return [
+                $taxonomy->handle().'::'.$term->slug() => $term->title(),
+            ];
+        });
     }
 
     public function getStatamicBlueprint()
