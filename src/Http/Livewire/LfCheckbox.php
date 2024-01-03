@@ -27,7 +27,8 @@ class LfCheckbox extends Component
 
     public function updatedSelected()
     {
-        $this->dispatch('filterUpdated',
+        ray($this->selected);
+        $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
             payload: $this->selected

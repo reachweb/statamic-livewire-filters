@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Jonassiewertsen\Livewire\WithPagination;
+use Livewire\Attributes\On; 
 use Livewire\Component;
 use Statamic\Tags\Collection\Entries;
 
@@ -26,6 +27,19 @@ class LivewireCollection extends Component
             unset($params['view']);
         }
         $this->params = $params;
+    }
+
+    #[On('filter-updated')] 
+    public function updateParameters($field, $condition, $payload)
+    {
+        if (is_array($payload)) {
+            foreach ($payload as $value) {
+                $this->params[$field.':'.$condition] = $value;
+            }
+        } else {
+            $this->params[$field.':'.$condition] = $payload;
+        }
+        ray($this->params);
     }
 
     public function entries()

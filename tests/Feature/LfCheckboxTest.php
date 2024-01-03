@@ -87,18 +87,30 @@ class LfCheckboxTest extends TestCase
             ->assertSet('selected', [])
             ->set('selected', ['option1'])
             ->assertSet('selected', ['option1'])
-            ->assertDispatched('filterUpdated',
+            ->assertDispatched('filter-updated',
                 field: 'checkbox',
                 condition: 'is',
                 payload: ['option1']
             )
             ->set('selected', ['option1', 'option2'])
             ->assertSet('selected', ['option1', 'option2'])
-            ->assertDispatched('filterUpdated',
+            ->assertDispatched('filter-updated',
                 field: 'checkbox',
                 condition: 'is',
                 payload: ['option1', 'option2']
             );
+    }
+
+    /** @test */
+    public function it_can_send_the_event_to_livewire_collection_component()
+    {
+        $params = [
+            'from' => 'pages',
+        ];
+
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->assertSet('params', $params);
+
     }
 
     protected function makeEntry($collection, $slug)
