@@ -70,6 +70,18 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
+                payload: 'option2',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'from' => 'music',
+                'title:is' => 'Test',
+                'item_options:is' => 'option1|option2',
+            ])
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
                 payload: 'option1',
                 command: 'remove',
                 modifier: 'any',
@@ -77,6 +89,31 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('params', [
                 'from' => 'music',
                 'title:is' => 'Test',
+                'item_options:is' => 'option2',
+            ]);
+    }
+
+    /** @test */
+    public function it_clears_all_filters_for_a_field()
+    {
+        $params = [
+            'from' => 'music',
+            'title:is' => 'I Love Guitars',
+            'item_options:is' => 'option1|option2',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('params', $params)
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: false,
+                command: 'clear',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'from' => 'music',
+                'title:is' => 'I Love Guitars',
             ]);
     }
 }

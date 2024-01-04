@@ -2,30 +2,41 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Reach\StatamicLivewireFilters\Exceptions\CommandNotFoundException;
+
 trait HandleParams
 {
     protected function handleCondition($field, $condition, $payload, $command)
     {
         $paramKey = $field.':'.$condition;
-        if ($command === 'add') {
-            $this->addValueToParam($paramKey, $payload);
-        } elseif ($command === 'replace') {
-            $this->replaceValueOfParam($paramKey, $payload);
-        } elseif ($command === 'remove') {
-            $this->removeValueFromParam($paramKey, $payload);
-        }
+        $this->runCommand($command, $paramKey, $payload);
     }
 
     protected function handleTaxonomyCondition($payload, $command, $modifier)
     {
         [$taxonomy, $term] = explode('::', $payload);
         $paramKey = 'taxonomy:'.$taxonomy.':'.$modifier;
-        if ($command === 'add') {
-            $this->addValueToParam($paramKey, $term);
-        } elseif ($command === 'replace') {
-            $this->replaceValueOfParam($paramKey, $term);
-        } elseif ($command === 'remove') {
-            $this->removeValueFromParam($paramKey, $term);
+        $this->runCommand($command, $paramKey, $term);
+    }
+
+    protected function runCommand($command, $paramKey, $value)
+    {
+        switch ($command) {
+            case 'add':
+                $this->addValueToParam($paramKey, $value);
+                break;
+            case 'replace':
+                $this->replaceValueOfParam($paramKey, $value);
+                break;
+            case 'remove':
+                $this->removeValueFromParam($paramKey, $value);
+                break;
+            case 'clear':
+                $this->clearParam($paramKey);
+                break;
+            default:
+                throw new CommandNotFoundException($command);
+                break;
         }
     }
 
@@ -45,6 +56,11 @@ trait HandleParams
     protected function replaceValueOfParam($paramKey, $value)
     {
         $this->params[$paramKey] = $value;
+    }
+
+    protected function clearParam($paramKey)
+    {
+        unset($this->params[$paramKey]);
     }
 
     protected function removeValueFromParam($paramKey, $value)
