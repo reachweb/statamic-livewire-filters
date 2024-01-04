@@ -33,7 +33,7 @@ class LivewireCollection extends Component
     public function updateParameters($field, $condition, $payload, $command, $modifier)
     {
         if ($condition === 'taxonomy') {
-            $this->handleTaxonomyCondition($payload, $command, $modifier);
+            $this->handleTaxonomyCondition($field, $payload, $command, $modifier);
 
             return;
         }

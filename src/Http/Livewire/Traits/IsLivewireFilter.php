@@ -51,9 +51,9 @@ trait IsLivewireFilter
     {
         $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
 
-        return $taxonomy->queryTerms()->get()->flatMap(function ($term) use ($taxonomy) {
+        return $taxonomy->queryTerms()->get()->flatMap(function ($term) {
             return [
-                $taxonomy->handle().'::'.$term->slug() => $term->title(),
+                $term->slug() => $term->title(),
             ];
         });
     }

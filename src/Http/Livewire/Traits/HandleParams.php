@@ -12,11 +12,10 @@ trait HandleParams
         $this->runCommand($command, $paramKey, $payload);
     }
 
-    protected function handleTaxonomyCondition($payload, $command, $modifier)
+    protected function handleTaxonomyCondition($field, $payload, $command, $modifier)
     {
-        [$taxonomy, $term] = explode('::', $payload);
-        $paramKey = 'taxonomy:'.$taxonomy.':'.$modifier;
-        $this->runCommand($command, $paramKey, $term);
+        $paramKey = 'taxonomy:'.$field.':'.$modifier;
+        $this->runCommand($command, $paramKey, $payload);
     }
 
     protected function runCommand($command, $paramKey, $value)
