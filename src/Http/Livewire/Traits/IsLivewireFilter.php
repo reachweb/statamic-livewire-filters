@@ -19,15 +19,16 @@ trait IsLivewireFilter
 
     public $condition;
 
-    public $modifier = 'any';
+    public $modifier;
 
-    public function mountIsLivewireFilter($blueprint, $field, $condition)
+    public function mountIsLivewireFilter($blueprint, $field, $condition, $modifier = 'any')
     {
         [$collection, $blueprint] = explode('.', $blueprint);
         $this->collection = $collection;
         $this->blueprint = $blueprint;
         $this->field = $field;
         $this->condition = $condition;
+        $this->modifier = $modifier;
 
         $this->initiateField();
     }
@@ -49,6 +50,7 @@ trait IsLivewireFilter
     protected function getTaxonomyTerms($taxonomy_handle)
     {
         $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
+
         return $taxonomy->queryTerms()->get()->flatMap(function ($term) use ($taxonomy) {
             return [
                 $taxonomy->handle().'::'.$term->slug() => $term->title(),

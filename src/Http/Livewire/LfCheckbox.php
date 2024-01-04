@@ -14,6 +14,7 @@ class LfCheckbox extends Component
     public $options;
 
     public $selected = [];
+
     public $previousSelected = [];
 
     #[Computed]
@@ -37,7 +38,7 @@ class LfCheckbox extends Component
                 condition: $this->condition,
                 payload: $option,
                 command: 'add',
-                modifer: $this->modifier,
+                modifier: $this->modifier,
             )
                 ->to(LivewireCollection::class);
         }
@@ -48,10 +49,10 @@ class LfCheckbox extends Component
                 condition: $this->condition,
                 payload: $option,
                 command: 'remove',
-                modifer: $this->modifier,
+                modifier: $this->modifier,
             )
                 ->to(LivewireCollection::class);
-        }    
+        }
 
         $this->previousSelected = $this->selected;
     }

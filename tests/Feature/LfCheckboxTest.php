@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckbox;
-use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -15,6 +14,7 @@ class LfCheckboxTest extends TestCase
     use PreventSavingStacheItemsToDisk;
 
     protected $collection;
+
     protected $blueprint;
 
     public function setUp(): void

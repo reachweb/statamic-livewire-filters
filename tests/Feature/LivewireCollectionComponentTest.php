@@ -4,7 +4,6 @@ namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
-use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckbox;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -51,7 +50,7 @@ class LivewireCollectionComponentTest extends TestCase
                 command: 'add',
                 modifier: 'any',
             )
-            ->assertSet('params', [                
+            ->assertSet('params', [
                 'from' => 'music',
                 'title:is' => 'I Love Guitars',
                 'item_options:is' => 'option1',
@@ -63,7 +62,7 @@ class LivewireCollectionComponentTest extends TestCase
                 command: 'replace',
                 modifier: 'any',
             )
-            ->assertSet('params', [                
+            ->assertSet('params', [
                 'from' => 'music',
                 'title:is' => 'Test',
                 'item_options:is' => 'option1',
@@ -75,7 +74,7 @@ class LivewireCollectionComponentTest extends TestCase
                 command: 'remove',
                 modifier: 'any',
             )
-            ->assertSet('params', [                
+            ->assertSet('params', [
                 'from' => 'music',
                 'title:is' => 'Test',
             ]);

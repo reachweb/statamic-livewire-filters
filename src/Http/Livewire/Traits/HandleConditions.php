@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
