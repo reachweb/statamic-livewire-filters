@@ -28,11 +28,12 @@ trait HandleStatamicQueries
         throw new BlueprintNotFoundException($this->blueprint);
     }
 
-    public function getStatamicField($blueprint)
+    public function getStatamicField($blueprint, $field_handle = null)
     {
-        if ($field = $blueprint->field($this->field)) {
+        $handle = $field_handle ?? $this->field;
+        if ($field = $blueprint->field($handle)) {
             return $field;
         }
-        throw new FieldNotFoundException($this->field, $this->blueprint);
+        throw new FieldNotFoundException($handle, $this->blueprint);
     }
 }
