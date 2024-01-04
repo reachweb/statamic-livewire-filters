@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
+use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -19,6 +20,44 @@ class LivewireCollectionComponentTest extends TestCase
         parent::setUp();
 
         $this->music = Facades\Collection::make('music')->save();
+
+        Facades\Taxonomy::make('colors')->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('black')->data(['title' => 'Black'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('yellow')->data(['title' => 'Yellow'])->save();
+        Facades\Collection::make('clothes')->taxonomies(['colors'])->save();
+
+        $clothesBlueprint = $this->blueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+
+                            'handle' => 'colors',
+                            'field' => [
+                                'type' => 'terms',
+                                'taxonomies' => [
+                                    'colors',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
+
+        EntryFactory::collection('clothes')->slug('red-shirt')->data(['title' => 'Red Shirt', 'colors' => ['red']])->create();
+        EntryFactory::collection('clothes')->slug('black-shirt')->data(['title' => 'Black Shirt', 'colors' => ['black']])->create();
+        EntryFactory::collection('clothes')->slug('yellow-shirt')->data(['title' => 'Yellow Shirt', 'colors' => ['yellow']])->create();
     }
 
     /** @test */
@@ -90,6 +129,50 @@ class LivewireCollectionComponentTest extends TestCase
                 'from' => 'music',
                 'title:is' => 'Test',
                 'item_options:is' => 'option2',
+            ]);
+    }
+
+    /** @test */
+    public function it_works_for_taxonomy_terms()
+    {
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('params', $params)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'from' => 'clothes',
+                'taxonomy:colors:any' => 'red',
+            ])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'yellow',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'from' => 'clothes',
+                'taxonomy:colors:any' => 'red|yellow',
+            ])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                command: 'remove',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'from' => 'clothes',
+                'taxonomy:colors:any' => 'yellow',
             ]);
     }
 

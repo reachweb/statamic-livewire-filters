@@ -56,6 +56,40 @@ class LfCheckboxFilterTest extends TestCase
         $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->save();
         $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->save();
         $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->save();
+
+        Facades\Taxonomy::make('colors')->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('black')->data(['title' => 'Black'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('yellow')->data(['title' => 'Yellow'])->save();
+        Facades\Collection::make('clothes')->taxonomies(['colors'])->save();
+
+        $clothesBlueprint = $this->blueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+
+                            'handle' => 'colors',
+                            'field' => [
+                                'type' => 'terms',
+                                'taxonomies' => [
+                                    'colors',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
     }
 
     /** @test */
@@ -103,6 +137,31 @@ class LfCheckboxFilterTest extends TestCase
                 condition: 'is',
                 payload: 'option2',
                 command: 'add',
+            );
+    }
+
+    /** @test */
+    public function it_shows_taxonomy_terms_and_submits_the_right_events()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'collection' => 'clothes', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->assertSee('Red')
+            ->assertSee('Black')
+            ->assertSee('Yellow')
+            ->set('selected', ['red'])
+            ->assertSet('selected', ['red'])
+            ->assertDispatched('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                command: 'add',
+            )
+            ->set('selected', ['yellow'])
+            ->assertSet('selected', ['yellow'])
+            ->assertDispatched('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                command: 'remove',
             );
     }
 
