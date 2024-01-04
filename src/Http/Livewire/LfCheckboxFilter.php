@@ -5,7 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
-class LfCheckbox extends Component
+class LfCheckboxFilter extends Component
 {
     use Traits\IsLivewireFilter;
 
