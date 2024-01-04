@@ -37,6 +37,12 @@ class LfRadioFilter extends Component
             ->to(LivewireCollection::class);
     }
 
+    public function clear()
+    {
+        $this->selected = '';
+        $this->clearFilters();
+    }
+
     public function render()
     {
         return view('statamic-livewire-filters::livewire.filters.'.$this->view);

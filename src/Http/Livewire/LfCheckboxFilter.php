@@ -57,6 +57,13 @@ class LfCheckboxFilter extends Component
         $this->previousSelected = $this->selected;
     }
 
+    public function clear()
+    {
+        $this->selected = [];
+        $this->previousSelected = [];
+        $this->clearFilters();
+    }
+
     public function render()
     {
         return view('statamic-livewire-filters::livewire.filters.'.$this->view);

@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Reach\StatamicLivewireFilters\Exceptions\BlueprintNotFoundException;
 use Reach\StatamicLivewireFilters\Exceptions\FieldNotFoundException;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Taxonomy;
 
@@ -45,6 +46,18 @@ trait IsLivewireFilter
             $field->setConfig(['options' => $terms->collapse()->all()]);
         }
         $this->statamic_field = $field->toArray();
+    }
+
+    public function clearFilters()
+    {
+        $this->dispatch('filter-updated',
+            field: $this->field,
+            condition: $this->condition,
+            payload: false,
+            command: 'clear',
+            modifier: $this->modifier,
+        )
+            ->to(LivewireCollection::class);
     }
 
     protected function getTaxonomyTerms($taxonomy_handle)
