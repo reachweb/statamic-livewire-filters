@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class LfRadioFilter extends Component
@@ -41,6 +42,14 @@ class LfRadioFilter extends Component
     {
         $this->selected = '';
         $this->clearFilters();
+    }
+
+    #[On('preset-params')]
+    public function setPresetSort($params)
+    {
+        if (array_key_exists($this->getParamKey(), $params)) {
+            $this->selected = $params[$this->getParamKey()];
+        }
     }
 
     public function render()

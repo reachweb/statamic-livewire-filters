@@ -57,4 +57,13 @@ trait IsLivewireFilter
         )
             ->to(LivewireCollection::class);
     }
+
+    protected function getParamKey()
+    {
+        if ($this->condition === 'taxonomy') {
+            return 'taxonomy:'.$this->field.':'.$this->modifier;
+        }
+
+        return $this->field.':'.$this->condition;
+    }
 }

@@ -176,7 +176,7 @@ class LivewireCollectionComponentTest extends TestCase
             ]);
     }
 
-     /** @test */
+    /** @test */
     public function it_sets_collection_sort()
     {
         $params = [
@@ -192,7 +192,7 @@ class LivewireCollectionComponentTest extends TestCase
                 'from' => 'clothes',
                 'sort' => 'title:asc',
             ])
-             ->dispatch('sort-updated',
+            ->dispatch('sort-updated',
                 sort: ''
             )->assertSet('params', [
                 'from' => 'clothes',

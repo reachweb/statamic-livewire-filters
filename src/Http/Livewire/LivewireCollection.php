@@ -27,6 +27,7 @@ class LivewireCollection extends Component
             unset($params['view']);
         }
         $this->params = $params;
+        $this->handlePresetParams();
     }
 
     #[On('filter-updated')]

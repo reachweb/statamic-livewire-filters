@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class LfCheckboxFilter extends Component
@@ -62,6 +63,14 @@ class LfCheckboxFilter extends Component
         $this->selected = [];
         $this->previousSelected = [];
         $this->clearFilters();
+    }
+
+    #[On('preset-params')]
+    public function setPresetSort($params)
+    {
+        if (array_key_exists($this->getParamKey(), $params)) {
+            $this->selected = explode('|', $params[$this->getParamKey()]);
+        }
     }
 
     public function render()

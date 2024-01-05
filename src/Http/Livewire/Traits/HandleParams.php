@@ -76,4 +76,14 @@ trait HandleParams
             }
         }
     }
+
+    protected function handlePresetParams()
+    {
+        $params = collect($this->params);
+        $collectionKeys = ['from', 'in', 'folder', 'use', 'collection'];
+        $restOfParams = $params->except($collectionKeys);
+        if ($restOfParams->isNotEmpty()) {
+            $this->dispatch('preset-params', $restOfParams->all());
+        }
+    }
 }

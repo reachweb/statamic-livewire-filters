@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class LfSort extends Component
@@ -36,6 +37,14 @@ class LfSort extends Component
                 array_merge($item, ['dir' => 'desc']),
             ];
         });
+    }
+
+    #[On('preset-params')]
+    public function setPresetSort($params)
+    {
+        if (array_key_exists('sort', $params)) {
+            $this->selected = $params['sort'];
+        }
     }
 
     protected function getFieldNames()
