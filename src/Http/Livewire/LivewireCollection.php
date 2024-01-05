@@ -30,7 +30,7 @@ class LivewireCollection extends Component
     }
 
     #[On('filter-updated')]
-    public function updateParameters($field, $condition, $payload, $command, $modifier)
+    public function filterUpdated($field, $condition, $payload, $command, $modifier)
     {
         if ($condition === 'taxonomy') {
             $this->handleTaxonomyCondition($field, $payload, $command, $modifier);
@@ -38,6 +38,17 @@ class LivewireCollection extends Component
             return;
         }
         $this->handleCondition($field, $condition, $payload, $command);
+    }
+
+    #[On('sort-updated')]
+    public function sortUpdated($sort)
+    {
+        if ($sort === '' || $sort === null) {
+            unset($this->params['sort']);
+
+            return;
+        }
+        $this->params['sort'] = $sort;
     }
 
     public function entries()

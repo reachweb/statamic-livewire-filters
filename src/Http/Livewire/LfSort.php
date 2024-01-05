@@ -55,7 +55,7 @@ class LfSort extends Component
 
     public function updatedSelected()
     {
-        $this->dispatch('sort-updated', $this->selected)
+        $this->dispatch('sort-updated', sort: $this->selected)
             ->to(LivewireCollection::class);
     }
 

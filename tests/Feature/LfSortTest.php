@@ -48,7 +48,7 @@ class LfSortTest extends TestCase
     public function it_can_render_the_lf_sort_component()
     {
         Livewire::test(LfSort::class, ['blueprint' => 'pages.pages', 'fields' => 'title|item_options'])
-            ->assertSee('Title asc');
+            ->assertSee('Title | ASC');
     }
 
     /** @test */
@@ -58,7 +58,7 @@ class LfSortTest extends TestCase
             ->set('selected', 'title|asc')
             ->assertSet('selected', 'title|asc')
             ->assertDispatched('sort-updated',
-                'title|asc'
+                sort: 'title|asc'
             );
     }
 }

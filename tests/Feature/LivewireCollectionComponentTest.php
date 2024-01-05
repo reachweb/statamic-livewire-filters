@@ -176,6 +176,29 @@ class LivewireCollectionComponentTest extends TestCase
             ]);
     }
 
+     /** @test */
+    public function it_sets_collection_sort()
+    {
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('params', $params)
+            ->dispatch('sort-updated',
+                sort: 'title:asc'
+            )
+            ->assertSet('params', [
+                'from' => 'clothes',
+                'sort' => 'title:asc',
+            ])
+             ->dispatch('sort-updated',
+                sort: ''
+            )->assertSet('params', [
+                'from' => 'clothes',
+            ]);
+    }
+
     /** @test */
     public function it_clears_all_filters_for_a_field()
     {
