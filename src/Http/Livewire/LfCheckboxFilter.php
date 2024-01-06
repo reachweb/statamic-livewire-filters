@@ -70,6 +70,7 @@ class LfCheckboxFilter extends Component
     {
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = explode('|', $params[$this->getParamKey()]);
+            $this->previousSelected = $this->selected;
         }
     }
 
