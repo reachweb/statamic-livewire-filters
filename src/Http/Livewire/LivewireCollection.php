@@ -25,7 +25,7 @@ class LivewireCollection extends Component
         if (is_null($this->params)) {
             $this->setParameters($params);
         } else {
-            $this->setParameters(array_merge($this->params, $params));
+            $this->setParameters(array_merge($params, $this->params));
         }
     }
 
