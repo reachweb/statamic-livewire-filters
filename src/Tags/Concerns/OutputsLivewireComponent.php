@@ -6,8 +6,8 @@ use Livewire\Livewire;
 
 trait OutputsLivewireComponent
 {
-    public function renderLivewireComponent($name, $params = [], $key = null)
+    public function renderLivewireComponent($name, $params = [])
     {
-        return Livewire::mount($name, [$params], $key);
+        return Livewire::mount($name, [$params]);
     }
 }

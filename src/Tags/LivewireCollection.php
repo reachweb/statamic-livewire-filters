@@ -32,7 +32,6 @@ class LivewireCollection extends Tags
         return $this->renderLivewireComponent(
             'livewire-collection',
             $this->params->all(),
-            $this->params->get('key')
         );
     }
 }
