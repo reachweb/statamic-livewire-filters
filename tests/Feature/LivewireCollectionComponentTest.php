@@ -69,7 +69,8 @@ class LivewireCollectionComponentTest extends TestCase
         ];
 
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->assertSet('params', $params);
+            ->assertSet('params', ['title:is' => 'I Love Guitars'])
+            ->assertSet('collections', 'music');
     }
 
     /** @test */
@@ -81,7 +82,7 @@ class LivewireCollectionComponentTest extends TestCase
         ];
 
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->assertSet('params', $params)
+            ->assertSet('params', ['title:is' => 'I Love Guitars'])
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
@@ -90,7 +91,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'music',
                 'title:is' => 'I Love Guitars',
                 'item_options:is' => 'option1',
             ])
@@ -102,7 +102,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'music',
                 'title:is' => 'Test',
                 'item_options:is' => 'option1',
             ])
@@ -114,7 +113,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'music',
                 'title:is' => 'Test',
                 'item_options:is' => 'option1|option2',
             ])
@@ -126,7 +124,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'music',
                 'title:is' => 'Test',
                 'item_options:is' => 'option2',
             ]);
@@ -140,7 +137,7 @@ class LivewireCollectionComponentTest extends TestCase
         ];
 
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->assertSet('params', $params)
+            ->assertSet('collections', 'clothes')
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
@@ -149,7 +146,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'clothes',
                 'taxonomy:colors:any' => 'red',
             ])
             ->dispatch('filter-updated',
@@ -160,7 +156,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'clothes',
                 'taxonomy:colors:any' => 'red|yellow',
             ])
             ->dispatch('filter-updated',
@@ -171,7 +166,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'clothes',
                 'taxonomy:colors:any' => 'yellow',
             ]);
     }
@@ -184,19 +178,16 @@ class LivewireCollectionComponentTest extends TestCase
         ];
 
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->assertSet('params', $params)
+            ->assertSet('collections', 'clothes')
             ->dispatch('sort-updated',
                 sort: 'title:asc'
             )
             ->assertSet('params', [
-                'from' => 'clothes',
                 'sort' => 'title:asc',
             ])
             ->dispatch('sort-updated',
                 sort: ''
-            )->assertSet('params', [
-                'from' => 'clothes',
-            ]);
+            )->assertSet('params', []);
     }
 
     /** @test */
@@ -209,7 +200,10 @@ class LivewireCollectionComponentTest extends TestCase
         ];
 
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->assertSet('params', $params)
+            ->assertSet('params', [
+                'title:is' => 'I Love Guitars',
+                'item_options:is' => 'option1|option2',
+            ])
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
@@ -218,7 +212,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertSet('params', [
-                'from' => 'music',
                 'title:is' => 'I Love Guitars',
             ]);
     }

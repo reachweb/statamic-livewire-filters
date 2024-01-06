@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Jonassiewertsen\Livewire\WithPagination;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Statamic\Tags\Collection\Entries;
 
@@ -11,17 +12,33 @@ class LivewireCollection extends Component
 {
     use Traits\GenerateParams, Traits\HandleParams, WithPagination;
 
+    #[Url]
     public $params;
+
+    #[Locked]
+    public $collections;
 
     public $view = 'livewire-collection';
 
     public function mount($params)
     {
-        $this->setParameters($params);
+        if (is_null($this->params)) {
+            $this->setParameters($params);
+        } else {
+            $this->setParameters(array_merge($this->params, $params));
+        }
     }
 
     public function setParameters($params)
     {
+        $collection_keys = ['from', 'in', 'folder', 'use', 'collection'];
+
+        foreach ($collection_keys as $key) {
+            if (array_key_exists($key, $params)) {
+                $this->collections = $params[$key];
+                unset($params[$key]);
+            }
+        }
         if (array_key_exists('view', $params)) {
             $this->view = $params['view'];
             unset($params['view']);
@@ -54,7 +71,7 @@ class LivewireCollection extends Component
 
     public function entries()
     {
-        $entries = (new Entries($this->generateParams($this->params)))->get();
+        $entries = (new Entries($this->generateParams()))->get();
         $this->dispatch('entriesUpdated');
         if (isset($this->params['paginate'])) {
             return $this->withPagination('entries', $entries);
