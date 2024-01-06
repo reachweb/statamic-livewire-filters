@@ -9,6 +9,10 @@ trait GenerateParams
 {
     protected function generateParams()
     {
-        return Parameters::make(array_merge(['from' => $this->collections], $this->params), Context::make([]));
+        return Parameters::make(array_merge(
+            ['from' => $this->collections],
+            ['paginate' => $this->paginate], $this->params),
+            Context::make([])
+        );
     }
 }

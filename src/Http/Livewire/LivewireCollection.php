@@ -17,6 +17,8 @@ class LivewireCollection extends Component
     #[Locked]
     public $collections;
 
+    public $paginate;
+
     public $view = 'livewire-collection';
 
     public function mount($params)
@@ -26,24 +28,6 @@ class LivewireCollection extends Component
         } else {
             $this->setParameters(array_merge($params, $this->params));
         }
-    }
-
-    public function setParameters($params)
-    {
-        $collection_keys = ['from', 'in', 'folder', 'use', 'collection'];
-
-        foreach ($collection_keys as $key) {
-            if (array_key_exists($key, $params)) {
-                $this->collections = $params[$key];
-                unset($params[$key]);
-            }
-        }
-        if (array_key_exists('view', $params)) {
-            $this->view = $params['view'];
-            unset($params['view']);
-        }
-        $this->params = $params;
-        $this->handlePresetParams();
     }
 
     #[On('filter-updated')]
@@ -83,7 +67,7 @@ class LivewireCollection extends Component
     {
         $entries = (new Entries($this->generateParams()))->get();
         $this->dispatch('entriesUpdated');
-        if (isset($this->params['paginate'])) {
+        if ($this->paginate) {
             return $this->withPagination('entries', $entries);
         }
 

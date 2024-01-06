@@ -6,6 +6,43 @@ use Reach\StatamicLivewireFilters\Exceptions\CommandNotFoundException;
 
 trait HandleParams
 {
+    public function setParameters($params)
+    {
+        $paramsCollection = collect($params);
+
+        $this->extractCollectionKeys($paramsCollection);
+        $this->extractView($paramsCollection);
+        $this->extractPagination($paramsCollection);
+
+        $this->params = $paramsCollection->all();
+        $this->handlePresetParams();
+    }
+
+    protected function extractCollectionKeys($paramsCollection)
+    {
+        $collectionKeys = ['from', 'in', 'folder', 'use', 'collection'];
+
+        foreach ($collectionKeys as $key) {
+            if ($paramsCollection->has($key)) {
+                $this->collections = $paramsCollection->pull($key);
+            }
+        }
+    }
+
+    protected function extractView($paramsCollection)
+    {
+        if ($paramsCollection->has('view')) {
+            $this->view = $paramsCollection->pull('view');
+        }
+    }
+
+    protected function extractPagination($paramsCollection)
+    {
+        if ($paramsCollection->has('paginate')) {
+            $this->paginate = $paramsCollection->pull('paginate');
+        }
+    }
+
     protected function handleCondition($field, $condition, $payload, $command)
     {
         $paramKey = $field.':'.$condition;
