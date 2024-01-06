@@ -15,15 +15,6 @@ class ServiceProvider extends AddonServiceProvider
         \Reach\StatamicLivewireFilters\Tags\LivewireCollection::class,
     ];
 
-    // protected $vite = [
-    //     'input' => [
-    //         'resources/js/app.js',
-    //         'resources/css/app.css',
-    //     ],
-    //     'hotFile' => 'vite.hot',
-    //     'publicDirectory'=> 'dist',
-    // ];
-
     public function bootAddon()
     {
         Livewire::component('livewire-collection', LivewireCollectionComponent::class);
@@ -33,8 +24,16 @@ class ServiceProvider extends AddonServiceProvider
 
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'statamic-livewire-filters');
 
-        $this->publishes([
-            __DIR__.'/../resources/views' => resource_path('views/vendor/statamic-livewire-filters'),
-        ], 'statamic-livewire-filters');
+        $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'statamic-livewire-filters');
+
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../resources/views' => resource_path('views/vendor/statamic-livewire-filters'),
+            ], 'statamic-livewire-filters');
+
+            $this->publishes([
+                __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
+            ], 'statamic-livewire-filters');
+        }
     }
 }

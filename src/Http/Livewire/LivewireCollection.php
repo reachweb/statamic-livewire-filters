@@ -3,8 +3,8 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Jonassiewertsen\Livewire\WithPagination;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Url;
 use Livewire\Component;
 use Statamic\Tags\Collection\Entries;
 
@@ -12,7 +12,6 @@ class LivewireCollection extends Component
 {
     use Traits\GenerateParams, Traits\HandleParams, WithPagination;
 
-    #[Url]
     public $params;
 
     #[Locked]
@@ -67,6 +66,17 @@ class LivewireCollection extends Component
             return;
         }
         $this->params['sort'] = $sort;
+    }
+
+    protected function queryString()
+    {
+        if (config('statamic-livewire-filters.enable_query_string')) {
+            return [
+                'params' => ['except' => []],
+            ];
+        }
+
+        return [];
     }
 
     public function entries()
