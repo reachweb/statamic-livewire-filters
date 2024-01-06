@@ -52,6 +52,15 @@ class LfSortTest extends TestCase
     }
 
     /** @test */
+    public function it_loads_a_sort_that_is_preset()
+    {
+        Livewire::test(LfSort::class, ['blueprint' => 'pages.pages', 'fields' => 'title|item_options'])
+            ->assertSet('selected', '')
+            ->dispatch('preset-params', ['sort' => 'title|asc', 'another_field:is' => 'value'])
+            ->assertSet('selected', 'title|asc');
+    }
+
+    /** @test */
     public function it_dispatches_the_event_when_selected_changes()
     {
         Livewire::test(LfSort::class, ['blueprint' => 'pages.pages', 'fields' => 'title|item_options'])

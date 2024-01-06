@@ -165,6 +165,15 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
+    /** @test */
+    public function it_loads_a_param_that_is_preset()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->dispatch('preset-params', ['item_options:is' => 'option1', 'another_field:is' => 'value'])
+            ->assertSet('selected', ['option1']);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
