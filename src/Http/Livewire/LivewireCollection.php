@@ -66,7 +66,6 @@ class LivewireCollection extends Component
     public function entries()
     {
         $entries = (new Entries($this->generateParams()))->get();
-        $this->dispatch('entriesUpdated');
         if ($this->paginate) {
             return $this->withPagination('entries', $entries);
         }
