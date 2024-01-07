@@ -33,6 +33,11 @@ class LivewireCollection extends Component
     #[On('filter-updated')]
     public function filterUpdated($field, $condition, $payload, $command, $modifier)
     {
+        if ($condition === 'query_scope') {
+            $this->handleQueryScopeCondition($field, $payload, $command, $modifier);
+
+            return;
+        }
         if ($condition === 'taxonomy') {
             $this->handleTaxonomyCondition($field, $payload, $command, $modifier);
 

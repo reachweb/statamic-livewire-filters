@@ -19,6 +19,10 @@ class ServiceProvider extends AddonServiceProvider
         \Reach\StatamicLivewireFilters\Tags\LivewireCollection::class,
     ];
 
+    protected $scopes = [
+        \Reach\StatamicLivewireFilters\Scopes\Multiselect::class,
+    ];
+
     public function bootAddon()
     {
         Livewire::component('livewire-collection', LivewireCollectionComponent::class);

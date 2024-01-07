@@ -55,6 +55,51 @@ trait HandleParams
         $this->runCommand($command, $paramKey, $payload);
     }
 
+    protected function handleQueryScopeCondition($field, $payload, $command, $modifier)
+    {
+        $queryScopeKey = 'query_scope';
+        $modifierKey = $modifier.':'.$field;
+
+        switch ($command) {
+            case 'add':
+                $this->params[$queryScopeKey] = $modifier;
+                if (! isset($this->params[$modifierKey])) {
+                    $this->params[$modifierKey] = $payload;
+                } else {
+                    $payloads = collect(explode('|', $this->params[$modifierKey]));
+                    if (! $payloads->contains($payload)) {
+                        $payloads->push($payload);
+                        $this->params[$modifierKey] = $payloads->implode('|');
+                    }
+                }
+                break;
+
+            case 'remove':
+                if (isset($this->params[$modifierKey])) {
+                    $payloads = collect(explode('|', $this->params[$modifierKey]));
+                    $payloads = $payloads->reject(fn ($item) => $item === $payload);
+                    if ($payloads->isNotEmpty()) {
+                        $this->params[$modifierKey] = $payloads->implode('|');
+                    } else {
+                        unset($this->params[$modifierKey], $this->params[$queryScopeKey]);
+                    }
+                }
+                break;
+
+            case 'replace':
+                $this->params[$queryScopeKey] = $modifier;
+                $this->params[$modifierKey] = $payload;
+                break;
+
+            case 'clear':
+                unset($this->params[$queryScopeKey], $this->params[$modifierKey]);
+                break;
+
+            default:
+                throw new CommandNotFoundException($command);
+        }
+    }
+
     protected function runCommand($command, $paramKey, $value)
     {
         switch ($command) {

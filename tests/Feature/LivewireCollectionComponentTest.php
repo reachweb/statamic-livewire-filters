@@ -171,6 +171,88 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     /** @test */
+    public function it_sets_query_scope_parameters()
+    {
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('collections', 'clothes')
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: 'xl',
+                command: 'add',
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl',
+            ])
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: 'l',
+                command: 'add',
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl|l',
+            ])
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: 'l',
+                command: 'remove',
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl',
+            ])
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: 'xl',
+                command: 'remove',
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [])
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: 'xl',
+                command: 'replace',
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl',
+            ])
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: 'l',
+                command: 'replace',
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'l',
+            ])
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: '',
+                command: 'clear',
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', []);
+    }
+
+    /** @test */
     public function it_sets_collection_sort()
     {
         $params = [
