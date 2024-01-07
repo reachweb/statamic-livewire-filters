@@ -10,7 +10,7 @@
                 wire:model.live="selected"
             >
             <span class="text-sm text-gray-500 absolute start-0 -bottom-1">{{ $min }}</span>
-            <span class="text-sm text-gray-500 absolute left-1/2 -translate-x-1/2 -bottom-1">Value: {{ $selected }}</span>
+            <span class="text-sm text-gray-500 absolute left-1/2 -translate-x-1/2 -bottom-1">{{ __('statamic-livewire-filters::ui.value') }}: {{ $selected }}</span>
             <span class="text-sm text-gray-500 absolute end-0 -bottom-1">{{ $max }}</span>
         </div>
     </div>

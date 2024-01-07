@@ -4,7 +4,7 @@
         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
         wire:model.live="selected"
     >
-        <option selected value="">All</option>
+        <option selected value="">{{ __('statamic-livewire-filters::ui.all') }}</option>
         @foreach ($this->filter_options as $value => $label)
             <option 
                 value="{{ $value }}">

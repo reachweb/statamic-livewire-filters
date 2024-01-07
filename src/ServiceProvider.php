@@ -28,6 +28,8 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-select-filter', LfSelectFilter::class);
         Livewire::component('lf-sort', LfSort::class);
 
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'statamic-livewire-filters');
+
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'statamic-livewire-filters');
 
         $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'statamic-livewire-filters');
