@@ -68,6 +68,11 @@ class LivewireCollection extends Component
         return [];
     }
 
+    public function paginationView()
+    {
+        return 'statamic-livewire-filters::livewire.ui.pagination';
+    }
+
     public function entries()
     {
         $entries = (new Entries($this->generateParams()))->get();
