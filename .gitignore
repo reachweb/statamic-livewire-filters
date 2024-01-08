@@ -1,6 +1,5 @@
 .DS_Store
 .idea
-build
 docs
 vendor
 coverage
