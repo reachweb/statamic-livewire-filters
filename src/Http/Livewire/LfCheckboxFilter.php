@@ -18,7 +18,7 @@ class LfCheckboxFilter extends Component
 
     public $previousSelected = [];
 
-    #[Computed]
+    #[Computed(persist: true)]
     public function filterOptions()
     {
         if (isset($this->statamic_field['options'])) {

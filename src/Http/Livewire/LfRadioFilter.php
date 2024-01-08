@@ -16,7 +16,7 @@ class LfRadioFilter extends Component
 
     public $selected = '';
 
-    #[Computed]
+    #[Computed(persist: true)]
     public function filterOptions()
     {
         if (isset($this->statamic_field['options'])) {

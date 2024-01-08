@@ -26,7 +26,7 @@ class LfDateFilter extends Component
             ->to(LivewireCollection::class);
     }
 
-    #[Computed]
+    #[Computed(persist: true)]
     public function filterOptions()
     {
         $fieldOptions = collect($this->statamic_field);
