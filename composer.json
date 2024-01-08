@@ -1,5 +1,23 @@
 {
     "name": "reachweb/statamic-livewire-filters",
+    "description": "Livewire filters for Statamic collections.",
+    "keywords": [
+        "Statamic",
+        "Livewire"
+    ],
+    "homepage": "https://www.reach.gr",
+    "license": "proprietary",
+    "type": "statamic-addon",
+    "authors": [
+        {
+            "name": "Iosif Chatzimichail",
+            "email": "iosif@reach.gr",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "email": "info@reach.gr"
+    },
     "autoload": {
         "psr-4": {
             "Reach\\StatamicLivewireFilters\\": "src"
