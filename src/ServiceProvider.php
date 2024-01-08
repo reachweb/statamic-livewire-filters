@@ -23,6 +23,10 @@ class ServiceProvider extends AddonServiceProvider
         \Reach\StatamicLivewireFilters\Scopes\Multiselect::class,
     ];
 
+    protected $publishables = [
+        __DIR__.'/../resources/build' => 'build',
+    ];
+
     public function bootAddon()
     {
         Livewire::component('livewire-collection', LivewireCollectionComponent::class);
@@ -40,14 +44,12 @@ class ServiceProvider extends AddonServiceProvider
 
         $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'statamic-livewire-filters');
 
-        if ($this->app->runningInConsole()) {
-            $this->publishes([
-                __DIR__.'/../resources/views' => resource_path('views/vendor/statamic-livewire-filters'),
-            ], 'statamic-livewire-filters');
+        $this->publishes([
+            __DIR__.'/../resources/views' => resource_path('views/vendor/statamic-livewire-filters'),
+        ], 'statamic-livewire-filters-views');
 
-            $this->publishes([
-                __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
-            ], 'statamic-livewire-filters');
-        }
+        $this->publishes([
+            __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
+        ], 'statamic-livewire-filters');
     }
 }

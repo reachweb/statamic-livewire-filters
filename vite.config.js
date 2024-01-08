@@ -5,7 +5,7 @@ export default defineConfig({
     plugins: [
         laravel({
             hotFile: "vite.hot",
-            publicDirectory: "dist",
+            publicDirectory: "resources",
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
         }),
