@@ -33,6 +33,7 @@ class LivewireCollection extends Component
     #[On('filter-updated')]
     public function filterUpdated($field, $condition, $payload, $command, $modifier)
     {
+        $this->resetPagination();
         if ($condition === 'query_scope') {
             $this->handleQueryScopeCondition($field, $payload, $command, $modifier);
 
@@ -49,6 +50,7 @@ class LivewireCollection extends Component
     #[On('sort-updated')]
     public function sortUpdated($sort)
     {
+        $this->resetPagination();
         if ($sort === '' || $sort === null) {
             unset($this->params['sort']);
 
@@ -71,6 +73,13 @@ class LivewireCollection extends Component
     public function paginationView()
     {
         return 'statamic-livewire-filters::livewire.ui.pagination';
+    }
+
+    protected function resetPagination()
+    {
+        if ($this->paginate) {
+            $this->resetPage();
+        }
     }
 
     public function entries()
