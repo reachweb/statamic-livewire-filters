@@ -1,8 +1,13 @@
 <div>
-    {{ entries }}
-    <div>{{ title }}</div>
-    {{ /entries }}
-
-    {{ links }}
-
+    <div>
+        {{ entries }}
+        <div wire:key="{{ id }}">
+            {{ title }}
+        </div>
+        {{ /entries }}
+    </div>
+   
+    <div class="mt-8 flex justify-center">
+        {{ links }}
+    </div>
 </div>
