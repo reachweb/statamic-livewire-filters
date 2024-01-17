@@ -24,7 +24,7 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $publishables = [
-        __DIR__.'/../resources/build' => 'build',
+        __DIR__.'/../resources/build' => 'assets',
     ];
 
     public function bootAddon()
