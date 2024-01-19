@@ -6,7 +6,7 @@ Statamic Livewire Filters is an add-on for Statamic that enables you to use Live
 
 Main features:
 
-- Main Livewire component that, with the help of a Statamic tag, can replace your collection tags using the exact same syntax.
+- Collections Livewire component that, with the help of a Statamic tag, can seamlessly your collection tags using the exact same syntax.
 - Simple and customizable filters equipped using the most common controls: Text input, Checkboxes, Radio, Select, Range, and Date.
 - Compatibility with most Statamic conditions supported by the collection tag.
 - Capability to dynamically order your collection besides filtering.
@@ -19,7 +19,7 @@ Main features:
 
 ## Documentation
 
-Coming soon!
+You can find the documentation and **examples** here: https://slf.reach.gr/
 
 ## License 
 
@@ -28,5 +28,5 @@ Statamic Livewire Filters is **not** free software.
 
 ## Issues and pull requests 
 
-Feel free to open an issue right here on Github. Email us directly for a security issue: iosif@reach.gr
+Feel free to open an issue right here on Github. Email us directly for a security issue: info@reach.gr
 
