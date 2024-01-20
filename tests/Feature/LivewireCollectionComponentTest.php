@@ -94,6 +94,7 @@ class LivewireCollectionComponentTest extends TestCase
                 'title:is' => 'I Love Guitars',
                 'item_options:is' => 'option1',
             ])
+            ->assertDispatched('entries-updated')
             ->dispatch('filter-updated',
                 field: 'title',
                 condition: 'is',
@@ -105,6 +106,7 @@ class LivewireCollectionComponentTest extends TestCase
                 'title:is' => 'Test',
                 'item_options:is' => 'option1',
             ])
+            ->assertDispatched('entries-updated')
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
@@ -116,6 +118,7 @@ class LivewireCollectionComponentTest extends TestCase
                 'title:is' => 'Test',
                 'item_options:is' => 'option1|option2',
             ])
+            ->assertDispatched('entries-updated')
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
@@ -123,6 +126,7 @@ class LivewireCollectionComponentTest extends TestCase
                 command: 'remove',
                 modifier: 'any',
             )
+            ->assertDispatched('entries-updated')
             ->assertSet('params', [
                 'title:is' => 'Test',
                 'item_options:is' => 'option2',
