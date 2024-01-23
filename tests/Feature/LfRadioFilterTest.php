@@ -107,6 +107,15 @@ class LfRadioFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_does_not_accept_a_value_not_in_the_options_array()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', '')
+            ->set('selected', 'not-an-option')
+            ->assertHasErrors('selected');
+    }
+
+    /** @test */
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])

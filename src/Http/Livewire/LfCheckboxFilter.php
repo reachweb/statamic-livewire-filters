@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -30,6 +31,8 @@ class LfCheckboxFilter extends Component
 
     public function updatedSelected()
     {
+        $this->validate();
+
         $optionsToAdd = array_diff($this->selected, $this->previousSelected);
         $optionsToRemove = array_diff($this->previousSelected, $this->selected);
 
@@ -63,6 +66,13 @@ class LfCheckboxFilter extends Component
         $this->selected = [];
         $this->previousSelected = [];
         $this->clearFilters();
+    }
+
+    public function rules()
+    {
+        return [
+            'selected' => ['array', Rule::in(array_keys($this->filterOptions()))],
+        ];
     }
 
     #[On('preset-params')]

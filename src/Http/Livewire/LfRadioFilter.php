@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -28,6 +29,8 @@ class LfRadioFilter extends Component
 
     public function updatedSelected()
     {
+        $this->validate();
+
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
@@ -42,6 +45,13 @@ class LfRadioFilter extends Component
     {
         $this->selected = '';
         $this->clearFilters();
+    }
+
+    public function rules()
+    {
+        return [
+            'selected' => ['required', Rule::in(array_keys($this->filterOptions()))],
+        ];
     }
 
     #[On('preset-params')]

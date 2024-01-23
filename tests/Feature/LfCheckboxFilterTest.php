@@ -141,6 +141,15 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_does_not_accept_a_value_not_in_the_options_array()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->set('selected', ['not-an-option'])
+            ->assertHasErrors('selected');
+    }
+
+    /** @test */
     public function it_shows_taxonomy_terms_and_submits_the_right_events()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'collection' => 'clothes', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
@@ -163,6 +172,14 @@ class LfCheckboxFilterTest extends TestCase
                 payload: 'red',
                 command: 'remove',
             );
+    }
+
+    /** @test */
+    public function it_does_not_accept_an_invalid_taxonomy_value()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'collection' => 'clothes', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->set('selected', ['purple'])
+            ->assertHasErrors('selected');
     }
 
     /** @test */
