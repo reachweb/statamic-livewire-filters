@@ -2,7 +2,25 @@
 
 Statamic Livewire Filters is an add-on for Statamic that enables you to use Livewire to create "live" filters for your Statamic collections. It comprises a primary Livewire component and various standard filter components, which are designed to be easily editable to suit your project's needs. It allows you to filter your entries by almost any field you wish and display the results in a "live" manner, using the power of Livewire.
 
-## Features
+## Introduction
+
+**No need to know Livewire**
+
+Just swap out your Statamic collection tag, add the filters using Antlers and you're good to go. It doesn't matter if you know or already use Livewire or not.
+
+**Ready to use filters**
+
+Starting from scratch isn’t fun. You can use the basic filters already included to hit the ground running. Want to change how the look? Piece of cake using TailwindCSS. Want to extend and add more filters? Also possible.
+
+**Advanced features**
+
+Ready-to-use pagination? Absolutely! Query scopes? You bet! Query string support? Yes sir!
+
+## Documentation & Examples
+
+You can find the documentation and **examples** here: https://slf.reach.gr/
+
+## Feature list
 
 Main features:
 
@@ -16,10 +34,6 @@ Main features:
 - Minimal styling using TailwindCSS.
 - Multiple view options for each component, offering flexibility in presentation.
 - No JavaScript required, except for Flatpickr for the Date filter, simplifying integration.
-
-## Documentation
-
-You can find the documentation and **examples** here: https://slf.reach.gr/
 
 ## License 
 
