@@ -32,6 +32,16 @@ trait IsLivewireFilter
         $this->initiateField();
     }
 
+    public function bootIsLivewireFilter()
+    {
+        $this->dispatch('filter-mounted',
+            field: $this->field,
+            condition: $this->condition,
+            modifier: $this->modifier,
+        )
+            ->to(LivewireCollection::class);
+    }
+
     public function initiateField()
     {
         $blueprint = $this->getStatamicBlueprint();

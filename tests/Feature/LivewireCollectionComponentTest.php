@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Collection;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -300,5 +301,36 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('params', [
                 'title:is' => 'I Love Guitars',
             ]);
+    }
+
+    /** @test */
+    public function it_gets_a_list_of_active_filters_on_the_page()
+    {
+        $params = [
+            'from' => 'music',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->dispatch('filter-mounted',
+                field: 'sizes',
+                condition: 'is',
+                modifier: null,
+            )
+            ->dispatch('filter-mounted',
+                field: 'colors',
+                condition: 'taxonomy',
+                modifier: 'any',
+            )
+            ->dispatch('filter-mounted',
+                field: 'brand',
+                condition: 'query_scope',
+                modifier: 'multiselect',
+            )
+            ->assertSet('filters', function ($collection) {
+                $this->assertInstanceOf(Collection::class, $collection);
+                $this->assertEquals(['sizes:is', 'taxonomy:colors:any', 'query_scope:multiselect', 'multiselect:brand'], $collection->all());
+
+                return true;
+            });
     }
 }

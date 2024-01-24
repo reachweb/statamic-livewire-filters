@@ -17,16 +17,33 @@ class LivewireCollection extends Component
     #[Locked]
     public $collections;
 
+    #[Locked]
+    public $filters;
+
     public $paginate;
 
     public $view = 'livewire-collection';
 
     public function mount($params)
     {
+        $this->filters = collect();
         if (is_null($this->params)) {
             $this->setParameters($params);
         } else {
             $this->setParameters(array_merge($params, $this->params));
+        }
+    }
+
+    #[On('filter-mounted')]
+    public function filterMounted($field, $condition, $modifier)
+    {
+        if ($condition === 'query_scope') {
+            $this->filters->push('query_scope:'.$modifier);
+            $this->filters->push($modifier.':'.$field);
+        } elseif ($condition === 'taxonomy') {
+            $this->filters->push('taxonomy:'.$field.':'.$modifier);
+        } else {
+            $this->filters->push($field.':'.$condition);
         }
     }
 
