@@ -176,6 +176,57 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     /** @test */
+    public function check_that_filtering_works_when_filter_is_mounted()
+    {
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('collections', 'clothes')
+            ->dispatch('filter-mounted',
+                field: 'colors',
+                condition: 'taxonomy',
+                modifier: 'any',
+            )
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'taxonomy:colors:any' => 'red',
+            ])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Black Shirt');
+    }
+
+    /** @test */
+    public function check_that_filter_gets_ignored_if_not_registered()
+    {
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('collections', 'clothes')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'taxonomy:colors:any' => 'red',
+            ])
+            ->assertSee('Yellow Shirt')
+            ->assertSee('Black Shirt');
+    }
+
+    /** @test */
     public function it_sets_query_scope_parameters()
     {
         $params = [
