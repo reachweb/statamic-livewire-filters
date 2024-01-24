@@ -4,9 +4,9 @@ Statamic Livewire Filters is an add-on for Statamic that enables you to use Live
 
 ## Introduction
 
-**No need to know Livewire**
+**No Livewire knowledge required**
 
-Just swap out your Statamic collection tag, add the filters using Antlers and you're good to go. It doesn't matter if you know or already use Livewire or not.
+Simply swap out your Statamic collection tag and add the filters using Antlers – you're all set. This addon is designed to be straightforward and accessible, making it a seamless experience whether you're already familiar with Livewire or not.
 
 **Ready to use filters**
 
