@@ -74,6 +74,10 @@ trait IsLivewireFilter
             return 'taxonomy:'.$this->field.':'.$this->modifier;
         }
 
+        if ($this->condition === 'query_scope') {
+            return $this->modifier.':'.$this->field;
+        }
+
         return $this->field.':'.$this->condition;
     }
 }

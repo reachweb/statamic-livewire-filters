@@ -191,6 +191,15 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['option1']);
     }
 
+    /** @test */
+    public function it_loads_a_param_that_is_preset_for_a_query_scope()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'query_scope', 'modifier' => 'multiselect'])
+            ->assertSet('selected', [])
+            ->dispatch('preset-params', ['multiselect:item_options' => 'option1', 'query_scope' => 'multiselect'])
+            ->assertSet('selected', ['option1']);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
