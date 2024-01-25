@@ -50,6 +50,6 @@ class ServiceProvider extends AddonServiceProvider
 
         $this->publishes([
             __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
-        ], 'statamic-livewire-filters');
+        ], 'statamic-livewire-filters-config');
     }
 }
