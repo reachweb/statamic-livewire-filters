@@ -29,7 +29,9 @@ class LfRadioFilter extends Component
 
     public function updatedSelected()
     {
-        $this->validate();
+        if (config('statamic-livewire-filters.validate_filter_values')) {
+            $this->validate();
+        }
 
         $this->dispatch('filter-updated',
             field: $this->field,

@@ -7,4 +7,7 @@ return [
     // Only allow filters for fields and conditions already loaded in the page to be applied
     'only_allow_active_filters' => true,
 
+    // Validate that the values of radio and checkbox filters are in the available options array
+    'validate_filter_values' => true,
+
 ];

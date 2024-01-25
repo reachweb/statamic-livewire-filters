@@ -31,7 +31,9 @@ class LfCheckboxFilter extends Component
 
     public function updatedSelected()
     {
-        $this->validate();
+        if (config('statamic-livewire-filters.validate_filter_values')) {
+            $this->validate();
+        }
 
         $optionsToAdd = array_diff($this->selected, $this->previousSelected);
         $optionsToRemove = array_diff($this->previousSelected, $this->selected);

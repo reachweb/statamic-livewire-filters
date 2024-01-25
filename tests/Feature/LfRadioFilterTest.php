@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -112,7 +113,25 @@ class LfRadioFilterTest extends TestCase
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', '')
             ->set('selected', 'not-an-option')
-            ->assertHasErrors('selected');
+            ->assertHasErrors('selected')
+            ->assertNotDispatched('filter-updated');
+    }
+
+    /** @test */
+    public function it_can_turn_off_validation_in_the_config()
+    {
+        Config::set('statamic-livewire-filters.validate_filter_values', false);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', '')
+            ->set('selected', 'not-an-option')
+            ->assertSet('selected', 'not-an-option')
+            ->assertDispatched('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: 'not-an-option',
+                command: 'replace',
+            );
     }
 
     /** @test */
