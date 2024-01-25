@@ -9,7 +9,9 @@ trait GenerateParams
 {
     protected function generateParams()
     {
-        $params = $this->removeParamsNotInFiltersCollection();
+        $params = config('statamic-livewire-filters.only_allow_active_filters')
+            ? $this->removeParamsNotInFiltersCollection()
+            : $this->params;
 
         return Parameters::make(array_merge(
             ['from' => $this->collections],

@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -224,6 +225,31 @@ class LivewireCollectionComponentTest extends TestCase
             ])
             ->assertSee('Yellow Shirt')
             ->assertSee('Black Shirt');
+    }
+
+    /** @test */
+    public function check_that_filter_gets_applied_if_check_is_disabled_in_config()
+    {
+        Config::set('statamic-livewire-filters.only_allow_active_filters', false);
+
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('collections', 'clothes')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'taxonomy:colors:any' => 'red',
+            ])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Yellow Shirt');
     }
 
     /** @test */
