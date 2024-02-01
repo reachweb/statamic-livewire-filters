@@ -18,16 +18,13 @@ trait IsLivewireFilter
 
     public $condition;
 
-    public $modifier;
+    public $modifier = 'any';
 
-    public function mountIsLivewireFilter($blueprint, $field, $condition, $modifier = 'any')
+    public function mountIsLivewireFilter($blueprint)
     {
         [$collection, $blueprint] = explode('.', $blueprint);
         $this->collection = $collection;
         $this->blueprint = $blueprint;
-        $this->field = $field;
-        $this->condition = $condition;
-        $this->modifier = $modifier;
 
         $this->initiateField();
     }
