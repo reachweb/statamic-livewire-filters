@@ -210,23 +210,23 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['option1']);
     }
 
-      /** @test */
-      public function it_loads_a_param_that_is_preset_for_a_taxonomy()
-      {
-          Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
-              ->assertSet('selected', [])
-              ->dispatch('preset-params', ['taxonomy:colors' => 'red', 'another_field:is' => 'value'])
-              ->assertSet('selected', ['red']);
-      }
+    /** @test */
+    public function it_loads_a_param_that_is_preset_for_a_taxonomy()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->assertSet('selected', [])
+            ->dispatch('preset-params', ['taxonomy:colors' => 'red', 'another_field:is' => 'value'])
+            ->assertSet('selected', ['red']);
+    }
 
-      /** @test */
-      public function it_loads_a_param_that_is_preset_for_a_taxonomy_with_modifier()
-      {
-          Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'modifier' => 'any'])
-              ->assertSet('selected', [])
-              ->dispatch('preset-params', ['taxonomy:colors:any' => 'red', 'another_field:is' => 'value'])
-              ->assertSet('selected', ['red']);
-      }
+    /** @test */
+    public function it_loads_a_param_that_is_preset_for_a_taxonomy_with_modifier()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'modifier' => 'any'])
+            ->assertSet('selected', [])
+            ->dispatch('preset-params', ['taxonomy:colors:any' => 'red', 'another_field:is' => 'value'])
+            ->assertSet('selected', ['red']);
+    }
 
     /** @test */
     public function it_loads_a_param_that_is_preset_for_a_query_scope()

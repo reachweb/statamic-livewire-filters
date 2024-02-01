@@ -71,6 +71,7 @@ trait IsLivewireFilter
             if ($this->modifier === null) {
                 return 'taxonomy:'.$this->field;
             }
+
             return 'taxonomy:'.$this->field.':'.$this->modifier;
         }
 
