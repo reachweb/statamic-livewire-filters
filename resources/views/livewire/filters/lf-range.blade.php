@@ -6,6 +6,7 @@
                 type="range" 
                 min="{{ $min }}"
                 max="{{ $max }}"
+                step="{{ $step }}"
                 class="w-full h-1 mb-6 bg-gray-200 rounded-lg appearance-none cursor-pointer range-sm"
                 wire:model.live="selected"
             >

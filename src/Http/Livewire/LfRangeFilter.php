@@ -17,18 +17,13 @@ class LfRangeFilter extends Component
 
     public $max;
 
-    public function mount($blueprint, $field, $condition, $min, $max, $default)
-    {
-        [$collection, $blueprint] = explode('.', $blueprint);
-        $this->collection = $collection;
-        $this->blueprint = $blueprint;
-        $this->field = $field;
-        $this->condition = $condition;
-        $this->min = $min;
-        $this->max = $max;
-        $this->selected = $default;
+    public $default;
 
-        $this->initiateField();
+    public $step = 1;
+
+    public function mount($default)
+    {
+        $this->selected = $default;
     }
 
     public function dispatchEvent()
