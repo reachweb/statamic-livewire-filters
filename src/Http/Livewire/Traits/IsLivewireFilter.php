@@ -18,7 +18,7 @@ trait IsLivewireFilter
 
     public $condition;
 
-    public $modifier;
+    public $modifier = 'any';
 
     public function mountIsLivewireFilter($blueprint)
     {
@@ -68,10 +68,6 @@ trait IsLivewireFilter
     protected function getParamKey()
     {
         if ($this->condition === 'taxonomy') {
-            if ($this->modifier === null) {
-                return 'taxonomy:'.$this->field;
-            }
-
             return 'taxonomy:'.$this->field.':'.$this->modifier;
         }
 
