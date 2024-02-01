@@ -96,7 +96,7 @@ class LfCheckboxFilterTest extends TestCase
     /** @test */
     public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSee('Option 1')
             ->assertSee('Option 2')
             ->assertSee('Option 3');
@@ -121,7 +121,7 @@ class LfCheckboxFilterTest extends TestCase
     /** @test */
     public function it_changes_the_value_of_selected_property_when_an_option_is_set_and_sends_an_event()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
             ->set('selected', ['option1'])
             ->assertSet('selected', ['option1'])
@@ -144,7 +144,7 @@ class LfCheckboxFilterTest extends TestCase
     /** @test */
     public function it_does_not_accept_a_value_not_in_the_options_array()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
             ->set('selected', ['not-an-option'])
             ->assertHasErrors('selected')
@@ -156,7 +156,7 @@ class LfCheckboxFilterTest extends TestCase
     {
         Config::set('statamic-livewire-filters.validate_filter_values', false);
 
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
             ->set('selected', ['not-an-option'])
             ->assertSet('selected', ['not-an-option'])
@@ -171,7 +171,7 @@ class LfCheckboxFilterTest extends TestCase
     /** @test */
     public function it_shows_taxonomy_terms_and_submits_the_right_events()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'collection' => 'clothes', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
             ->assertSee('Red')
             ->assertSee('Black')
             ->assertSee('Yellow')
@@ -196,7 +196,7 @@ class LfCheckboxFilterTest extends TestCase
     /** @test */
     public function it_does_not_accept_an_invalid_taxonomy_value()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'collection' => 'clothes', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
             ->set('selected', ['purple'])
             ->assertHasErrors('selected');
     }
@@ -204,16 +204,34 @@ class LfCheckboxFilterTest extends TestCase
     /** @test */
     public function it_loads_a_param_that_is_preset()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
             ->dispatch('preset-params', ['item_options:is' => 'option1', 'another_field:is' => 'value'])
             ->assertSet('selected', ['option1']);
     }
 
+      /** @test */
+      public function it_loads_a_param_that_is_preset_for_a_taxonomy()
+      {
+          Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+              ->assertSet('selected', [])
+              ->dispatch('preset-params', ['taxonomy:colors' => 'red', 'another_field:is' => 'value'])
+              ->assertSet('selected', ['red']);
+      }
+
+      /** @test */
+      public function it_loads_a_param_that_is_preset_for_a_taxonomy_with_modifier()
+      {
+          Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'modifier' => 'any'])
+              ->assertSet('selected', [])
+              ->dispatch('preset-params', ['taxonomy:colors:any' => 'red', 'another_field:is' => 'value'])
+              ->assertSet('selected', ['red']);
+      }
+
     /** @test */
     public function it_loads_a_param_that_is_preset_for_a_query_scope()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'query_scope', 'modifier' => 'multiselect'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'query_scope', 'modifier' => 'multiselect'])
             ->assertSet('selected', [])
             ->dispatch('preset-params', ['multiselect:item_options' => 'option1', 'query_scope' => 'multiselect'])
             ->assertSet('selected', ['option1']);
