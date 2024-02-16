@@ -45,6 +45,7 @@ class LivewireCollection extends Component
         } else {
             $this->filters->push($field.':'.$condition);
         }
+        $this->filters->unique();
     }
 
     #[On('filter-updated')]
