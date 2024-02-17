@@ -6,7 +6,7 @@ use Statamic\Tags\Tags;
 
 class LivewireCollection extends Tags
 {
-    use Concerns\OutputsLivewireComponent;
+    use Concerns\OutputsLivewireComponent, Concerns\SupportTaxonomyTermRoute;
 
     protected static $handle = 'livewire-collection';
 
@@ -29,6 +29,8 @@ class LivewireCollection extends Tags
 
     protected function output()
     {
+        $this->addTaxonomyTermRoute();
+
         return $this->renderLivewireComponent(
             'livewire-collection',
             $this->params->all(),
