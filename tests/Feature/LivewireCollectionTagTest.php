@@ -141,8 +141,6 @@ class LivewireCollectionTagTest extends TestCase
 
         $response = $this->get('/colors/black');
 
-        ray($response);
-
         $response->assertDontSee('taxonomy:colors:any', false);
     }
 
