@@ -3,7 +3,9 @@
 namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
 use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
+use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -11,7 +13,7 @@ use Statamic\Facades\Antlers;
 
 class LivewireCollectionTagTest extends TestCase
 {
-    use PreventSavingStacheItemsToDisk;
+    use FakesViews, PreventSavingStacheItemsToDisk;
 
     private $music;
 
@@ -57,6 +59,15 @@ class LivewireCollectionTagTest extends TestCase
         $this->makeEntry($this->books, 'i')->set('title', 'I Hate Martin')->save();
     }
 
+    protected function makeTaxononomyFakes()
+    {
+        Facades\Taxonomy::make('colors')->termTemplate('default')->layout('default')->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('black')->data(['title' => 'Black'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('yellow')->data(['title' => 'Yellow'])->save();
+        Facades\Collection::make('clothes')->routes('clothes/{slug}')->taxonomies(['colors'])->save();
+    }
+
     public function test_if_it_throws_an_exception_for_no_collection()
     {
         $this->expectException(\Reach\StatamicLivewireFilters\Exceptions\NoCollectionException::class);
@@ -93,6 +104,46 @@ class LivewireCollectionTagTest extends TestCase
         $this->setTagParameters(['from' => 'music|art']);
         $this->assertStringContainsString('I Love Guitars', $this->collectionTag->index());
         $this->assertStringContainsString('I Love Drawing', $this->collectionTag->index());
+    }
+
+    public function test_it_sets_term_param_for_taxonony_route()
+    {
+        Config::set('statamic-livewire-filters.enable_term_routes', true);
+
+        $this->withFakeViews();
+
+        $this->makeTaxononomyFakes();
+
+        $this->viewShouldReturnRaw('layout', '{{ template_content }}');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div></div>');
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection from="clothes" }}');
+
+        Facades\Stache::clear();
+
+        $response = $this->get('/colors/red');
+
+        $response->assertSee('taxonomy:colors:any', false);
+    }
+
+    public function test_it_does_not_set_term_param_for_taxonony_route()
+    {
+        Config::set('statamic-livewire-filters.enable_term_routes', false);
+
+        $this->withFakeViews();
+
+        $this->makeTaxononomyFakes();
+
+        $this->viewShouldReturnRaw('layout', '{{ template_content }}');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div></div>');
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection from="clothes" }}');
+
+        Facades\Stache::clear();
+
+        $response = $this->get('/colors/black');
+
+        ray($response);
+
+        $response->assertDontSee('taxonomy:colors:any', false);
     }
 
     private function setTagParameters($parameters)
