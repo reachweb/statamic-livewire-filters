@@ -9,6 +9,9 @@
             <option 
                 value="{{ $value }}">
                 {{ $label }}
+                @if ($this->counts[$value] !== null)
+                <span class="text-gray-500 ml-1">({{ $this->counts[$value] }})</span>
+                @endif
             </option>
         @endforeach
     </select>

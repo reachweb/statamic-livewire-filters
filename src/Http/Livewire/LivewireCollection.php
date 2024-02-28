@@ -32,6 +32,7 @@ class LivewireCollection extends Component
         } else {
             $this->setParameters(array_merge($params, $this->params));
         }
+        $this->dispatchParamsUpdated();
     }
 
     #[On('filter-mounted')]

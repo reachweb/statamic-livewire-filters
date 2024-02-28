@@ -410,4 +410,62 @@ class LivewireCollectionComponentTest extends TestCase
                 return true;
             });
     }
+
+    /** @test */
+    public function it_does_not_dispatch_the_params_updated_event_by_default()
+    {
+        //Config::set('statamic-livewire-filters.only_allow_active_filters', false);
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'yellow',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertNotDispatched('params-updated');
+    }
+
+    /** @test */
+    public function it_dispatches_the_params_updated_event_if_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        // Also add some tests to make sure it's not dispatched when it's not needed
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'yellow',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertDispatched('params-updated')
+            ->dispatch('filter-mounted',
+                field: 'colors',
+                condition: 'taxonomy',
+                modifier: 'any',
+            )
+            ->assertNotDispatched('params-updated')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'yellow',
+                command: 'remove',
+                modifier: 'any',
+            )
+            ->assertDispatched('params-updated')
+            ->dispatch('sort-updated',
+                sort: 'title:asc'
+            )
+            ->assertNotDispatched('params-updated');
+    }
 }

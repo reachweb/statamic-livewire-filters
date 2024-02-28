@@ -54,9 +54,9 @@ class LfRadioFilterTest extends TestCase
         ]);
         $this->blueprint->setHandle('pages')->setNamespace('collections.'.$this->collection->handle())->save();
 
-        $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->save();
-        $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->save();
-        $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->save();
+        $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->set('item_options', 'option1')->save();
+        $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->set('item_options', 'option1')->save();
+        $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->set('item_options', 'option2')->save();
     }
 
     /** @test */
@@ -155,6 +155,19 @@ class LfRadioFilterTest extends TestCase
             ->assertSet('selected', '')
             ->dispatch('preset-params', ['item_options:is' => 'option1', 'another_field:is' => 'value'])
             ->assertSet('selected', 'option1');
+    }
+
+    /** @test */
+    public function it_calculates_the_count_for_each_entry()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', '')
+            ->dispatch('params-updated', ['item_options:is' => 'option1'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
+            })
+            ->assertSeeHtml('<span class="text-gray-500 ml-1">(2)</span>');
+
     }
 
     protected function makeEntry($collection, $slug)
