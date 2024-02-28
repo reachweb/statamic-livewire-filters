@@ -28,6 +28,8 @@ class LfRangeFilter extends Component
 
     public function dispatchEvent()
     {
+        $this->dispatchFilterMounted();
+
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,

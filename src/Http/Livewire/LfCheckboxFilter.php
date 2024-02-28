@@ -31,6 +31,8 @@ class LfCheckboxFilter extends Component
 
     public function updatedSelected()
     {
+        $this->dispatchFilterMounted();
+
         if (config('statamic-livewire-filters.validate_filter_values')) {
             $this->validate();
         }

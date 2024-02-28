@@ -15,6 +15,8 @@ class LfTextFilter extends Component
 
     public function updatedSelected()
     {
+        $this->dispatchFilterMounted();
+
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
