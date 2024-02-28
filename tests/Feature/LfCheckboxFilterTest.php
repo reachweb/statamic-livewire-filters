@@ -38,7 +38,7 @@ class LfCheckboxFilterTest extends TestCase
 
                             'handle' => 'item_options',
                             'field' => [
-                                'type' => 'checkbox',
+                                'type' => 'checkboxes',
                                 'display' => 'Checkbox',
                                 'listable' => 'hidden',
                                 'options' => [
@@ -54,9 +54,9 @@ class LfCheckboxFilterTest extends TestCase
         ]);
         $this->blueprint->setHandle('pages')->setNamespace('collections.'.$this->collection->handle())->save();
 
-        $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->save();
-        $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->save();
-        $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->save();
+        $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->set('item_options', 'option1')->save();
+        $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->set('item_options', 'option1')->save();
+        $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->set('item_options', 'option2')->save();
 
         Facades\Taxonomy::make('colors')->save();
         Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
@@ -226,6 +226,17 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', [])
             ->dispatch('preset-params', ['multiselect:item_options' => 'option1', 'query_scope' => 'multiselect'])
             ->assertSet('selected', ['option1']);
+    }
+
+    /** @test */
+    public function it_calculates_the_count_for_each_entry()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->dispatch('params-updated', ['item_options:is' => 'option1'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
+            });
     }
 
     protected function makeEntry($collection, $slug)
