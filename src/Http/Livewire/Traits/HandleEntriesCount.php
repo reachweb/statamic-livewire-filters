@@ -2,10 +2,9 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
-use Statamic\Tags\Collection\Entries;
-use Livewire\Attributes\On;
 use Livewire\Attributes\Computed;
-
+use Livewire\Attributes\On;
+use Statamic\Tags\Collection\Entries;
 
 trait HandleEntriesCount
 {
@@ -14,7 +13,7 @@ trait HandleEntriesCount
     #[Computed]
     public function counts()
     {
-        return $this->statamic_field['counts'];      
+        return $this->statamic_field['counts'];
     }
 
     #[On('params-updated')]
@@ -25,5 +24,4 @@ trait HandleEntriesCount
             $this->statamic_field['counts'][$option] = (new Entries($this->generateParamsForCount($this->collection, $params)))->count();
         }
     }
-
 }

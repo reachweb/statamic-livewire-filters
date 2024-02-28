@@ -55,7 +55,7 @@ trait IsLivewireFilter
         } else {
             if (array_key_exists('options', $field->toArray())) {
                 $field->setConfig(array_merge(
-                    $field->config(), 
+                    $field->config(),
                     ['counts' => collect($field->get('options'))->keys()->flatMap(fn ($option) => [$option => null])->all()]
                 ));
             }
