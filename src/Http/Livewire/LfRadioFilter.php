@@ -9,7 +9,7 @@ use Livewire\Component;
 
 class LfRadioFilter extends Component
 {
-    use Traits\IsLivewireFilter;
+    use Traits\HandleEntriesCount, Traits\IsLivewireFilter;
 
     public $view = 'lf-radio';
 
