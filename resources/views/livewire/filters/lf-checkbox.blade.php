@@ -14,6 +14,9 @@
                 class="ml-2 text-gray-900"
             >
                 {{ $label }}
+                @if ($this->counts[$value] !== null)
+                <span class="text-gray-500 ml-1">({{ $this->counts[$value] }})</span>
+                @endif
             </label>
         </div>
         @endforeach
