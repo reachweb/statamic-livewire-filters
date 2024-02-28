@@ -98,6 +98,7 @@ trait HandleParams
             default:
                 throw new CommandNotFoundException($command);
         }
+        $this->dispatchParamsUpdated();
     }
 
     protected function runCommand($command, $paramKey, $value)
@@ -120,7 +121,7 @@ trait HandleParams
                 break;
         }
 
-        $this->dispatch('params-updated', $this->params);
+        $this->dispatchParamsUpdated();
     }
 
     protected function addValueToParam($paramKey, $value)
@@ -168,6 +169,13 @@ trait HandleParams
         $restOfParams = $params->except($collectionKeys);
         if ($restOfParams->isNotEmpty()) {
             $this->dispatch('preset-params', $restOfParams->all());
+        }
+    }
+
+    protected function dispatchParamsUpdated()
+    {
+        if (config('statamic-livewire-filters.enable_filter_values_count')) {
+            $this->dispatch('params-updated', $this->params);
         }
     }
 }

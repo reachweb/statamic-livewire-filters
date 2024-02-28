@@ -13,4 +13,6 @@ return [
     // If enabled the addon will preset the term parameters in any taxonomy term routes
     'enable_term_routes' => false,
 
+    // The addon will calculate the number of entries for each filter value (can be slow for a large number of entries)
+    'enable_filter_values_count' => true,
 ];
