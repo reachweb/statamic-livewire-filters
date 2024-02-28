@@ -145,7 +145,6 @@ class LfRangeFilterTest extends TestCase
             );
     }
 
-
     /** @test */
     public function it_loads_a_param_that_is_preset()
     {

@@ -152,8 +152,8 @@ class LfCheckboxFilterTest extends TestCase
                 field: 'item_options',
                 condition: 'is',
                 modifier: 'any',
-        );
-            
+            );
+
     }
 
     /** @test */

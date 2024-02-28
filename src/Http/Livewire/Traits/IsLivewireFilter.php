@@ -30,7 +30,6 @@ trait IsLivewireFilter
 
     }
 
-    
     public function initiateField()
     {
         $blueprint = $this->getStatamicBlueprint();
