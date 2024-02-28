@@ -119,6 +119,8 @@ trait HandleParams
                 throw new CommandNotFoundException($command);
                 break;
         }
+        
+        $this->dispatch('params-updated', $this->params);
     }
 
     protected function addValueToParam($paramKey, $value)
