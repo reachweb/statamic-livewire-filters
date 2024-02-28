@@ -100,6 +100,20 @@ class LfTextFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_sends_the_filter_mounted_event()
+    {
+        Livewire::test(LfTextFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', '')
+            ->set('selected', 'option1')
+            ->assertSet('selected', 'option1')
+            ->assertDispatched('filter-mounted',
+                field: 'item_options',
+                condition: 'is',
+                modifier: 'any',
+            );
+    }
+
+    /** @test */
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfTextFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])

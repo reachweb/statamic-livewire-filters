@@ -142,6 +142,21 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_sends_the_filter_mounted_event()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->set('selected', ['option1'])
+            ->assertSet('selected', ['option1'])
+            ->assertDispatched('filter-mounted',
+                field: 'item_options',
+                condition: 'is',
+                modifier: 'any',
+        );
+            
+    }
+
+    /** @test */
     public function it_does_not_accept_a_value_not_in_the_options_array()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
