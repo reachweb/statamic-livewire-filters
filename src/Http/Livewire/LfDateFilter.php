@@ -45,6 +45,8 @@ class LfDateFilter extends Component
     #[On('preset-params')]
     public function setPresetSort($params)
     {
+        $this->dispatchFilterMounted();
+
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = $params[$this->getParamKey()];
         }
