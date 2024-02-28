@@ -9,7 +9,7 @@ use Livewire\Component;
 
 class LfCheckboxFilter extends Component
 {
-    use Traits\IsLivewireFilter;
+    use Traits\IsLivewireFilter, Traits\HandleEntriesCount;;
 
     public $view = 'lf-checkbox';
 
