@@ -31,8 +31,6 @@ class LfCheckboxFilter extends Component
 
     public function updatedSelected()
     {
-        $this->dispatchFilterMounted();
-
         if (config('statamic-livewire-filters.validate_filter_values')) {
             $this->validate();
         }
@@ -82,8 +80,6 @@ class LfCheckboxFilter extends Component
     #[On('preset-params')]
     public function setPresetSort($params)
     {
-        $this->dispatchFilterMounted();
-
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = explode('|', $params[$this->getParamKey()]);
             $this->previousSelected = $this->selected;

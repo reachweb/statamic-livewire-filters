@@ -67,16 +67,6 @@ trait IsLivewireFilter
             ->to(LivewireCollection::class);
     }
 
-    public function dispatchFilterMounted()
-    {
-        $this->dispatch('filter-mounted',
-            field: $this->field,
-            condition: $this->condition,
-            modifier: $this->modifier,
-        )
-            ->to(LivewireCollection::class);
-    }
-
     protected function getParamKey()
     {
         if ($this->condition === 'taxonomy') {

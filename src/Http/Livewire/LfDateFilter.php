@@ -16,8 +16,6 @@ class LfDateFilter extends Component
 
     public function updatedSelected()
     {
-        $this->dispatchFilterMounted();
-
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
@@ -45,8 +43,6 @@ class LfDateFilter extends Component
     #[On('preset-params')]
     public function setPresetSort($params)
     {
-        $this->dispatchFilterMounted();
-
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = $params[$this->getParamKey()];
         }

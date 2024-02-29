@@ -102,20 +102,6 @@ class LfDateFilterTest extends TestCase
     }
 
     /** @test */
-    public function it_sends_the_filter_mounted_event()
-    {
-        Livewire::test(LfDateFilter::class, ['field' => 'item_from', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is_after'])
-            ->assertSet('selected', '')
-            ->set('selected', '2024-03-01')
-            ->assertSet('selected', '2024-03-01')
-            ->assertDispatched('filter-mounted',
-                field: 'item_from',
-                condition: 'is_after',
-                modifier: 'any',
-            );
-    }
-
-    /** @test */
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfDateFilter::class, ['field' => 'item_from', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])

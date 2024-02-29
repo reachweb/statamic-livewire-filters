@@ -29,8 +29,6 @@ class LfRadioFilter extends Component
 
     public function updatedSelected()
     {
-        $this->dispatchFilterMounted();
-
         if (config('statamic-livewire-filters.validate_filter_values')) {
             $this->validate();
         }
@@ -61,8 +59,6 @@ class LfRadioFilter extends Component
     #[On('preset-params')]
     public function setPresetSort($params)
     {
-        $this->dispatchFilterMounted();
-
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = $params[$this->getParamKey()];
         }

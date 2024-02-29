@@ -13,6 +13,7 @@ trait HandleParams
         $this->extractCollectionKeys($paramsCollection);
         $this->extractView($paramsCollection);
         $this->extractPagination($paramsCollection);
+        $this->extractAllowedFilters($paramsCollection);
 
         $this->params = $paramsCollection->all();
         $this->handlePresetParams();
@@ -40,6 +41,13 @@ trait HandleParams
     {
         if ($paramsCollection->has('paginate')) {
             $this->paginate = $paramsCollection->pull('paginate');
+        }
+    }
+
+    protected function extractAllowedFilters($paramsCollection)
+    {
+        if ($paramsCollection->has('allowed_filters')) {
+            $this->allowedFilters = collect(explode('|', $paramsCollection->pull('allowed_filters')));
         }
     }
 

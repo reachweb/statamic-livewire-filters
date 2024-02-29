@@ -177,7 +177,35 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     /** @test */
-    public function check_that_filtering_works_when_filter_is_mounted()
+    public function it_gets_a_list_of_allowed_filters_by_the_parameter()
+    {
+        $params = [
+            'from' => 'music',
+            'allowed_filters' => 'sizes:is|taxonomy:colors:any|query_scope:multiselect|multiselect:brand',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('allowedFilters', function ($collection) {
+                $this->assertInstanceOf(Collection::class, $collection);
+                $this->assertEquals(['sizes:is', 'taxonomy:colors:any', 'query_scope:multiselect', 'multiselect:brand'], $collection->all());
+
+                return true;
+            });
+    }
+
+    /** @test */
+    public function allowed_filters_is_false_if_not_set()
+    {
+        $params = [
+            'from' => 'music',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('allowedFilters', false);
+    }
+
+    /** @test */
+    public function check_that_filter_works_if_allowed_filters_not_set()
     {
         $params = [
             'from' => 'clothes',
@@ -185,11 +213,6 @@ class LivewireCollectionComponentTest extends TestCase
 
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
             ->assertSet('collections', 'clothes')
-            ->dispatch('filter-mounted',
-                field: 'colors',
-                condition: 'taxonomy',
-                modifier: 'any',
-            )
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
@@ -197,18 +220,16 @@ class LivewireCollectionComponentTest extends TestCase
                 command: 'add',
                 modifier: 'any',
             )
-            ->assertSet('params', [
-                'taxonomy:colors:any' => 'red',
-            ])
-            ->assertSee('Red Shirt')
+            ->assertDontSee('Yellow Shirt')
             ->assertDontSee('Black Shirt');
     }
 
     /** @test */
-    public function check_that_filter_gets_ignored_if_not_registered()
+    public function check_that_filter_gets_ignored_if_not_in_allowed_filters()
     {
         $params = [
             'from' => 'clothes',
+            'allowed_filters' => 'random_field:is',
         ];
 
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
@@ -220,36 +241,8 @@ class LivewireCollectionComponentTest extends TestCase
                 command: 'add',
                 modifier: 'any',
             )
-            ->assertSet('params', [
-                'taxonomy:colors:any' => 'red',
-            ])
             ->assertSee('Yellow Shirt')
             ->assertSee('Black Shirt');
-    }
-
-    /** @test */
-    public function check_that_filter_gets_applied_if_check_is_disabled_in_config()
-    {
-        Config::set('statamic-livewire-filters.only_allow_active_filters', false);
-
-        $params = [
-            'from' => 'clothes',
-        ];
-
-        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->assertSet('collections', 'clothes')
-            ->dispatch('filter-updated',
-                field: 'colors',
-                condition: 'taxonomy',
-                payload: 'red',
-                command: 'add',
-                modifier: 'any',
-            )
-            ->assertSet('params', [
-                'taxonomy:colors:any' => 'red',
-            ])
-            ->assertSee('Red Shirt')
-            ->assertDontSee('Yellow Shirt');
     }
 
     /** @test */
@@ -381,40 +374,8 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     /** @test */
-    public function it_gets_a_list_of_active_filters_on_the_page()
-    {
-        $params = [
-            'from' => 'music',
-        ];
-
-        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->dispatch('filter-mounted',
-                field: 'sizes',
-                condition: 'is',
-                modifier: null,
-            )
-            ->dispatch('filter-mounted',
-                field: 'colors',
-                condition: 'taxonomy',
-                modifier: 'any',
-            )
-            ->dispatch('filter-mounted',
-                field: 'brand',
-                condition: 'query_scope',
-                modifier: 'multiselect',
-            )
-            ->assertSet('filters', function ($collection) {
-                $this->assertInstanceOf(Collection::class, $collection);
-                $this->assertEquals(['sizes:is', 'taxonomy:colors:any', 'query_scope:multiselect', 'multiselect:brand'], $collection->all());
-
-                return true;
-            });
-    }
-
-    /** @test */
     public function it_does_not_dispatch_the_params_updated_event_by_default()
     {
-        //Config::set('statamic-livewire-filters.only_allow_active_filters', false);
         $params = [
             'from' => 'clothes',
         ];
@@ -439,7 +400,6 @@ class LivewireCollectionComponentTest extends TestCase
             'from' => 'clothes',
         ];
 
-        // Also add some tests to make sure it's not dispatched when it's not needed
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
             ->dispatch('filter-updated',
                 field: 'colors',
@@ -449,12 +409,6 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertDispatched('params-updated')
-            ->dispatch('filter-mounted',
-                field: 'colors',
-                condition: 'taxonomy',
-                modifier: 'any',
-            )
-            ->assertNotDispatched('params-updated')
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',

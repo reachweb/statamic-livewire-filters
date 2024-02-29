@@ -9,8 +9,8 @@ trait GenerateParams
 {
     protected function generateParams()
     {
-        $params = config('statamic-livewire-filters.only_allow_active_filters')
-            ? $this->removeParamsNotInFiltersCollection()
+        $params = ($this->allowedFilters && $this->allowedFilters->isNotEmpty())
+            ? $this->removeParamsNotInAllowedFiltersCollection()
             : $this->params;
 
         return Parameters::make(array_merge(
@@ -30,17 +30,17 @@ trait GenerateParams
         );
     }
 
-    protected function removeParamsNotInFiltersCollection()
+    protected function removeParamsNotInAllowedFiltersCollection()
     {
         return collect($this->params)->filter(function ($value, $key) {
             if ($key === 'sort') {
                 return true;
             }
             if ($key === 'query_scope') {
-                return $this->filters->contains('query_scope:'.$value);
+                return $this->allowedFilters->contains('query_scope:'.$value);
             }
 
-            return $this->filters->contains($key);
+            return $this->allowedFilters->contains($key);
         })->all();
     }
 }
