@@ -7,10 +7,11 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Statamic\Tags\Collection\Entries;
+use Statamic\Support\Traits\Hookable;
 
 class LivewireCollection extends Component
 {
-    use Traits\GenerateParams, Traits\HandleParams, WithPagination;
+    use Traits\GenerateParams, Traits\HandleParams, WithPagination, Hookable;
 
     public $params;
 
@@ -33,6 +34,8 @@ class LivewireCollection extends Component
             $this->setParameters(array_merge($params, $this->params));
         }
         $this->dispatchParamsUpdated();
+
+        $this->runHooks('init');
     }
 
     #[On('filter-updated')]
@@ -90,6 +93,9 @@ class LivewireCollection extends Component
     public function entries()
     {
         $entries = (new Entries($this->generateParams()))->get();
+
+        $entries = $this->runHooks('livewire-fetched-entries', $entries);
+
         if ($this->paginate) {
             return $this->withPagination('entries', $entries);
         }
