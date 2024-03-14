@@ -43,7 +43,7 @@
         "livewire/livewire": "^3.3",
         "laravel/framework": "^10.0",
         "illuminate/support": "^10.0",
-        "statamic/cms": "4.*",
+        "statamic/cms": "^4.50.0",
         "jonassiewertsen/statamic-livewire": "^3.0"
     },
     "config": {
