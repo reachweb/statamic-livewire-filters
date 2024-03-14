@@ -6,12 +6,12 @@ use Jonassiewertsen\Livewire\WithPagination;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Statamic\Tags\Collection\Entries;
 use Statamic\Support\Traits\Hookable;
+use Statamic\Tags\Collection\Entries;
 
 class LivewireCollection extends Component
 {
-    use Traits\GenerateParams, Traits\HandleParams, WithPagination, Hookable;
+    use Hookable, Traits\GenerateParams, Traits\HandleParams, WithPagination;
 
     public $params;
 
