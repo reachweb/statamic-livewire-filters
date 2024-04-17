@@ -2,7 +2,6 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
-use Jonassiewertsen\Livewire\WithPagination;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -11,7 +10,7 @@ use Statamic\Tags\Collection\Entries;
 
 class LivewireCollection extends Component
 {
-    use Hookable, Traits\GenerateParams, Traits\HandleParams, WithPagination;
+    use Hookable, Traits\GenerateParams, Traits\HandleParams, Traits\WithPagination;
 
     public $params;
 
