@@ -13,11 +13,13 @@ trait HandleFieldOptions
             $terms->push($this->getTaxonomyTerms($taxonomy)->all());
         });
 
-        $collapsedTerms = $terms->collapse();
-        $field->setConfig([
-            'options' => $collapsedTerms->all(),
-            'counts' => $collapsedTerms->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
-        ]);
+        $field->setConfig(array_merge(
+            $field->config(),
+            [
+                'options' => $terms->collapse()->all(),
+                'counts' => $terms->collapse()->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
+            ]
+        ));
 
         return $field;
     }
@@ -45,10 +47,13 @@ trait HandleFieldOptions
     protected function addCustomOptionsToConfig($field)
     {
         $options = collect($this->options);
-        $field->setConfig([
-            'options' => $this->options,
-            'counts' => $options->keys()->flatMap(fn ($option) => [$option => null])->all(),
-        ]);
+        $field->setConfig(array_merge(
+            $field->config(),
+            [
+                'options' => $this->options,
+                'counts' => $options->keys()->flatMap(fn ($option) => [$option => null])->all(),
+            ]
+        ));
 
         return $field;
     }

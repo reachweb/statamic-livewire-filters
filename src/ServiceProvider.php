@@ -9,6 +9,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Statamic\Providers\AddonServiceProvider;
@@ -37,6 +38,7 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-text-filter', LfTextFilter::class);
         Livewire::component('lf-select-filter', LfSelectFilter::class);
         Livewire::component('lf-sort', LfSort::class);
+        Livewire::component('lf-tags', LfTags::class);
 
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'statamic-livewire-filters');
 

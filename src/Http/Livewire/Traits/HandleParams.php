@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Reach\StatamicLivewireFilters\Exceptions\CommandNotFoundException;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 
 trait HandleParams
 {
@@ -185,5 +186,8 @@ trait HandleParams
         if (config('statamic-livewire-filters.enable_filter_values_count')) {
             $this->dispatch('params-updated', $this->params);
         }
+
+        // Dispatching to the tags component
+        $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
     }
 }

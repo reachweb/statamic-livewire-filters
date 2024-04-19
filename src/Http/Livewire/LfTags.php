@@ -2,23 +2,33 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
-use Statamic\Fields\Blueprint;
 
 class LfTags extends Component
 {
-    use Traits\HandleStatamicQueries;
+    use Traits\HandleFieldOptions, Traits\HandleStatamicQueries;
 
     public $view = 'tags';
 
+    #[Locked]
     public string $blueprint;
 
-    protected Blueprint $statamicBlueprint;
-
+    #[Locked]
     public string $collection;
 
+    #[Locked]
     public $fields;
+
+    #[Locked]
+    public $params;
+
+    #[Locked]
+    public $tags;
 
     public function mount($blueprint, $fields)
     {
@@ -26,30 +36,115 @@ class LfTags extends Component
         $this->collection = $collection;
         $this->blueprint = $blueprint;
         $this->fields = explode('|', $fields);
-        $this->statamicBlueprint = $this->getStatamicBlueprint();
+        $this->tags = collect();
     }
 
     #[Computed(persist: true)]
-    public function optionLabels(): array
+    public function statamicFields(): Collection
     {
-        $optionLabels = [];
-        ray($this->fields);
+        $statamicFields = collect();
+        $statamicBlueprint = $this->getStatamicBlueprint();
         foreach ($this->fields as $field_handle) {
-            $field = $this->getStatamicField($this->statamicBlueprint, $field_handle);
+            $field = $this->getStatamicField($statamicBlueprint, $field_handle);
             if ($field->type() == 'terms') {
-                $terms = collect();
-                collect($field->config()['taxonomies'])->each(function ($taxonomy) use ($terms) {
-                    $terms->push(($this->getTaxonomyTerms($taxonomy)->all()));
-                });
-                $optionLabels[$field_handle] =  $terms->collapse()->all();
-            } else {
-                if (array_key_exists('options', $field->toArray())) {
-                    $optionLabels[$field_handle] = $field->get('options');
-                }
-            }        
+                $field = $this->addTermsToOptions($field);
+            }
+            $statamicFields->put($field_handle, $field->toArray());
         }
-        
-        return $optionLabels;
+
+        return $statamicFields;
+    }
+
+    #[On('tags-updated')]
+    public function updateTags($params)
+    {
+        $this->params = collect($params);
+
+        $this->tags = collect();
+
+        // Order is critical here
+        $this->parseQueryScopes();
+        $this->parseTaxonomyTerms();
+        $this->parseConditions();
+    }
+
+    public function parseConditions()
+    {
+        $this->params->each(function ($value, $key) {
+            [$field, $condition] = explode(':', $key);
+            $values = collect(explode('|', $value));
+            $values->each(function ($value) use ($field, $condition) {
+                $this->addFieldOptionToTags($field, $value, $condition);
+            });
+        });
+    }
+
+    public function parseTaxonomyTerms()
+    {
+        $taxonomies = $this->params->filter(fn ($value, $key) => Str::startsWith($key, 'taxonomy:'));
+
+        if ($taxonomies->isEmpty()) {
+            return;
+        }
+
+        $this->handleTaxonomyTermConditions($taxonomies);
+    }
+
+    public function parseQueryScopes()
+    {
+        $scopes = $this->params->filter(fn ($value, $key) => Str::startsWith($key, 'query_scope'));
+
+        if ($scopes->isEmpty()) {
+            return;
+        }
+
+        $scopes->each(function ($scopeName) {
+            $scopeValues = $this->params->filter(fn ($value, $key) => Str::startsWith($key, $scopeName));
+            $this->handleQueryScopeCondition($scopeValues);
+        });
+
+        $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, 'query_scope'));
+
+    }
+
+    public function handleTaxonomyTermConditions($taxonomies)
+    {
+        $taxonomies->each(function ($values, $key) {
+            [$taxonomy, $field, $condition] = explode(':', $key);
+            $terms = collect(explode('|', $values));
+            $terms->each(function ($value) use ($field, $condition) {
+                $this->addFieldOptionToTags($field, $value, $condition);
+            });
+        });
+
+        $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, 'taxonomy:'));
+    }
+
+    public function handleQueryScopeCondition($values)
+    {
+        $values->each(function ($values, $key) {
+            [$scope, $field] = explode(':', $key);
+            $selectedValues = collect(explode('|', $values));
+            $selectedValues->each(function ($value) use ($field) {
+                $this->addFieldOptionToTags($field, $value);
+            });
+            $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, $scope));
+        });
+    }
+
+    public function addFieldOptionToTags($field, $value, $condition = null)
+    {
+        $fieldLabel = $this->statamicFields->get($field)['display'] ?? $field;
+        $optionLabel = $this->statamicFields->get($field)['options'][$value] ?? $value;
+        $tag = [
+            'field' => $fieldLabel,
+            'value' => $optionLabel,
+        ];
+        if ($condition) {
+            $tag['condition'] = $condition;
+        }
+
+        $this->tags->push($tag);
     }
 
     public function render()
