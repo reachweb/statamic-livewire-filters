@@ -6,7 +6,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 
 trait IsLivewireFilter
 {
-    use HandleStatamicQueries;
+    use HandleFieldOptions, HandleStatamicQueries;
 
     public $field;
 
@@ -34,32 +34,15 @@ trait IsLivewireFilter
     {
         $blueprint = $this->getStatamicBlueprint();
         $field = $this->getStatamicField($blueprint);
+
         if ($field->type() == 'terms') {
-            $terms = collect();
-            collect($field->config()['taxonomies'])->each(function ($taxonomy) use ($terms) {
-                $terms->push(($this->getTaxonomyTerms($taxonomy)->all()));
-            });
-            $field->setConfig(array_merge(
-                $field->config(),
-                [
-                    'options' => $terms->collapse()->all(),
-                    'counts' => $terms->collapse()->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
-                ]
-            ));
-        } elseif (array_key_exists('options', $field->toArray())) {
-            $field->setConfig(array_merge(
-                $field->config(),
-                ['counts' => collect($field->get('options'))->keys()->flatMap(fn ($option) => [$option => null])->all()]
-            ));
-        } elseif (isset($this->options) && is_array($this->options)) {
-            $field->setConfig(array_merge(
-                $field->config(),
-                [
-                    'options' => $this->options,
-                    'counts' => collect($this->options)->keys()->flatMap(fn ($option) => [$option => null])->all(),
-                ]
-            ));
+            $field = $this->addTermsToOptions($field);
+        } elseif ($this->hasOptionsInConfig($field)) {
+            $field = $this->addCountsArrayToConfig($field);
+        } elseif ($this->hasCustomOptions()) {
+            $field = $this->addCustomOptionsToConfig($field);
         }
+
         $this->statamic_field = $field->toArray();
     }
 
