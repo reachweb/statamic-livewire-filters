@@ -22,8 +22,6 @@ class LfRadioFilter extends Component
     {
         if (isset($this->statamic_field['options'])) {
             return $this->statamic_field['options'];
-        } elseif (is_array($this->options)) {
-            return $this->options;
         }
     }
 
