@@ -240,6 +240,32 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSeeHtml('<span class="text-gray-500 ml-1">(2)</span>');
     }
 
+    /** @test */
+    public function it_clears_the_value_when_clear_is_called()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', ['option1', 'option2'])
+            ->call('clear')
+            ->assertSet('selected', []);
+    }
+
+    /** @test */
+    public function it_clears_the_value_when_clear_option_is_fired()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', ['option1', 'option2'])
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option2',
+            ])
+            ->assertSet('selected', ['option1'])
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option1',
+            ])
+            ->assertSet('selected', []);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

@@ -156,6 +156,27 @@ class LfRadioFilterTest extends TestCase
 
     }
 
+    /** @test */
+    public function it_clears_the_value_when_clear_is_called()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', 'option1')
+            ->call('clear')
+            ->assertSet('selected', '');
+    }
+
+    /** @test */
+    public function it_clears_the_value_when_clear_option_is_fired()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', 'option1')
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option1',
+            ])
+            ->assertSet('selected', '');
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

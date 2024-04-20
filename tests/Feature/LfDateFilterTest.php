@@ -102,6 +102,27 @@ class LfDateFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_clears_the_value_when_clear_is_called()
+    {
+        Livewire::test(LfDateFilter::class, ['field' => 'item_from', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is_after'])
+            ->set('selected', '2024-03-01')
+            ->call('clear')
+            ->assertSet('selected', '');
+    }
+
+    /** @test */
+    public function it_clears_the_value_when_clear_option_is_fired()
+    {
+        Livewire::test(LfDateFilter::class, ['field' => 'item_from', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is_after'])
+            ->set('selected', '2024-03-01')
+            ->dispatch('clear-option', [
+                'field' => 'item_from',
+                'value' => '2024-03-01',
+            ])
+            ->assertSet('selected', '');
+    }
+
+    /** @test */
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfDateFilter::class, ['field' => 'item_from', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])

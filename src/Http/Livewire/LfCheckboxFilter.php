@@ -75,6 +75,17 @@ class LfCheckboxFilter extends Component
         ];
     }
 
+    #[On('clear-option')]
+    public function clearOption($tag)
+    {
+        if ($tag['field'] === $this->field) {
+            if (in_array($tag['value'], $this->selected)) {
+                $this->selected = array_diff($this->selected, [$tag['value']]);
+                $this->updatedSelected();
+            }
+        }
+    }
+
     #[On('preset-params')]
     public function setPresetSort($params)
     {

@@ -31,6 +31,14 @@ class LfTextFilter extends Component
         $this->clearFilters();
     }
 
+    #[On('clear-option')]
+    public function clearOption($tag)
+    {
+        if ($tag['field'] === $this->field) {
+            $this->clear();
+        }
+    }
+
     #[On('preset-params')]
     public function setPresetSort($params)
     {

@@ -126,7 +126,7 @@ class LfTags extends Component
             [$scope, $field] = explode(':', $key);
             $selectedValues = collect(explode('|', $values));
             $selectedValues->each(function ($value) use ($field) {
-                $this->addFieldOptionToTags($field, $value);
+                $this->addFieldOptionToTags($field, $value, 'query_scope');
             });
             $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, $scope));
         });
@@ -137,14 +137,20 @@ class LfTags extends Component
         $fieldLabel = $this->statamicFields->get($field)['display'] ?? $field;
         $optionLabel = $this->statamicFields->get($field)['options'][$value] ?? $value;
         $tag = [
-            'field' => $fieldLabel,
-            'value' => $optionLabel,
+            'field' => $field,
+            'value' => $value,
+            'fieldLabel' => $fieldLabel,
+            'optionLabel' => $optionLabel,
+            'condition' => $condition,
         ];
-        if ($condition) {
-            $tag['condition'] = $condition;
-        }
 
         $this->tags->push($tag);
+    }
+
+    public function removeOption($field, $value)
+    {
+        $tag = $this->tags->firstOrFail(fn ($item) => $item['field'] === $field && $item['value'] === $value);
+        $this->dispatch('clear-option', $tag);
     }
 
     public function render()

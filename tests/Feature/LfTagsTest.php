@@ -101,7 +101,7 @@ class LfTagsTest extends TestCase
             'option1' => 'Option 1',
             'option2' => 'Option 2',
             'option3' => 'Option 3',
-        ], $component->optionLabels['item_options']);
+        ], $component->statamicFields->get('item_options')['options']);
     }
 
     /** @test */
@@ -113,7 +113,7 @@ class LfTagsTest extends TestCase
             'red' => 'Red',
             'black' => 'Black',
             'yellow' => 'Yellow',
-        ], $component->optionLabels['colors']);
+        ], $component->statamicFields->get('colors')['options']);
     }
 
     /** @test */
@@ -123,7 +123,7 @@ class LfTagsTest extends TestCase
 
         $component = Livewire::test(LfTags::class, ['fields' => 'item_options|not-a-field', 'blueprint' => 'pages.pages']);
 
-        $this->assertNotEmpty($component->optionLabels['item_options']);
+        $this->assertNotEmpty($component->statamicFields);
     }
 
     /** @test */
@@ -133,9 +133,31 @@ class LfTagsTest extends TestCase
 
         $component = Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.not-a-blueprint']);
 
-        $this->assertNotEmpty($component->optionLabels['item_options']);
+        $this->assertNotEmpty($component->statamicFields);
     }
 
+    /** @test */
+    public function it_renders_the_tag_when_a_filter_is_updated()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['item_options:is' => 'option1'])
+            ->assertSee('Checkbox: Option 1');
+    }
+
+    /** @test */
+    public function it_dispatches_the_clear_option_event()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['item_options:is' => 'option1'])
+            ->call('removeOption', 'item_options', 'option1')
+            ->assertDispatched('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option1',
+                'fieldLabel' => 'Checkbox',
+                'optionLabel' => 'Option 1',
+                'condition' => 'is',
+            ]);
+    }
 
     protected function makeEntry($collection, $slug)
     {

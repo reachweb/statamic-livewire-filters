@@ -54,6 +54,14 @@ class LfRadioFilter extends Component
         ];
     }
 
+    #[On('clear-option')]
+    public function clearOption($tag)
+    {
+        if ($tag['field'] === $this->field) {
+            $this->clear();
+        }
+    }
+
     #[On('preset-params')]
     public function setPresetSort($params)
     {
