@@ -18,7 +18,7 @@ Ready-to-use pagination? Absolutely! Query scopes? You bet! Query string support
 
 ## Documentation & Examples
 
-You can find the documentation and **examples** here: https://slf.reach.gr/
+You can find the documentation and **examples** here: https://livewirefilters.com/
 
 ## Feature list
 
