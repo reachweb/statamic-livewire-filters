@@ -58,7 +58,7 @@ class LfTags extends Component
     #[On('tags-updated')]
     public function updateTags($params)
     {
-        $this->params = collect($params);
+        $this->params = collect($params)->reject(fn ($value, $key) => $key === 'sort');
 
         $this->tags = collect();
 
@@ -70,6 +70,7 @@ class LfTags extends Component
 
     public function parseConditions()
     {
+        
         $this->params->each(function ($value, $key) {
             [$field, $condition] = explode(':', $key);
             $values = collect(explode('|', $value));
