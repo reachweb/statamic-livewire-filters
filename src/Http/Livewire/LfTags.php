@@ -58,7 +58,9 @@ class LfTags extends Component
     #[On('tags-updated')]
     public function updateTags($params)
     {
-        $this->params = collect($params)->reject(fn ($value, $key) => $key === 'sort');
+        $this->params = collect($params)
+            ->reject(fn ($value, $key) => $key === 'sort')
+            ->reject(fn ($value, $key) => ! Str::contains($key, ':') && ! Str::startsWith($key, 'query_scope'));
 
         $this->tags = collect();
 
@@ -70,7 +72,6 @@ class LfTags extends Component
 
     public function parseConditions()
     {
-        
         $this->params->each(function ($value, $key) {
             [$field, $condition] = explode(':', $key);
             $values = collect(explode('|', $value));
@@ -135,6 +136,9 @@ class LfTags extends Component
 
     public function addFieldOptionToTags($field, $value, $condition = null)
     {
+        if ($this->isNotTaggable($field)) {
+            return;
+        }
         $fieldLabel = $this->statamicFields->get($field)['display'] ?? $field;
         $optionLabel = $this->statamicFields->get($field)['options'][$value] ?? $value;
         $tag = [
@@ -152,6 +156,11 @@ class LfTags extends Component
     {
         $tag = $this->tags->firstOrFail(fn ($item) => $item['field'] === $field && $item['value'] === $value);
         $this->dispatch('clear-option', $tag);
+    }
+
+    public function isNotTaggable($field)
+    {
+        return ! in_array($field, $this->fields);
     }
 
     public function render()

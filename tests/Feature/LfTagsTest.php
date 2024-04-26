@@ -145,6 +145,14 @@ class LfTagsTest extends TestCase
     }
 
     /** @test */
+    public function it_does_not_render_the_tag_when_a_filter_is_not_in_the_fields_array()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'some_other_option', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['item_options:is' => 'option1'])
+            ->assertDontSee('Checkbox: Option 1');
+    }
+
+    /** @test */
     public function it_dispatches_the_clear_option_event()
     {
         Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages'])
