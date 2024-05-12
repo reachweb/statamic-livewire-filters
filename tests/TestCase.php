@@ -14,14 +14,6 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     {
         parent::setUp();
 
-        $this->withoutVite();
-
-        $uses = array_flip(class_uses_recursive(static::class));
-
-        if (isset($uses[PreventSavingStacheItemsToDisk::class])) {
-            $this->preventSavingStacheItemsToDisk();
-        }
-
         // We changed the default sites setup but the tests assume defaults like the following.
         File::put(resource_path('sites.yaml'), YAML::dump([
             'en' => [
@@ -31,6 +23,14 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
                 'lang' => 'en',
             ],
         ]));
+
+        $this->withoutVite();
+
+        $uses = array_flip(class_uses_recursive(static::class));
+
+        if (isset($uses[PreventSavingStacheItemsToDisk::class])) {
+            $this->preventSavingStacheItemsToDisk();
+        }
     }
 
     public function tearDown(): void
