@@ -3,9 +3,13 @@
 namespace Reach\StatamicLivewireFilters\Tests;
 
 use Statamic\Extend\Manifest;
+use Statamic\Facades\File;
+use Statamic\Facades\YAML;
 
 abstract class TestCase extends \Orchestra\Testbench\TestCase
 {
+    protected $fakeStacheDirectory = __DIR__.'/__fixtures__/dev-null';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -17,6 +21,15 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
         if (isset($uses[PreventSavingStacheItemsToDisk::class])) {
             $this->preventSavingStacheItemsToDisk();
         }
+
+        // We changed the default sites setup but the tests assume defaults like the following.
+        File::put(resource_path('sites.yaml'), YAML::dump([
+            'en' => [
+                'name' => 'English',
+                'url' => 'http://localhost/',
+                'locale' => 'en_US',
+            ],
+        ]));
     }
 
     public function tearDown(): void
@@ -52,7 +65,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
 
         $configs = [
             'assets', 'cp', 'forms', 'routes', 'static_caching',
-            'sites', 'stache', 'system', 'users',
+            'stache', 'system', 'users',
         ];
 
         foreach ($configs as $config) {
