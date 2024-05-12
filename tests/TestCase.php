@@ -28,6 +28,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
                 'name' => 'English',
                 'url' => 'http://localhost/',
                 'locale' => 'en_US',
+                'lang' => 'en',
             ],
         ]));
     }
@@ -81,13 +82,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
                 'namespace' => 'Reach\\StatamicLivewireFilters',
             ],
         ];
-        // We changed the default sites setup but the tests assume defaults like the following.
-        $app['config']->set('statamic.sites', [
-            'default' => 'en',
-            'sites' => [
-                'en' => ['name' => 'English', 'locale' => 'en_US', 'url' => 'http://localhost/'],
-            ],
-        ]);
+
         $app['config']->set('auth.providers.users.driver', 'statamic');
         $app['config']->set('statamic.stache.watcher', false);
         $app['config']->set('statamic.users.repository', 'file');
@@ -106,6 +101,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
         $app['config']->set('statamic.stache.stores.asset-containers.directory', __DIR__.'/__fixtures__/content/assets');
         $app['config']->set('statamic.stache.stores.nav-trees.directory', __DIR__.'/__fixtures__/content/structures/navigation');
         $app['config']->set('statamic.stache.stores.collection-trees.directory', __DIR__.'/__fixtures__/content/structures/collections');
+        $app['config']->set('statamic.stache.stores.form-submissions.directory', __DIR__.'/__fixtures__/content/submissions');
 
         $app['config']->set('statamic.api.enabled', true);
         $app['config']->set('statamic.graphql.enabled', true);
