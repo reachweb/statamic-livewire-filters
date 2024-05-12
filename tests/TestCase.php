@@ -22,6 +22,8 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
             $this->preventSavingStacheItemsToDisk();
         }
 
+        dd(resource_path('sites.yaml'));
+
         // We changed the default sites setup but the tests assume defaults like the following.
         File::put(resource_path('sites.yaml'), YAML::dump([
             'en' => [

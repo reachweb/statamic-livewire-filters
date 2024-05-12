@@ -37,27 +37,27 @@ class HooksTest extends TestCase
     }
 
     /** @test */
-    // public function it_can_hook_into_livewire_fetched_entries()
-    // {
-    //     $this->withFakeViews();
+    public function it_can_hook_into_livewire_fetched_entries()
+    {
+        $this->withFakeViews();
 
-    //     $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ bands }} {{ /entries }}</div>');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ bands }} {{ /entries }}</div>');
 
-    //     LivewireCollection::hook('livewire-fetched-entries', function ($entries, $next) {
-    //         $entries->transform(function ($entry) {
-    //             return $entry->set('bands', 'I Love Rush!');
-    //         });
+        LivewireCollection::hook('livewire-fetched-entries', function ($entries, $next) {
+            $entries->transform(function ($entry) {
+                return $entry->set('bands', 'I Love Rush!');
+            });
 
-    //         return $next($entries);
-    //     });
+            return $next($entries);
+        });
 
-    //     $params = [
-    //         'from' => 'music',
-    //         'title:is' => 'I Love Guitars',
-    //     ];
+        $params = [
+            'from' => 'music',
+            'title:is' => 'I Love Guitars',
+        ];
 
-    //     Livewire::test(LivewireCollection::class, ['params' => $params])
-    //         ->assertSee('I Love Rush!');
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->assertSee('I Love Rush!');
 
-    // }
+    }
 }
