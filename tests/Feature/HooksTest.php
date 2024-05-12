@@ -14,7 +14,7 @@ class HooksTest extends TestCase
 {
     use FakesViews, PreventSavingStacheItemsToDisk;
 
-    private $music;
+    protected $music;
 
     public function setUp(): void
     {
