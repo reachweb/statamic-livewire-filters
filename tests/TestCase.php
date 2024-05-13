@@ -3,8 +3,6 @@
 namespace Reach\StatamicLivewireFilters\Tests;
 
 use Statamic\Extend\Manifest;
-use Statamic\Facades\File;
-use Statamic\Facades\YAML;
 use Statamic\Facades\Site;
 
 abstract class TestCase extends \Orchestra\Testbench\TestCase
@@ -23,16 +21,14 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
             $this->preventSavingStacheItemsToDisk();
         }
 
-        File::put(resource_path('sites.yaml'), YAML::dump($sites = [
+        Site::setSites([
             'en' => [
                 'name' => 'English',
                 'url' => 'http://localhost/',
                 'locale' => 'en_US',
                 'lang' => 'en',
             ],
-        ]));
-        
-        Site::setSites($sites);
+        ]);
     }
 
     public function tearDown(): void
