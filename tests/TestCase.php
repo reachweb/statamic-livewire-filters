@@ -75,7 +75,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     protected function getEnvironmentSetUp($app)
     {
         $app->make(Manifest::class)->manifest = [
-            'reach/statatmic-livewire-filters' => [
+            'reach/statamic-livewire-filters' => [
                 'id' => 'reach/statamic-livewire-filters',
                 'namespace' => 'Reach\\StatamicLivewireFilters',
             ],

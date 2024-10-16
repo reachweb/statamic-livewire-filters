@@ -32,7 +32,7 @@
         "statamic": {
             "name": "Statamic Livewire Filters",
             "description": "Livewire powered live filtering for Statamic collections"
-        },
+        }, 
         "laravel": {
             "providers": [
                 "Reach\\StatamicLivewireFilters\\ServiceProvider"
@@ -40,10 +40,10 @@
         }
     },
     "require": {
-        "livewire/livewire": "^3.4",
+        "livewire/livewire": "^3.5",
         "laravel/framework": "^10.0|^11.0",
         "illuminate/support": "^10.0|^11.0",
-        "statamic/cms": "^4.50.0|^5.0.0",
+        "statamic/cms": "^5.0.0",
         "jonassiewertsen/statamic-livewire": "^3.0"
     },
     "config": {
