@@ -41,9 +41,18 @@ class LfSelectFilterTest extends TestCase
                                 'display' => 'Select',
                                 'listable' => 'hidden',
                                 'options' => [
-                                    'option1' => 'Option 1',
-                                    'option2' => 'Option 2',
-                                    'option3' => 'Option 3',
+                                    [
+                                        'key' => 'option1',
+                                        'value' => 'Option 1',
+                                    ],
+                                    [
+                                        'key' => 'option2',
+                                        'value' => 'Option 2',
+                                    ],
+                                    [
+                                        'key' => 'option3',
+                                        'value' => 'Option 3',
+                                    ],
                                 ],
                             ],
                         ],

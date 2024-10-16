@@ -29,6 +29,20 @@ trait HandleFieldOptions
         return array_key_exists('options', $field->toArray());
     }
 
+    protected function transformOptionsArray($field)
+    {
+        $options = collect($field->get('options'));
+        if (! is_array($options->first()) || ! array_key_exists('key', $options->first())) {
+            return $field;
+        }
+        $field->setConfig(array_merge(
+            $field->config(),
+            ['options' => $options->flatMap(fn ($option) => [$option['key'] => $option['value']])->all()]
+        ));
+
+        return $field;
+    }
+
     protected function addCountsArrayToConfig($field)
     {
         $field->setConfig(array_merge(
