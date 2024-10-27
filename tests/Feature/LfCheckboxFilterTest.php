@@ -275,6 +275,134 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', []);
     }
 
+    /** @test */
+    public function it_can_reorder_term_filter_values_by_slug()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'slug:asc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['black', 'red', 'yellow'];
+            });
+    }
+
+    /** @test */
+    public function it_can_reorder_term_filter_values_by_title()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'title:desc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['yellow', 'red', 'black'];
+            });
+    }
+
+    /** @test */
+    public function it_can_reorder_checkboxes_filter_values_by_key()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'key:desc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['option3', 'option2', 'option1'];
+            });
+    }
+
+    /** @test */
+    public function it_can_reorder_checkboxes_filter_values_by_value()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'label:desc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['option3', 'option2', 'option1'];
+            });
+    }
+
+    /** @test */
+    public function it_throws_an_exception_for_wrong_sort_parameter()
+    {
+        $this->expectExceptionMessage('Cannot sort field [item_options] by [slug]');
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'slug:desc']);
+    }
+
+    /** @test */
+    public function it_throws_an_exception_for_wrong_sort_parameter_terms()
+    {
+        $this->expectExceptionMessage('Cannot sort field [colors] by [key]');
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'key:desc']);
+    }
+
+    /** @test */
+    public function it_can_reorder_term_filter_values_by_custom_field()
+    {
+        Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'order',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Order',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ])->setHandle('brand')->setNamespace('taxonomies.brand')->save();
+
+        Facades\Taxonomy::make('brand')->save();
+        Facades\Term::make()->taxonomy('brand')->inDefaultLocale()->slug('nike')->data(['title' => 'Nike', 'order' => '3'])->save();
+        Facades\Term::make()->taxonomy('brand')->inDefaultLocale()->slug('adidas')->data(['title' => 'Adidas', 'order' => '1'])->save();
+        Facades\Term::make()->taxonomy('brand')->inDefaultLocale()->slug('reebok')->data(['title' => 'Reebok', 'order' => '2'])->save();
+
+        // add to clothers blueprint
+        $clothesBlueprint = $this->blueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+
+                            'handle' => 'colors',
+                            'field' => [
+                                'type' => 'terms',
+                                'taxonomies' => [
+                                    'colors',
+                                ],
+                            ],
+                        ],
+                        [
+
+                            'handle' => 'brand',
+                            'field' => [
+                                'type' => 'terms',
+                                'taxonomies' => [
+                                    'brand',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
+
+        // By default they are sorted by creation date
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['nike', 'adidas', 'reebok'];
+            });
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'order:asc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['adidas', 'reebok', 'nike'];
+            });
+
+        $this->expectExceptionMessage('Cannot find field [something] in the taxonomy [brand]');
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'something:asc']);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
