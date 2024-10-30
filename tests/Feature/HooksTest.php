@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -36,7 +37,7 @@ class HooksTest extends TestCase
         $this->makeEntry($this->music, 'c')->set('title', 'I Hate Flutes')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_can_hook_into_livewire_fetched_entries()
     {
         $this->withFakeViews();

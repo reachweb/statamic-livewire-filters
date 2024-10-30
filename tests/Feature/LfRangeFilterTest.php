@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -53,7 +54,7 @@ class LfRangeFilterTest extends TestCase
         $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
     {
         Livewire::test(LfRangeFilter::class, [
@@ -69,7 +70,7 @@ class LfRangeFilterTest extends TestCase
             ->assertSee('4');
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
@@ -84,7 +85,7 @@ class LfRangeFilterTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_blueprint_not_found_exception_if_the_blueprint_doesnt_exist()
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
@@ -100,7 +101,7 @@ class LfRangeFilterTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_changes_the_value_of_selected_property_when_slider_changes()
     {
         Livewire::test(LfRangeFilter::class, [
@@ -123,7 +124,7 @@ class LfRangeFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfRangeFilter::class, [

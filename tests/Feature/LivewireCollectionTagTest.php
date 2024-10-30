@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -68,7 +69,8 @@ class LivewireCollectionTagTest extends TestCase
         Facades\Collection::make('clothes')->routes('clothes/{slug}')->taxonomies(['colors'])->save();
     }
 
-    public function test_if_it_throws_an_exception_for_no_collection()
+    #[Test]
+    public function if_it_throws_an_exception_for_no_collection()
     {
         $this->expectException(\Reach\StatamicLivewireFilters\Exceptions\NoCollectionException::class);
         $this->expectExceptionMessage('You need to specifiy a collection for the livewire-collection tag.');
@@ -77,7 +79,8 @@ class LivewireCollectionTagTest extends TestCase
         $this->collectionTag->index();
     }
 
-    public function test_it_throws_an_exception_for_an_invalid_collection()
+    #[Test]
+    public function it_throws_an_exception_for_an_invalid_collection()
     {
         $this->makePosts();
 
@@ -89,7 +92,8 @@ class LivewireCollectionTagTest extends TestCase
         $this->collectionTag->index();
     }
 
-    public function test_it_gets_entries_from_a_single_collection()
+    #[Test]
+    public function it_gets_entries_from_a_single_collection()
     {
         $this->makePosts();
 
@@ -97,7 +101,8 @@ class LivewireCollectionTagTest extends TestCase
         $this->assertStringContainsString('I Love Guitars', $this->collectionTag->index());
     }
 
-    public function test_it_gets_entries_from_multiple_collections()
+    #[Test]
+    public function it_gets_entries_from_multiple_collections()
     {
         $this->makePosts();
 
@@ -106,7 +111,8 @@ class LivewireCollectionTagTest extends TestCase
         $this->assertStringContainsString('I Love Drawing', $this->collectionTag->index());
     }
 
-    public function test_it_sets_term_param_for_taxonony_route()
+    #[Test]
+    public function it_sets_term_param_for_taxonony_route()
     {
         Config::set('statamic-livewire-filters.enable_term_routes', true);
 
@@ -125,7 +131,8 @@ class LivewireCollectionTagTest extends TestCase
         $response->assertSee('taxonomy:colors:any', false);
     }
 
-    public function test_it_does_not_set_term_param_for_taxonony_route()
+    #[Test]
+    public function it_does_not_set_term_param_for_taxonony_route()
     {
         Config::set('statamic-livewire-filters.enable_term_routes', false);
 

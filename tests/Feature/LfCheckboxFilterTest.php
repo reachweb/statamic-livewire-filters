@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -102,7 +103,7 @@ class LfCheckboxFilterTest extends TestCase
         $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -111,7 +112,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSee('Option 3');
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
@@ -119,7 +120,7 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'not-a-field', 'blueprint' => 'pages.pages', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_blueprint_not_found_exception_if_the_blueprint_doesnt_exist()
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
@@ -127,7 +128,7 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.not-a-blueprint', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_changes_the_value_of_selected_property_when_an_option_is_set_and_sends_an_event()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -150,7 +151,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_accept_a_value_not_in_the_options_array()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -160,7 +161,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertNotDispatched('filter-updated');
     }
 
-    /** @test */
+    #[Test]
     public function it_can_turn_off_validation_of_values_in_the_config()
     {
         Config::set('statamic-livewire-filters.validate_filter_values', false);
@@ -177,7 +178,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_shows_taxonomy_terms_and_submits_the_right_events()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
@@ -202,7 +203,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_accept_an_invalid_taxonomy_value()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
@@ -210,7 +211,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertHasErrors('selected');
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -219,7 +220,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['option1']);
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset_for_a_taxonomy_with_modifier()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'modifier' => 'any'])
@@ -228,7 +229,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['red']);
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset_for_a_query_scope()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'query_scope', 'modifier' => 'multiselect'])
@@ -237,7 +238,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['option1']);
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_the_count_for_each_entry()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -249,7 +250,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSeeHtml('<span class="text-gray-500 ml-1">(2)</span>');
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -258,7 +259,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', []);
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_option_is_fired()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -275,7 +276,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', []);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_term_filter_values_by_slug()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'slug:asc'])
@@ -284,7 +285,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_term_filter_values_by_title()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'title:desc'])
@@ -293,7 +294,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_checkboxes_filter_values_by_key()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'key:desc'])
@@ -302,7 +303,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_checkboxes_filter_values_by_value()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'label:desc'])
@@ -311,7 +312,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_an_exception_for_wrong_sort_parameter()
     {
         $this->expectExceptionMessage('Cannot sort field [item_options] by [slug]');
@@ -319,15 +320,39 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'slug:desc']);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_an_exception_for_wrong_sort_parameter_terms()
     {
         $this->expectExceptionMessage('Cannot sort field [colors] by [key]');
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'key:desc']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_term_filter_values_by_custom_field()
+    {
+        $this->createBrandsTaxonomy();
+
+        // By default they are sorted by creation date
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['nike', 'adidas', 'reebok'];
+            });
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'order:asc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['adidas', 'reebok', 'nike'];
+            });
+
+        $this->expectExceptionMessage('Cannot find field [something] in the taxonomy [brand]');
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'something:asc']);
+    }
+
+    protected function makeEntry($collection, $slug)
+    {
+        return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
+    }
+
+    public function createBrandsTaxonomy()
     {
         Facades\Blueprint::make()->setContents([
             'sections' => [
@@ -387,24 +412,5 @@ class LfCheckboxFilterTest extends TestCase
             ],
         ]);
         $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
-
-        // By default they are sorted by creation date
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
-            ->assertViewHas('statamic_field', function ($statamic_field) {
-                return array_keys($statamic_field['options']) === ['nike', 'adidas', 'reebok'];
-            });
-
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'order:asc'])
-            ->assertViewHas('statamic_field', function ($statamic_field) {
-                return array_keys($statamic_field['options']) === ['adidas', 'reebok', 'nike'];
-            });
-
-        $this->expectExceptionMessage('Cannot find field [something] in the taxonomy [brand]');
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'something:asc']);
-    }
-
-    protected function makeEntry($collection, $slug)
-    {
-        return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
     }
 }
