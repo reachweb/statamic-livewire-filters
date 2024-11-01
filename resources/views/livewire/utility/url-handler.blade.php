@@ -3,7 +3,6 @@
     <script>
         document.addEventListener('livewire:initialized', () => {
             Livewire.on('update-url', ({ newUrl }) => {
-                console.log('updateUrl', newUrl);
                 history.pushState(null, '', newUrl);
             });
         });
