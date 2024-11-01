@@ -9,6 +9,9 @@ trait HandleParams
 {
     public function setParameters($params)
     {
+        if ($customUrlParams = $this->handleCustomQueryStringParams()) {
+            $params = array_merge($params, $customUrlParams);
+        }
         $paramsCollection = collect($params);
 
         $this->extractCollectionKeys($paramsCollection);
@@ -18,6 +21,19 @@ trait HandleParams
 
         $this->params = $paramsCollection->all();
         $this->handlePresetParams();
+    }
+
+    protected function handleCustomQueryStringParams(): array|bool
+    {
+        if (
+            config('statamic-livewire-filters.custom_query_string') !== false &&
+            config('statamic-livewire-filters.enable_query_string') === false &&
+            request()->has('params')
+        ) {
+            return request()->get('params');
+        }
+
+        return false;
     }
 
     protected function extractCollectionKeys($paramsCollection)

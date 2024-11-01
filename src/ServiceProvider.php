@@ -12,10 +12,17 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
+use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Statamic\Providers\AddonServiceProvider;
 
 class ServiceProvider extends AddonServiceProvider
 {
+    protected $middlewareGroups = [
+        'web' => [
+            HandleFiltersQueryString::class,
+        ],
+    ];
+
     protected $tags = [
         \Reach\StatamicLivewireFilters\Tags\LivewireCollection::class,
     ];
