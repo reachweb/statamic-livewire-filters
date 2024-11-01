@@ -206,7 +206,6 @@ trait HandleParams
         $aliases = array_flip(array_merge(
             [
                 'sort' => 'sort',
-                'page' => 'page',
             ],
             config('statamic-livewire-filters.custom_query_string_aliases', [])
         ));
