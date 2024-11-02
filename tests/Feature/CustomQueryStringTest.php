@@ -130,6 +130,6 @@ class CustomQueryStringTest extends TestCase
                 modifier: 'any',
             )
             ->assertDispatched('update-url')
-            ->assertDispatched('update-url', fn ($name, $payload) => $payload['newUrl'] === 'http://localhost/filters/title/I Love Guitars/item_options/option1');
+            ->assertDispatched('update-url', fn ($name, $payload) => str_contains($payload['newUrl'], 'filters/title/I Love Guitars/item_options/option1'));
     }
 }

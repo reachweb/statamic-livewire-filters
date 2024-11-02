@@ -232,7 +232,11 @@ trait HandleParams
             ? ''
             : $prefix.'/'.$segments->implode('/');
 
-        $this->dispatch('update-url', newUrl: url($path));
+        $fullPath = $path
+            ? trim($this->currentPath, '/').'/'.trim($path, '/')
+            : $this->currentPath;
+
+        $this->dispatch('update-url', newUrl: url($fullPath));
     }
 
     protected function dispatchParamsUpdated(): void

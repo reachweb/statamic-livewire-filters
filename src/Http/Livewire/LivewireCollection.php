@@ -20,12 +20,16 @@ class LivewireCollection extends Component
     #[Locked]
     public $allowedFilters;
 
+    #[Locked]
+    public $currentPath;
+
     public $paginate;
 
     public $view = 'livewire-collection';
 
     public function mount($params)
     {
+        $this->currentPath = request()->path();
         $this->allowedFilters = false;
         if (is_null($this->params)) {
             $this->setParameters($params);
