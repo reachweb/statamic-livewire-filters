@@ -9,6 +9,9 @@ trait HandleParams
 {
     public function setParameters($params)
     {
+        if ($customUrlParams = $this->handleCustomQueryStringParams()) {
+            $params = array_merge($params, $customUrlParams);
+        }
         $paramsCollection = collect($params);
 
         $this->extractCollectionKeys($paramsCollection);
@@ -18,6 +21,19 @@ trait HandleParams
 
         $this->params = $paramsCollection->all();
         $this->handlePresetParams();
+    }
+
+    protected function handleCustomQueryStringParams(): array|bool
+    {
+        if (
+            config('statamic-livewire-filters.custom_query_string') !== false &&
+            config('statamic-livewire-filters.enable_query_string') === false &&
+            request()->has('params')
+        ) {
+            return request()->get('params');
+        }
+
+        return false;
     }
 
     protected function extractCollectionKeys($paramsCollection)
@@ -181,7 +197,45 @@ trait HandleParams
         }
     }
 
-    protected function dispatchParamsUpdated()
+    protected function updateCustomQueryStringUrl(): void
+    {
+        if (config('statamic-livewire-filters.custom_query_string') === false) {
+            return;
+        }
+
+        $aliases = array_flip(array_merge(
+            [
+                'sort' => 'sort',
+            ],
+            config('statamic-livewire-filters.custom_query_string_aliases', [])
+        ));
+
+        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+
+        // Only include params that have aliases configured
+        $segments = collect($this->params)
+            ->filter(fn ($value, $key) => isset($aliases[$key]))
+            ->map(function ($value, $key) use ($aliases) {
+                $urlKey = $aliases[$key];
+
+                // Convert pipe-separated values to comma-separated
+                $urlValue = str_contains($value, '|')
+                    ? str_replace('|', ',', $value)
+                    : $value;
+
+                return [$urlKey, $urlValue];
+            })
+            ->flatten()
+            ->values();
+
+        $path = $segments->isEmpty()
+            ? ''
+            : $prefix.'/'.$segments->implode('/');
+
+        $this->dispatch('update-url', newUrl: url($path));
+    }
+
+    protected function dispatchParamsUpdated(): void
     {
         if (config('statamic-livewire-filters.enable_filter_values_count')) {
             $this->dispatch('params-updated', $this->params);

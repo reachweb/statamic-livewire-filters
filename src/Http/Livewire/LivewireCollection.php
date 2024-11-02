@@ -64,6 +64,7 @@ class LivewireCollection extends Component
             return;
         }
         $this->params['sort'] = $sort;
+
     }
 
     protected function queryString()
@@ -94,6 +95,9 @@ class LivewireCollection extends Component
         $entries = (new Entries($this->generateParams()))->get();
 
         $entries = $this->runHooks('livewire-fetched-entries', $entries);
+
+        // Update the URL if using custom query string
+        $this->updateCustomQueryStringUrl();
 
         if ($this->paginate) {
             return $this->withPagination('entries', $entries);

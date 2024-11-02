@@ -11,17 +11,29 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfUrlHandler;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
+use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Statamic\Providers\AddonServiceProvider;
 
 class ServiceProvider extends AddonServiceProvider
 {
+    protected $middlewareGroups = [
+        'web' => [
+            HandleFiltersQueryString::class,
+        ],
+    ];
+
     protected $tags = [
         \Reach\StatamicLivewireFilters\Tags\LivewireCollection::class,
     ];
 
     protected $scopes = [
         \Reach\StatamicLivewireFilters\Scopes\Multiselect::class,
+    ];
+
+    protected $commands = [
+        \Reach\StatamicLivewireFilters\Console\Commands\UpdateLivewireFilters::class,
     ];
 
     protected $publishables = [
@@ -39,6 +51,7 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-select-filter', LfSelectFilter::class);
         Livewire::component('lf-sort', LfSort::class);
         Livewire::component('lf-tags', LfTags::class);
+        Livewire::component('lf-url-handler', LfUrlHandler::class);
 
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'statamic-livewire-filters');
 
