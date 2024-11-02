@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Livewire\Attributes\On;
 use Reach\StatamicLivewireFilters\Exceptions\CommandNotFoundException;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 
@@ -197,7 +198,8 @@ trait HandleParams
         }
     }
 
-    protected function updateCustomQueryStringUrl(): void
+    #[On('preset-params')]
+    public function updateCustomQueryStringUrl(): void
     {
         if (config('statamic-livewire-filters.custom_query_string') === false) {
             return;
