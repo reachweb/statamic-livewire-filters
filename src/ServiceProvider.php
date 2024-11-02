@@ -32,6 +32,10 @@ class ServiceProvider extends AddonServiceProvider
         \Reach\StatamicLivewireFilters\Scopes\Multiselect::class,
     ];
 
+    protected $commands = [
+        \Reach\StatamicLivewireFilters\Console\Commands\UpdateLivewireFilters::class,
+    ];
+
     protected $publishables = [
         __DIR__.'/../resources/build' => 'build',
     ];
