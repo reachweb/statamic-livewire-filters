@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -25,6 +27,7 @@ class CustomQueryStringTest extends TestCase
         Config::set('statamic-livewire-filters.custom_query_string', 'filters');
         Config::set('statamic-livewire-filters.custom_query_string_aliases', [
             'item_options' => 'item_options:is',
+            'title' => 'title:contains',
         ]);
 
         $this->collection = Facades\Collection::make('pages')
@@ -108,5 +111,25 @@ class CustomQueryStringTest extends TestCase
 
         // If the parameter have loaded we should only see item 2
         $response->assertSee('I Love Drums')->assertDontSee('I Love Guitars')->assertDontSee('I Hate Flutes');
+    }
+
+    #[Test]
+    public function it_dispatched_the_update_url_event_with_the_correct_url()
+    {
+        $params = [
+            'from' => 'pages',
+            'title:contains' => 'I Love Guitars',
+        ];
+
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: 'option1',
+                command: 'add',
+                modifier: 'any',
+            )
+            ->assertDispatched('update-url')
+            ->assertDispatched('update-url', fn ($name, $payload) => $payload['newUrl'] === 'http://localhost/filters/title/I Love Guitars/item_options/option1');
     }
 }
