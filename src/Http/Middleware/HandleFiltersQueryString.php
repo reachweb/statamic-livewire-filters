@@ -86,6 +86,15 @@ class HandleFiltersQueryString
             // Convert alias to actual filter key
             $actualKey = $aliases[$key];
 
+            // Handle query_scopes
+            if (str_contains($actualKey, 'query_scope')) {
+                [$scopeString, $scopeClass, $scopeKey] = explode(':', $actualKey);
+                // Add the query scope param to the array
+                $params['query_scope'] = $scopeClass;
+                // Set the the actual parameter key
+                $actualKey = $scopeClass.':'.$scopeKey;
+            }
+
             // Handle multiple values
             $value = str_contains($value, ',')
                 ? implode('|', explode(',', $value))

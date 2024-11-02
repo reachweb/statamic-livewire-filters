@@ -203,12 +203,7 @@ trait HandleParams
             return;
         }
 
-        $aliases = array_flip(array_merge(
-            [
-                'sort' => 'sort',
-            ],
-            config('statamic-livewire-filters.custom_query_string_aliases', [])
-        ));
+        $aliases = $this->getConfigAliases();
 
         $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
 
@@ -237,6 +232,21 @@ trait HandleParams
             : $this->currentPath;
 
         $this->dispatch('update-url', newUrl: url($fullPath));
+    }
+
+    protected function getConfigAliases(): array
+    {
+        return collect(config('statamic-livewire-filters.custom_query_string_aliases', []))->transform(function ($value, $key) {
+            if (str_contains($value, 'query_scope')) {
+                [$scopeString, $scopeKey] = explode(':', $value, 2);
+
+                return $scopeKey;
+            }
+
+            return $value;
+        })->merge(['sort' => 'sort'])
+            ->flip()
+            ->all();
     }
 
     protected function dispatchParamsUpdated(): void
