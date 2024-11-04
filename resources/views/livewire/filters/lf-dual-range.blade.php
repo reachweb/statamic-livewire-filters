@@ -1,73 +1,54 @@
 <div>
     <div 
-        x-data="dualRange({
-            initialMin: @entangle('selectedMin'),
-            initialMax: @entangle('selectedMax'),
-            step: {{ $step }},
+        x-data="{
+            selectedMin: $wire.selectedMin,
+            selectedMax: $wire.selectedMax,
             min: {{ $min }},
             max: {{ $max }},
+            step: {{ $step }},
             format: '{{ $format }}',
-            minRange: {{ $minRange }}
-        })"
+            minRange: {{ $minRange }},
+            init() {
+                const slider = $refs.slider;
+                window.noUiSlider.create(slider, {
+                    start: [this.selectedMin, this.selectedMax],
+                    connect: true,
+                    step: this.step,
+                    margin: this.minRange,
+                    range: {
+                        'min': this.min,
+                        'max': this.max
+                    },
+                    format: {
+                        to: (value) => {
+                            return this.format === 'date' 
+                                ? new Date(value).getFullYear()
+                                : Math.round(value);
+                        },
+                        from: (value) => {
+                            return this.format === 'date'
+                                ? new Date(value, 0).getTime()
+                                : parseFloat(value);
+                        }
+                    }
+                });
+
+                slider.noUiSlider.on('set', (values) => {
+                    $wire.set('selectedMin', values[0]);
+                    $wire.set('selectedMax', values[1]);
+                });
+                }
+        }"
+
         class="w-full my-8"
     >
         <div class="relative">
-            <div x-ref="slider" class="w-[93%] mx-auto"></div>
+            <div wire:ignore x-ref="slider" class="w-[93%] mx-auto"></div>
             <div class="flex justify-center mt-3">
-                <span class="font-bold" x-text="min"></span>
+                <span class="font-bold" x-text="$wire.selectedMin"></span>
                 <span class="mx-2">{{ __('statamic-livewire-filters::ui.to') }}</span>
-                <span class="font-bold" x-text="max"></span>
+                <span class="font-bold" x-text="$wire.selectedMax"></span>
             </div>
         </div>
     </div>
 </div>
-
-@script
-<script>
-Alpine.data('dualRange', ({ initialMin, initialMax, step, min, max, format, minRange }) => ({
-    min: initialMin,
-    max: initialMax,
-    init() {
-        const slider = this.$refs.slider;
-
-        console.log(window);
-        
-        window.noUiSlider.create(slider, {
-            start: [this.min, this.max],
-            connect: true,
-            step: step,
-            range: {
-                'min': min,
-                'max': max
-            },
-            format: {
-                to: (value) => {
-                    return format === 'date' 
-                        ? new Date(value).getFullYear()
-                        : Math.round(value);
-                },
-                from: (value) => {
-                    return format === 'date'
-                        ? new Date(value, 0).getTime()
-                        : parseFloat(value);
-                }
-            }
-        });
-
-        slider.noUiSlider.on('update', (values) => {
-            this.min = values[0];
-            this.max = values[1];
-        });
-
-        slider.noUiSlider.on('slide', (values, handle) => {
-            if (handle === 0 && (values[1] - values[0]) < minRange) {
-                slider.noUiSlider.set([values[1] - minRange, values[1]]);
-            }
-            if (handle === 1 && (values[1] - values[0]) < minRange) {
-                slider.noUiSlider.set([values[0], values[0] + minRange]);
-            }
-        });
-    }
-}))
-</script>
-@endscript

@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -10,22 +11,28 @@ class LfDualRangeFilter extends Component
 {
     use Traits\IsLivewireFilter;
 
+    #[Locked]
     public $view = 'lf-dual-range';
 
+    #[Validate('required')]
     public $selectedMin;
 
+    #[Validate('required')]
     public $selectedMax;
 
-    #[Validate('required')]
+    #[Locked]
     public $min;
 
-    #[Validate('required')]
+    #[Locked]
     public $max;
 
+    #[Locked]
     public $step = 1;
 
+    #[Locked]
     public $minRange = 1;
 
+    #[Locked]
     public $format = 'number';
 
     public function mount($defaultMin = null, $defaultMax = null)

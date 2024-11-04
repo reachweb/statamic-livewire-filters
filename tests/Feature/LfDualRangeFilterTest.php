@@ -113,30 +113,28 @@ class LfDualRangeFilterTest extends TestCase
         ]);
     }
 
-    // #[Test]
-    // public function it_enforces_minimum_range_between_handles()
-    // {
-    //     $component = Livewire::test(LfDualRangeFilter::class, [
-    //         'field' => 'cabins',
-    //         'blueprint' => 'yachts.yachts',
-    //         'condition' => 'between',
-    //         'min' => 2,
-    //         'max' => 10,
-    //         'defaultMin' => 4,
-    //         'defaultMax' => 8,
-    //         'minRange' => 2,
-    //     ]);
+    #[Test]
+    public function it_enforces_minimum_range_between_handles()
+    {
+        $component = Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual-range',
+            'min' => 2,
+            'max' => 8,
+            'minRange' => 2,
+        ]);
 
-    //     // Try to set min too close to max
-    //     $component->set('selectedMin', 7)
-    //         ->assertSet('selectedMin', 6) // Should be forced to max - minRange
-    //         ->assertSet('selectedMax', 8);
+        // Try to set min too close to max
+        $component->set('selectedMin', 7)
+            ->assertSet('selectedMin', 6) // Should be forced to max - minRange
+            ->assertSet('selectedMax', 8);
 
-    //     // Try to set max too close to min
-    //     $component->set('selectedMax', 5)
-    //         ->assertSet('selectedMin', 4)
-    //         ->assertSet('selectedMax', 6); // Should be forced to min + minRange
-    // }
+        // Try to set max too close to min
+        $component->set('selectedMax', 7)
+            ->assertSet('selectedMin', 6)
+            ->assertSet('selectedMax', 8); // Should be forced to min + minRange
+    }
 
     #[Test]
     public function it_dispatches_filter_updated_event_when_values_change()
@@ -167,7 +165,7 @@ class LfDualRangeFilterTest extends TestCase
                 condition: 'dual-range',
                 payload: ['min' => 5, 'max' => 10],
                 command: 'replace',
-                modifier: null,
+                modifier: 'any',
             )
             ->assertSet('params', [
                 'cabins:gte' => 5,
@@ -178,7 +176,7 @@ class LfDualRangeFilterTest extends TestCase
                 condition: 'dual-range',
                 payload: ['min' => 5, 'max' => 8],
                 command: 'replace',
-                modifier: null,
+                modifier: 'any',
             )
             ->assertSet('params', [
                 'cabins:gte' => 5,

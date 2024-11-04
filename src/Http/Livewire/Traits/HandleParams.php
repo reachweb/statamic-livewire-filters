@@ -133,7 +133,7 @@ trait HandleParams
         $maxModifier = 'lte';
 
         // If the modifier is set, we need to extract the min and max modifiers
-        if ($modifier !== null) {
+        if ($modifier !== 'any') {
             [$minModifier, $maxModifier] = explode('|', $modifier);
         }
 
