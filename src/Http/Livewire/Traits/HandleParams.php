@@ -127,6 +127,36 @@ trait HandleParams
         $this->dispatchParamsUpdated();
     }
 
+    protected function handleDualRangeCondition($field, $payload, $command, $modifier)
+    {
+        $minModifier = 'gte';
+        $maxModifier = 'lte';
+
+        // If the modifier is set, we need to extract the min and max modifiers
+        if ($modifier !== null) {
+            [$minModifier, $maxModifier] = explode('|', $modifier);
+        }
+
+        $minParamKey = $field.':'.$minModifier;
+        $maxParamKey = $field.':'.$maxModifier;
+
+        switch ($command) {
+            case 'replace':
+                $this->params[$minParamKey] = $payload['min'];
+                $this->params[$maxParamKey] = $payload['max'];
+                break;
+
+            case 'clear':
+                unset($this->params[$minParamKey]);
+                unset($this->params[$maxParamKey]);
+                break;
+
+            default:
+                throw new CommandNotFoundException($command);
+        }
+        $this->dispatchParamsUpdated();
+    }
+
     protected function runCommand($command, $paramKey, $value)
     {
         switch ($command) {

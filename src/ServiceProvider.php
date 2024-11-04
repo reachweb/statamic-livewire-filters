@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
@@ -46,6 +47,7 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('livewire-collection', LivewireCollectionComponent::class);
         Livewire::component('lf-checkbox-filter', LfCheckboxFilter::class);
         Livewire::component('lf-date-filter', LfDateFilter::class);
+        Livewire::component('lf-dual-range-filter', LfDualRangeFilter::class);
         Livewire::component('lf-radio-filter', LfRadioFilter::class);
         Livewire::component('lf-range-filter', LfRangeFilter::class);
         Livewire::component('lf-text-filter', LfTextFilter::class);
