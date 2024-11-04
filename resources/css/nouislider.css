@@ -1,7 +1,8 @@
 :root {
     --noui-width: 16px;
     --noui-height: 12px;
-    --noui-handle-size: 28px;
+    --noui-handle-width: 28px;
+    --noui-handle-height: 28px;
     --noui-handle-radius: 100%;
     --noui-border-radius: 0;
     --noui-bg: #FAFAFA;
@@ -95,23 +96,23 @@
      height: var(--noui-height);
  }
  .noUi-horizontal .noUi-handle {
-     width: var(--noui-handle-size);
-     height: var(--noui-handle-size);
+     width: var(--noui-handle-width);
+     height: var(--noui-handle-height);
      border-radius: var(--noui-handle-radius);
-     right: calc(var(--noui-handle-size) / 2 * -1);
-     top: calc(((var(--noui-handle-size) - var(--noui-height)) / 2 * -1) - 1px)
+     right: calc(var(--noui-handle-width) / 2 * -1);
+     top: calc(((var(--noui-handle-height) - var(--noui-height)) / 2 * -1) - 1px)
  }
  .noUi-vertical {
      width: var(--noui-width);
  }
  .noUi-vertical .noUi-handle {
-     width: var(--noui-handle-size);
-     height: var(--noui-handle-size);
-     right: calc(((var(--noui-handle-size) - var(--noui-height)) / 2 * -1) - 1px);
-     bottom: calc(var(--noui-handle-size) / 2 * -1);
+     width: var(--noui-handle-width);
+     height: var(--noui-handle-height);
+     right: calc(((var(--noui-handle-width) - var(--noui-height)) / 2 * -1) - 1px);
+     bottom: calc(var(--noui-handle-height) / 2 * -1);
  }
  .noUi-txt-dir-rtl.noUi-horizontal .noUi-handle {
-     left: calc(var(--noui-handle-size) / 2 * -1);
+     left: calc(var(--noui-handle-width) / 2 * -1);
      right: auto;
  }
   
