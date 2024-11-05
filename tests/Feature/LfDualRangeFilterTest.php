@@ -212,9 +212,28 @@ class LfDualRangeFilterTest extends TestCase
             'max' => 10,
             'minRange' => 2,
         ])
-            ->dispatch('preset-params', ['cabins:lte' => 5, 'cabins:gte' => 8])
+            ->dispatch('preset-params', ['cabins:gte' => 5, 'cabins:lte' => 8])
+            ->assertDispatched('dual-range-preset-values', min: 5, max: 8)
             ->assertSet('selectedMin', 5)
             ->assertSet('selectedMax', 8);
+    }
+
+    #[Test]
+    public function it_loads_preset_params_with_custom_modifier_correctly()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 2,
+            'modifier' => 'gt|lt',
+        ])
+            ->dispatch('preset-params', ['cabins:gt' => 5])
+            ->assertDispatched('dual-range-preset-values', min: 5, max: 10)
+            ->assertSet('selectedMin', 5)
+            ->assertSet('selectedMax', 10);
     }
 
     protected function makeEntry($collection, $slug)

@@ -75,22 +75,20 @@ class LfDualRangeFilter extends Component
         $this->dispatchEvent();
     }
 
-    // #[On('livewire:initialized')]
-    // public function livewireComponentReady()
-    // {
-    //     $this->dispatchEvent();
-    // }
-
     #[On('preset-params')]
     public function setPresetSort($params)
     {
-        $paramKey = $this->getParamKey();
-        if (isset($params[$paramKey]['min'])) {
-            $this->selectedMin = $params[$paramKey]['min'];
+        $paramKeys = $this->getParamKey();
+        if (isset($params[$paramKeys['min']])) {
+            $this->selectedMin = $params[$paramKeys['min']];
         }
-        if (isset($params[$paramKey]['max'])) {
-            $this->selectedMax = $params[$paramKey]['max'];
+        if (isset($params[$paramKeys['max']])) {
+            $this->selectedMax = $params[$paramKeys['max']];
         }
+        $this->dispatch('dual-range-preset-values',
+            min: $this->selectedMin,
+            max: $this->selectedMax,
+        );
     }
 
     public function render()

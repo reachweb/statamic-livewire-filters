@@ -44,6 +44,11 @@
                     $wire.set('selectedMin', values[0]);
                     $wire.set('selectedMax', values[1]);
                 });
+
+                // Handle preset values
+                $wire.on('dual-range-preset-values', (presetValues) => {
+                    slider.noUiSlider.set([presetValues.min, presetValues.max], false);
+                });
             }
         }"
 
