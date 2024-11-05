@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Carbon\Carbon;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
@@ -33,7 +34,7 @@ class LfDualRangeFilter extends Component
     public $minRange = 1;
 
     #[Locked]
-    public $format = 'number';
+    public $format = 'integer';
 
     public function mount()
     {
@@ -44,12 +45,21 @@ class LfDualRangeFilter extends Component
 
     public function dispatchEvent()
     {
+        $min = $this->selectedMin;
+        $max = $this->selectedMax;
+
+        if ($this->statamic_field['type'] === 'date') {
+            $min = Carbon::createFromDate($this->selectedMin)->startOfYear()->format('Y-m-d');
+            $max = Carbon::createFromDate($this->selectedMax)->endOfYear()->format('Y-m-d');
+            $this->modifier = 'is_after|is_before';
+        }
+
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
             payload: [
-                'min' => $this->selectedMin,
-                'max' => $this->selectedMax,
+                'min' => $min,
+                'max' => $max,
             ],
             command: 'replace',
             modifier: $this->modifier,
@@ -63,6 +73,7 @@ class LfDualRangeFilter extends Component
         if ($value > $this->selectedMax - $this->minRange) {
             $this->selectedMin = $this->selectedMax - $this->minRange;
         }
+
         $this->dispatchEvent();
     }
 
@@ -72,6 +83,7 @@ class LfDualRangeFilter extends Component
         if ($value < $this->selectedMin + $this->minRange) {
             $this->selectedMax = $this->selectedMin + $this->minRange;
         }
+
         $this->dispatchEvent();
     }
 

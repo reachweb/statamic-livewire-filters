@@ -46,7 +46,7 @@ class LfDualRangeFilterTest extends TestCase
                         [
                             'handle' => 'year',
                             'field' => [
-                                'type' => 'text',
+                                'type' => 'date',
                                 'display' => 'Year',
                                 'listable' => 'hidden',
                             ],
@@ -57,9 +57,9 @@ class LfDualRangeFilterTest extends TestCase
         ]);
         $this->blueprint->setHandle('yachts')->setNamespace('collections.'.$this->collection->handle())->save();
 
-        $this->makeEntry($this->collection, 'yacht-a')->set('title', 'Luxury Yacht A')->set('cabins', 4)->set('year', 2020)->save();
-        $this->makeEntry($this->collection, 'yacht-b')->set('title', 'Luxury Yacht B')->set('cabins', 6)->set('year', 2022)->save();
-        $this->makeEntry($this->collection, 'yacht-c')->set('title', 'Luxury Yacht C')->set('cabins', 8)->set('year', 2024)->save();
+        $this->makeEntry($this->collection, 'yacht-a')->set('title', 'Luxury Yacht A')->set('cabins', 4)->set('year', '2020-05-22')->save();
+        $this->makeEntry($this->collection, 'yacht-b')->set('title', 'Luxury Yacht B')->set('cabins', 6)->set('year', '2022-02-02')->save();
+        $this->makeEntry($this->collection, 'yacht-c')->set('title', 'Luxury Yacht C')->set('cabins', 8)->set('year', '2024-12-30')->save();
     }
 
     #[Test]
@@ -192,6 +192,44 @@ class LfDualRangeFilterTest extends TestCase
             ->assertSet('params', [
                 'cabins:gt' => 5,
                 'cabins:lt' => 10,
+            ]);
+    }
+
+    #[Test]
+    public function it_can_handle_date_field_and_dispatch_correct_event()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2024,
+            'minRange' => 1,
+        ])
+            ->set('selectedMin', 2020)
+            ->assertDispatched('filter-updated',
+                field: 'year',
+                condition: 'dual_range',
+                payload: ['min' => '2020-01-01', 'max' => '2024-12-31'],
+                command: 'replace',
+                modifier: 'is_after|is_before',
+            );
+    }
+
+    #[Test]
+    public function collection_component_handles_date_field()
+    {
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']])
+            ->dispatch('filter-updated',
+                field: 'year',
+                condition: 'dual_range',
+                payload: ['min' => '2020-01-01', 'max' => '2024-12-31'],
+                command: 'replace',
+                modifier: 'is_after|is_before',
+            )
+            ->assertSet('params', [
+                'year:is_after' => '2020-01-01',
+                'year:is_before' => '2024-12-31',
             ]);
     }
 

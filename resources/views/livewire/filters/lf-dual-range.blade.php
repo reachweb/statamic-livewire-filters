@@ -23,13 +23,13 @@
                     },
                     format: {
                         to: (value) => {
-                            return this.format === 'date' 
-                                ? new Date(value).getFullYear()
+                            return this.format === 'float' 
+                                ? value
                                 : Math.round(value);
                         },
                         from: (value) => {
-                            return this.format === 'date'
-                                ? new Date(value, 0).getTime()
+                            return this.format === 'float'
+                                ? value
                                 : parseFloat(value);
                         }
                     }
