@@ -71,12 +71,10 @@ class LfDualRangeFilterTest extends TestCase
             'condition' => 'gte|lte',
             'min' => 2,
             'max' => 10,
-            'defaultMin' => 4,
-            'defaultMax' => 8,
             'minRange' => 2,
         ])
-            ->assertSet('selectedMin', 4)
-            ->assertSet('selectedMax', 8)
+            ->assertSet('selectedMin', 2)
+            ->assertSet('selectedMax', 10)
             ->assertSet('minRange', 2)
             ->assertSee('10');
     }
@@ -92,8 +90,6 @@ class LfDualRangeFilterTest extends TestCase
             'condition' => 'between',
             'min' => 2,
             'max' => 10,
-            'defaultMin' => 4,
-            'defaultMax' => 8,
         ]);
     }
 
@@ -108,8 +104,6 @@ class LfDualRangeFilterTest extends TestCase
             'condition' => 'between',
             'min' => 2,
             'max' => 10,
-            'defaultMin' => 4,
-            'defaultMax' => 8,
         ]);
     }
 

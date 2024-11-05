@@ -35,11 +35,11 @@ class LfDualRangeFilter extends Component
     #[Locked]
     public $format = 'number';
 
-    public function mount($defaultMin = null, $defaultMax = null)
+    public function mount()
     {
         $this->condition = 'dual_range';
-        $this->selectedMin = $defaultMin ?? $this->min;
-        $this->selectedMax = $defaultMax ?? $this->max;
+        $this->selectedMin = $this->min;
+        $this->selectedMax = $this->max;
     }
 
     public function dispatchEvent()
