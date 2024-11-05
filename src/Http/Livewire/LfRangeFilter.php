@@ -47,12 +47,6 @@ class LfRangeFilter extends Component
         $this->dispatchEvent();
     }
 
-    #[On('livewire:initialized')]
-    public function livewireComponentReady()
-    {
-        $this->dispatchEvent();
-    }
-
     #[On('preset-params')]
     public function setPresetValues($params)
     {
