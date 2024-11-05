@@ -5,4 +5,5 @@ return [
     'default' => 'Default',
     'all' => 'All',
     'value' => 'Value',
+    'to' => 'to',
 ];

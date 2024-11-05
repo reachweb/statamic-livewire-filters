@@ -69,6 +69,20 @@ trait IsLivewireFilter
             return $this->modifier.':'.$this->field;
         }
 
+        if ($this->condition === 'dual_range') {
+            $minModifier = 'gte';
+            $maxModifier = 'lte';
+
+            if ($this->modifier !== 'any') {
+                [$minModifier, $maxModifier] = explode('|', $this->modifier);
+            }
+
+            return [
+                'min' => $this->field.':'.$minModifier,
+                'max' => $this->field.':'.$maxModifier,
+            ];
+        }
+
         return $this->field.':'.$this->condition;
     }
 }

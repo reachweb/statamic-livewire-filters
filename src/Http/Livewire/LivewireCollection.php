@@ -55,6 +55,11 @@ class LivewireCollection extends Component
 
             return;
         }
+        if ($condition === 'dual_range') {
+            $this->handleDualRangeCondition($field, $payload, $command, $modifier);
+
+            return;
+        }
         $this->handleCondition($field, $condition, $payload, $command);
     }
 
