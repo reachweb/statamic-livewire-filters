@@ -37,7 +37,7 @@ class LfDualRangeFilter extends Component
 
     public function mount($defaultMin = null, $defaultMax = null)
     {
-        $this->condition = 'dual-range';
+        $this->condition = 'dual_range';
         $this->selectedMin = $defaultMin ?? $this->min;
         $this->selectedMax = $defaultMax ?? $this->max;
     }

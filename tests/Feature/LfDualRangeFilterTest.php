@@ -119,7 +119,7 @@ class LfDualRangeFilterTest extends TestCase
         $component = Livewire::test(LfDualRangeFilter::class, [
             'field' => 'cabins',
             'blueprint' => 'yachts.yachts',
-            'condition' => 'dual-range',
+            'condition' => 'dual_range',
             'min' => 2,
             'max' => 8,
             'minRange' => 2,
@@ -142,7 +142,7 @@ class LfDualRangeFilterTest extends TestCase
         Livewire::test(LfDualRangeFilter::class, [
             'field' => 'cabins',
             'blueprint' => 'yachts.yachts',
-            'condition' => 'dual-range',
+            'condition' => 'dual_range',
             'min' => 2,
             'max' => 10,
             'minRange' => 2,
@@ -150,7 +150,7 @@ class LfDualRangeFilterTest extends TestCase
             ->set('selectedMin', 5)
             ->assertDispatched('filter-updated',
                 field: 'cabins',
-                condition: 'dual-range',
+                condition: 'dual_range',
                 payload: ['min' => 5, 'max' => 10],
                 command: 'replace',
             );
@@ -162,7 +162,7 @@ class LfDualRangeFilterTest extends TestCase
         Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']])
             ->dispatch('filter-updated',
                 field: 'cabins',
-                condition: 'dual-range',
+                condition: 'dual_range',
                 payload: ['min' => 5, 'max' => 10],
                 command: 'replace',
                 modifier: 'any',
@@ -173,7 +173,7 @@ class LfDualRangeFilterTest extends TestCase
             ])
             ->dispatch('filter-updated',
                 field: 'cabins',
-                condition: 'dual-range',
+                condition: 'dual_range',
                 payload: ['min' => 5, 'max' => 8],
                 command: 'replace',
                 modifier: 'any',
@@ -190,7 +190,7 @@ class LfDualRangeFilterTest extends TestCase
         Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']])
             ->dispatch('filter-updated',
                 field: 'cabins',
-                condition: 'dual-range',
+                condition: 'dual_range',
                 payload: ['min' => 5, 'max' => 10],
                 command: 'replace',
                 modifier: 'gt|lt',
@@ -201,24 +201,21 @@ class LfDualRangeFilterTest extends TestCase
             ]);
     }
 
-    // #[Test]
-    // public function it_loads_preset_params_correctly()
-    // {
-    //     Livewire::test(LfDualRangeFilter::class, [
-    //         'field' => 'cabins',
-    //         'blueprint' => 'yachts.yachts',
-    //         'condition' => 'between',
-    //         'min' => 2,
-    //         'max' => 10,
-    //         'defaultMin' => 4,
-    //         'defaultMax' => 8,
-    //     ])
-    //         ->assertSet('selectedMin', 4)
-    //         ->assertSet('selectedMax', 8)
-    //         ->dispatch('preset-params', ['cabins:between' => ['min' => 5, 'max' => 7]])
-    //         ->assertSet('selectedMin', 5)
-    //         ->assertSet('selectedMax', 7);
-    // }
+    #[Test]
+    public function it_loads_preset_params_correctly()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 2,
+        ])
+            ->dispatch('preset-params', ['cabins:lte' => 5, 'cabins:gte' => 8])
+            ->assertSet('selectedMin', 5)
+            ->assertSet('selectedMax', 8);
+    }
 
     protected function makeEntry($collection, $slug)
     {
