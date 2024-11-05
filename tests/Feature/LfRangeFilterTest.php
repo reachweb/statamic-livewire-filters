@@ -54,7 +54,7 @@ class LfRangeFilterTest extends TestCase
     }
 
     /** @test */
-    public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
+    public function it_renders_the_component()
     {
         Livewire::test(LfRangeFilter::class, [
             'field' => 'max_items',
@@ -62,10 +62,8 @@ class LfRangeFilterTest extends TestCase
             'condition' => 'gte',
             'min' => 1,
             'max' => 4,
-            'default' => 2,
         ])
             ->assertSee('1')
-            ->assertSee('2')
             ->assertSee('4');
     }
 
@@ -80,7 +78,6 @@ class LfRangeFilterTest extends TestCase
             'condition' => 'gte',
             'min' => 1,
             'max' => 4,
-            'default' => 2,
         ]);
     }
 
@@ -95,8 +92,6 @@ class LfRangeFilterTest extends TestCase
             'condition' => 'gte',
             'min' => 1,
             'max' => 4,
-            'default' => 2,
-
         ]);
     }
 
@@ -110,7 +105,6 @@ class LfRangeFilterTest extends TestCase
             'min' => 1,
             'max' => 4,
             'default' => 2,
-
         ])
             ->assertSet('selected', 2)
             ->set('selected', 3)

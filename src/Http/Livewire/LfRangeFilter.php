@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -13,17 +14,20 @@ class LfRangeFilter extends Component
 
     public $selected;
 
+    #[Locked]
     public $min;
 
+    #[Locked]
     public $max;
 
+    #[Locked]
     public $default;
 
     public $step = 1;
 
-    public function mount($default)
+    public function mount($default = null)
     {
-        $this->selected = $default;
+        $this->selected = $default ?? $this->min;
     }
 
     public function dispatchEvent()
