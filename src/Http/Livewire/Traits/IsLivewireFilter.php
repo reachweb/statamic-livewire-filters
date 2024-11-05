@@ -73,6 +73,11 @@ trait IsLivewireFilter
             $minModifier = 'gte';
             $maxModifier = 'lte';
 
+            if ($this->statamic_field['type'] === 'date') {
+                $minModifier = 'is_after';
+                $maxModifier = 'is_before';
+            }
+
             if ($this->modifier !== 'any') {
                 [$minModifier, $maxModifier] = explode('|', $this->modifier);
             }
