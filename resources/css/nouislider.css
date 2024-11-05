@@ -120,7 +120,6 @@
  .noUi-target {
      background: var(--noui-bg);
      border-radius: var(--noui-border-radius);
-     border: 1px solid var(--noui-border);
      box-shadow: inset 0 1px 1px var(--noui-shadow-light), 0 3px 6px -5px var(--noui-shadow-dark);
  }
  
