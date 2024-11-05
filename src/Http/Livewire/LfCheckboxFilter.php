@@ -87,7 +87,7 @@ class LfCheckboxFilter extends Component
     }
 
     #[On('preset-params')]
-    public function setPresetSort($params)
+    public function setPresetValues($params)
     {
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = explode('|', $params[$this->getParamKey()]);

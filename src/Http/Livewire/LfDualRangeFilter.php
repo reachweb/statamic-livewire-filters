@@ -88,7 +88,7 @@ class LfDualRangeFilter extends Component
     }
 
     #[On('preset-params')]
-    public function setPresetSort($params)
+    public function setPresetValues($params)
     {
         $paramKeys = $this->getParamKey();
         if (isset($params[$paramKeys['min']])) {

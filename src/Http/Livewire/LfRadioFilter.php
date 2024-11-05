@@ -63,7 +63,7 @@ class LfRadioFilter extends Component
     }
 
     #[On('preset-params')]
-    public function setPresetSort($params)
+    public function setPresetValues($params)
     {
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = $params[$this->getParamKey()];
