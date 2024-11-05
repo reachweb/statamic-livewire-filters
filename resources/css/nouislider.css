@@ -100,7 +100,7 @@
      height: var(--noui-handle-height);
      border-radius: var(--noui-handle-radius);
      right: calc(var(--noui-handle-width) / 2 * -1);
-     top: calc(((var(--noui-handle-height) - var(--noui-height)) / 2 * -1) - 1px)
+     top: calc((var(--noui-handle-height) - var(--noui-height)) / 2 * -1);
  }
  .noUi-vertical {
      width: var(--noui-width);
@@ -108,7 +108,7 @@
  .noUi-vertical .noUi-handle {
      width: var(--noui-handle-width);
      height: var(--noui-handle-height);
-     right: calc(((var(--noui-handle-width) - var(--noui-height)) / 2 * -1) - 1px);
+     right: calc((var(--noui-handle-width) - var(--noui-height)) / 2 * -1);
      bottom: calc(var(--noui-handle-height) / 2 * -1);
  }
  .noUi-txt-dir-rtl.noUi-horizontal .noUi-handle {
