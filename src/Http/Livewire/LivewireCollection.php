@@ -47,7 +47,6 @@ class LivewireCollection extends Component
         $this->resetPagination();
         if ($payload === '' || $payload === null || $payload === []) {
             $this->clearFilter($field, $condition, $modifier);
-            $this->dispatchParamsUpdated();
 
             return;
         }

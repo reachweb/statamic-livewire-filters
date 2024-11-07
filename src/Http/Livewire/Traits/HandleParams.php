@@ -115,12 +115,14 @@ trait HandleParams
             $queryScopeKey = 'query_scope';
             $modifierKey = $modifier.':'.$field;
             unset($this->params[$queryScopeKey], $this->params[$modifierKey]);
+            $this->dispatchParamsUpdated();
 
             return;
         }
         if ($condition === 'taxonomy') {
             $paramKey = 'taxonomy:'.$field.':'.$modifier;
             unset($this->params[$paramKey]);
+            $this->dispatchParamsUpdated();
 
             return;
         }
@@ -131,10 +133,12 @@ trait HandleParams
             $maxParamKey = $field.':'.$maxModifier;
 
             unset($this->params[$minParamKey], $this->params[$maxParamKey]);
+            $this->dispatchParamsUpdated();
 
             return;
         }
         unset($this->params[$field.':'.$condition]);
+        $this->dispatchParamsUpdated();
     }
 
     protected function toPipeSeparatedString($payload): string
