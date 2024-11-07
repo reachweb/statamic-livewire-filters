@@ -42,25 +42,31 @@ class LivewireCollection extends Component
     }
 
     #[On('filter-updated')]
-    public function filterUpdated($field, $condition, $payload, $command, $modifier)
+    public function filterUpdated($field, $condition, $payload, $modifier)
     {
         $this->resetPagination();
+        if ($payload === '' || $payload === null || $payload === []) {
+            $this->clearFilter($field, $condition, $modifier);
+            $this->dispatchParamsUpdated();
+
+            return;
+        }
         if ($condition === 'query_scope') {
-            $this->handleQueryScopeCondition($field, $payload, $command, $modifier);
+            $this->handleQueryScopeCondition($field, $payload, $modifier);
 
             return;
         }
         if ($condition === 'taxonomy') {
-            $this->handleTaxonomyCondition($field, $payload, $command, $modifier);
+            $this->handleTaxonomyCondition($field, $payload, $modifier);
 
             return;
         }
         if ($condition === 'dual_range') {
-            $this->handleDualRangeCondition($field, $payload, $command, $modifier);
+            $this->handleDualRangeCondition($field, $payload, $modifier);
 
             return;
         }
-        $this->handleCondition($field, $condition, $payload, $command);
+        $this->handleCondition($field, $condition, $payload);
     }
 
     #[On('sort-updated')]

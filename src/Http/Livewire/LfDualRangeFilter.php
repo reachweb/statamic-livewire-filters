@@ -61,7 +61,6 @@ class LfDualRangeFilter extends Component
                 'min' => $min,
                 'max' => $max,
             ],
-            command: 'replace',
             modifier: $this->modifier,
         )
             ->to(LivewireCollection::class);

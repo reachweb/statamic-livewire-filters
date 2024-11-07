@@ -19,7 +19,6 @@ class LfTextFilter extends Component
             field: $this->field,
             condition: $this->condition,
             payload: $this->selected,
-            command: 'replace',
             modifier: $this->modifier,
         )
             ->to(LivewireCollection::class);

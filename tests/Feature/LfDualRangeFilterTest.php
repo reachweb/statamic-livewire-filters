@@ -146,7 +146,6 @@ class LfDualRangeFilterTest extends TestCase
                 field: 'cabins',
                 condition: 'dual_range',
                 payload: ['min' => 5, 'max' => 10],
-                command: 'replace',
             );
     }
 
@@ -158,7 +157,6 @@ class LfDualRangeFilterTest extends TestCase
                 field: 'cabins',
                 condition: 'dual_range',
                 payload: ['min' => 5, 'max' => 10],
-                command: 'replace',
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -169,7 +167,6 @@ class LfDualRangeFilterTest extends TestCase
                 field: 'cabins',
                 condition: 'dual_range',
                 payload: ['min' => 5, 'max' => 8],
-                command: 'replace',
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -211,7 +208,6 @@ class LfDualRangeFilterTest extends TestCase
                 field: 'year',
                 condition: 'dual_range',
                 payload: ['min' => '2020-01-01', 'max' => '2024-12-31'],
-                command: 'replace',
                 modifier: 'is_after|is_before',
             );
     }
@@ -224,7 +220,6 @@ class LfDualRangeFilterTest extends TestCase
                 field: 'year',
                 condition: 'dual_range',
                 payload: ['min' => '2020-01-01', 'max' => '2024-12-31'],
-                command: 'replace',
                 modifier: 'is_after|is_before',
             )
             ->assertSet('params', [

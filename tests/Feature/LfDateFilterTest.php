@@ -89,7 +89,6 @@ class LfDateFilterTest extends TestCase
                 field: 'item_from',
                 condition: 'is_after',
                 payload: '2024-03-01',
-                command: 'replace',
             )
             ->set('selected', '2024-05-01')
             ->assertSet('selected', '2024-05-01')
@@ -97,7 +96,6 @@ class LfDateFilterTest extends TestCase
                 field: 'item_from',
                 condition: 'is_after',
                 payload: '2024-05-01',
-                command: 'replace',
             );
     }
 
