@@ -84,13 +84,14 @@ trait HandleParams
         $this->dispatchParamsUpdated();
     }
 
+    // TODO: improve Resrv detection
     protected function handleQueryScopeCondition($field, $payload, $modifier)
     {
         $queryScopeKey = 'query_scope';
         $modifierKey = $modifier.':'.$field;
 
         $this->params[$queryScopeKey] = $modifier;
-        $this->params[$modifierKey] = $this->toPipeSeparatedString($payload);
+        $this->params[$modifierKey] = $field === 'resrv_availability' ? $payload : $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
     }
