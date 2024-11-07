@@ -36,7 +36,6 @@ class LfRangeFilter extends Component
             field: $this->field,
             condition: $this->condition,
             payload: $this->selected,
-            command: 'replace',
             modifier: null,
         )
             ->to(LivewireCollection::class);

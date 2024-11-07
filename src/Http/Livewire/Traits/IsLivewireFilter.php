@@ -49,11 +49,9 @@ trait IsLivewireFilter
 
     public function clearFilters()
     {
-        $this->dispatch('filter-updated',
+        $this->dispatch('clear-filter',
             field: $this->field,
             condition: $this->condition,
-            payload: false,
-            command: 'clear',
             modifier: $this->modifier,
         )
             ->to(LivewireCollection::class);

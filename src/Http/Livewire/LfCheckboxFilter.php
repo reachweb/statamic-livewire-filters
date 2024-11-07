@@ -33,32 +33,13 @@ class LfCheckboxFilter extends Component
             $this->validate();
         }
 
-        $optionsToAdd = array_diff($this->selected, $this->previousSelected);
-        $optionsToRemove = array_diff($this->previousSelected, $this->selected);
-
-        foreach ($optionsToAdd as $option) {
-            $this->dispatch('filter-updated',
-                field: $this->field,
-                condition: $this->condition,
-                payload: $option,
-                command: 'add',
-                modifier: $this->modifier,
-            )
-                ->to(LivewireCollection::class);
-        }
-
-        foreach ($optionsToRemove as $option) {
-            $this->dispatch('filter-updated',
-                field: $this->field,
-                condition: $this->condition,
-                payload: $option,
-                command: 'remove',
-                modifier: $this->modifier,
-            )
-                ->to(LivewireCollection::class);
-        }
-
-        $this->previousSelected = $this->selected;
+        $this->dispatch('filter-updated',
+            field: $this->field,
+            condition: $this->condition,
+            payload: $this->selected,
+            modifier: $this->modifier,
+        )
+            ->to(LivewireCollection::class);
     }
 
     public function clear()

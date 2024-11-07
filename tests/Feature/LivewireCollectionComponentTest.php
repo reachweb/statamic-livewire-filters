@@ -89,7 +89,6 @@ class LivewireCollectionComponentTest extends TestCase
                 field: 'item_options',
                 condition: 'is',
                 payload: 'option1',
-                command: 'add',
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -101,7 +100,6 @@ class LivewireCollectionComponentTest extends TestCase
                 field: 'title',
                 condition: 'is',
                 payload: 'Test',
-                command: 'replace',
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -112,8 +110,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: 'option2',
-                command: 'add',
+                payload: ['option1', 'option2'],
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -124,8 +121,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: 'option1',
-                command: 'remove',
+                payload: ['option2'],
                 modifier: 'any',
             )
             ->assertDispatched('entries-updated')
@@ -147,8 +143,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
-                payload: 'red',
-                command: 'add',
+                payload: ['red'],
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -157,8 +152,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
-                payload: 'yellow',
-                command: 'add',
+                payload: ['red', 'yellow'],
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -167,8 +161,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
-                payload: 'red',
-                command: 'remove',
+                payload: ['yellow'],
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -257,8 +250,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'sizes',
                 condition: 'query_scope',
-                payload: 'xl',
-                command: 'add',
+                payload: ['xl'],
                 modifier: 'multiselect',
             )
             ->assertSet('params', [
@@ -268,8 +260,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'sizes',
                 condition: 'query_scope',
-                payload: 'l',
-                command: 'add',
+                payload: ['xl', 'l'],
                 modifier: 'multiselect',
             )
             ->assertSet('params', [
@@ -279,8 +270,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'sizes',
                 condition: 'query_scope',
-                payload: 'l',
-                command: 'remove',
+                payload: ['xl'],
                 modifier: 'multiselect',
             )
             ->assertSet('params', [
@@ -290,16 +280,14 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'sizes',
                 condition: 'query_scope',
-                payload: 'xl',
-                command: 'remove',
+                payload: [],
                 modifier: 'multiselect',
             )
             ->assertSet('params', [])
             ->dispatch('filter-updated',
                 field: 'sizes',
                 condition: 'query_scope',
-                payload: 'xl',
-                command: 'replace',
+                payload: ['xl'],
                 modifier: 'multiselect',
             )
             ->assertSet('params', [
@@ -309,22 +297,13 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'sizes',
                 condition: 'query_scope',
-                payload: 'l',
-                command: 'replace',
+                payload: ['l'],
                 modifier: 'multiselect',
             )
             ->assertSet('params', [
                 'query_scope' => 'multiselect',
                 'multiselect:sizes' => 'l',
-            ])
-            ->dispatch('filter-updated',
-                field: 'sizes',
-                condition: 'query_scope',
-                payload: '',
-                command: 'clear',
-                modifier: 'multiselect',
-            )
-            ->assertSet('params', []);
+            ]);
     }
 
     /** @test */
@@ -361,11 +340,9 @@ class LivewireCollectionComponentTest extends TestCase
                 'title:is' => 'I Love Guitars',
                 'item_options:is' => 'option1|option2',
             ])
-            ->dispatch('filter-updated',
+            ->dispatch('clear-filter',
                 field: 'item_options',
                 condition: 'is',
-                payload: false,
-                command: 'clear',
                 modifier: 'any',
             )
             ->assertSet('params', [
@@ -404,16 +381,14 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
-                payload: 'yellow',
-                command: 'add',
+                payload: ['yellow'],
                 modifier: 'any',
             )
             ->assertDispatched('params-updated')
             ->dispatch('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
-                payload: 'yellow',
-                command: 'remove',
+                payload: [],
                 modifier: 'any',
             )
             ->assertDispatched('params-updated')

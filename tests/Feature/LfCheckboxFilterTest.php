@@ -137,16 +137,14 @@ class LfCheckboxFilterTest extends TestCase
             ->assertDispatched('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: 'option1',
-                command: 'add',
+                payload: ['option1'],
             )
             ->set('selected', ['option1', 'option2'])
             ->assertSet('selected', ['option1', 'option2'])
             ->assertDispatched('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: 'option2',
-                command: 'add',
+                payload: ['option1', 'option2'],
             );
     }
 
@@ -172,8 +170,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertDispatched('filter-updated',
                 field: 'item_options',
                 condition: 'is',
-                payload: 'not-an-option',
-                command: 'add',
+                payload: ['not-an-option'],
             );
     }
 
@@ -189,16 +186,14 @@ class LfCheckboxFilterTest extends TestCase
             ->assertDispatched('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
-                payload: 'red',
-                command: 'add',
+                payload: ['red'],
             )
             ->set('selected', ['yellow'])
             ->assertSet('selected', ['yellow'])
             ->assertDispatched('filter-updated',
                 field: 'colors',
                 condition: 'taxonomy',
-                payload: 'red',
-                command: 'remove',
+                payload: ['yellow'],
             );
     }
 

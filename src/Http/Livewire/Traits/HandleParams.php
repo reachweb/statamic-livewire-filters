@@ -3,7 +3,6 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\On;
-use Reach\StatamicLivewireFilters\Exceptions\CommandNotFoundException;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 
 trait HandleParams
@@ -69,153 +68,78 @@ trait HandleParams
         }
     }
 
-    protected function handleCondition($field, $condition, $payload, $command)
+    protected function handleCondition($field, $condition, $payload)
     {
         $paramKey = $field.':'.$condition;
-        $this->runCommand($command, $paramKey, $payload);
+        $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
+
+        $this->dispatchParamsUpdated();
     }
 
-    protected function handleTaxonomyCondition($field, $payload, $command, $modifier)
+    protected function handleTaxonomyCondition($field, $payload, $modifier)
     {
         $paramKey = 'taxonomy:'.$field.':'.$modifier;
-        $this->runCommand($command, $paramKey, $payload);
+        $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
+
+        $this->dispatchParamsUpdated();
     }
 
-    protected function handleQueryScopeCondition($field, $payload, $command, $modifier)
+    protected function handleQueryScopeCondition($field, $payload, $modifier)
     {
         $queryScopeKey = 'query_scope';
         $modifierKey = $modifier.':'.$field;
 
-        switch ($command) {
-            case 'add':
-                $this->params[$queryScopeKey] = $modifier;
-                if (! isset($this->params[$modifierKey])) {
-                    $this->params[$modifierKey] = $payload;
-                } else {
-                    $payloads = collect(explode('|', $this->params[$modifierKey]));
-                    if (! $payloads->contains($payload)) {
-                        $payloads->push($payload);
-                        $this->params[$modifierKey] = $payloads->implode('|');
-                    }
-                }
-                break;
+        $this->params[$queryScopeKey] = $modifier;
+        $this->params[$modifierKey] = $this->toPipeSeparatedString($payload);
 
-            case 'remove':
-                if (isset($this->params[$modifierKey])) {
-                    $payloads = collect(explode('|', $this->params[$modifierKey]));
-                    $payloads = $payloads->reject(fn ($item) => $item === $payload);
-                    if ($payloads->isNotEmpty()) {
-                        $this->params[$modifierKey] = $payloads->implode('|');
-                    } else {
-                        unset($this->params[$modifierKey], $this->params[$queryScopeKey]);
-                    }
-                }
-                break;
-
-            case 'replace':
-                $this->params[$queryScopeKey] = $modifier;
-                $this->params[$modifierKey] = $payload;
-                break;
-
-            case 'clear':
-                unset($this->params[$queryScopeKey], $this->params[$modifierKey]);
-                break;
-
-            default:
-                throw new CommandNotFoundException($command);
-        }
         $this->dispatchParamsUpdated();
     }
 
-    protected function handleDualRangeCondition($field, $payload, $command, $modifier)
+    protected function handleDualRangeCondition($field, $payload, $modifier)
     {
-        $minModifier = 'gte';
-        $maxModifier = 'lte';
-
-        // If the modifier is set, we need to extract the min and max modifiers
-        if ($modifier !== 'any') {
-            [$minModifier, $maxModifier] = explode('|', $modifier);
-        }
+        [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
 
         $minParamKey = $field.':'.$minModifier;
         $maxParamKey = $field.':'.$maxModifier;
 
-        switch ($command) {
-            case 'replace':
-                $this->params[$minParamKey] = $payload['min'];
-                $this->params[$maxParamKey] = $payload['max'];
-                break;
-
-            case 'clear':
-                unset($this->params[$minParamKey]);
-                unset($this->params[$maxParamKey]);
-                break;
-
-            default:
-                throw new CommandNotFoundException($command);
-        }
-        $this->dispatchParamsUpdated();
-    }
-
-    protected function runCommand($command, $paramKey, $value)
-    {
-        switch ($command) {
-            case 'add':
-                $this->addValueToParam($paramKey, $value);
-                break;
-            case 'replace':
-                $this->replaceValueOfParam($paramKey, $value);
-                break;
-            case 'remove':
-                $this->removeValueFromParam($paramKey, $value);
-                break;
-            case 'clear':
-                $this->clearParam($paramKey);
-                break;
-            default:
-                throw new CommandNotFoundException($command);
-                break;
-        }
+        $this->params[$minParamKey] = $payload['min'];
+        $this->params[$maxParamKey] = $payload['max'];
 
         $this->dispatchParamsUpdated();
     }
 
-    protected function addValueToParam($paramKey, $value)
+    #[On('clear-filter')]
+    public function clearFilter($field, $condition, $modifier): void
     {
-        if (! isset($this->params[$paramKey])) {
-            $this->params[$paramKey] = $value;
-        } else {
-            $values = collect(explode('|', $this->params[$paramKey]));
-            if (! $values->contains($value)) {
-                $values->push($value);
-                $this->params[$paramKey] = $values->implode('|');
-            }
+        if ($condition === 'query_scope') {
+            $queryScopeKey = 'query_scope';
+            $modifierKey = $modifier.':'.$field;
+            unset($this->params[$queryScopeKey], $this->params[$modifierKey]);
+
+            return;
         }
-    }
+        if ($condition === 'taxonomy') {
+            $paramKey = 'taxonomy:'.$field.':'.$modifier;
+            unset($this->params[$paramKey]);
 
-    protected function replaceValueOfParam($paramKey, $value)
-    {
-        $this->params[$paramKey] = $value;
-    }
-
-    protected function clearParam($paramKey)
-    {
-        unset($this->params[$paramKey]);
-    }
-
-    protected function removeValueFromParam($paramKey, $value)
-    {
-        if (isset($this->params[$paramKey])) {
-            $values = collect(explode('|', $this->params[$paramKey]));
-
-            $values = $values->reject(fn ($item) => $item === $value);
-
-            if ($values->isNotEmpty()) {
-                $this->params[$paramKey] = $values->implode('|');
-            } else {
-                unset($this->params[$paramKey]);
-            }
+            return;
         }
+        if ($condition === 'dual_range') {
+            [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
+
+            $minParamKey = $field.':'.$minModifier;
+            $maxParamKey = $field.':'.$maxModifier;
+
+            unset($this->params[$minParamKey], $this->params[$maxParamKey]);
+
+            return;
+        }
+        unset($this->params[$field.':'.$condition]);
+    }
+
+    protected function toPipeSeparatedString($payload): string
+    {
+        return is_array($payload) ? implode('|', $payload) : $payload;
     }
 
     protected function handlePresetParams()
@@ -279,6 +203,17 @@ trait HandleParams
         })->merge(['sort' => 'sort'])
             ->flip()
             ->all();
+    }
+
+    protected function getDualRangeConditions($modifer): array
+    {
+        $modifiers = ['gte', 'lte'];
+
+        if ($modifer === 'any') {
+            return $modifiers;
+        }
+
+        return explode('|', $modifer);
     }
 
     protected function dispatchParamsUpdated(): void
