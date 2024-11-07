@@ -61,7 +61,7 @@ class LfCheckboxFilter extends Component
     {
         if ($tag['field'] === $this->field) {
             if (in_array($tag['value'], $this->selected)) {
-                $this->selected = array_diff($this->selected, [$tag['value']]);
+                $this->selected = array_values(array_diff($this->selected, [$tag['value']]));
                 $this->updatedSelected();
             }
         }
