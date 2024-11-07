@@ -104,7 +104,6 @@ class LfRadioFilterTest extends TestCase
                 field: 'item_options',
                 condition: 'is',
                 payload: 'option1',
-                command: 'replace',
             )
             ->set('selected', 'option2')
             ->assertSet('selected', 'option2')
@@ -112,7 +111,6 @@ class LfRadioFilterTest extends TestCase
                 field: 'item_options',
                 condition: 'is',
                 payload: 'option2',
-                command: 'replace',
             );
     }
 
@@ -139,7 +137,6 @@ class LfRadioFilterTest extends TestCase
                 field: 'item_options',
                 condition: 'is',
                 payload: 'not-an-option',
-                command: 'replace',
             );
     }
 

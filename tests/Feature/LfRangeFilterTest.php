@@ -113,7 +113,6 @@ class LfRangeFilterTest extends TestCase
                 field: 'max_items',
                 condition: 'gte',
                 payload: 3,
-                command: 'replace',
             );
     }
 

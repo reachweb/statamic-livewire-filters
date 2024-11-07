@@ -87,7 +87,6 @@ class LfTextFilterTest extends TestCase
                 field: 'item_options',
                 condition: 'is',
                 payload: 'option1',
-                command: 'replace',
             )
             ->set('selected', 'option2')
             ->assertSet('selected', 'option2')
@@ -95,7 +94,6 @@ class LfTextFilterTest extends TestCase
                 field: 'item_options',
                 condition: 'is',
                 payload: 'option2',
-                command: 'replace',
             );
     }
 
