@@ -358,6 +358,16 @@ class LivewireCollectionComponentTest extends TestCase
                 'query_scope' => 'multiselect',
                 'multiselect:sizes' => 'xl',
                 'multiselect:origin' => 'china',
+            ])
+            ->dispatch('filter-updated',
+                field: 'origin',
+                condition: 'query_scope',
+                payload: [],
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl',
             ]);
     }
 

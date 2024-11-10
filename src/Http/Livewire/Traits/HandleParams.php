@@ -130,8 +130,8 @@ trait HandleParams
             unset($this->params[$modifierKey]);
 
             $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
-            $existingParams = collect($this->params)->filter(function ($value, $key) use ($field) {
-                return Str::endsWith($key, ':'.$field);
+            $existingParams = collect($this->params)->filter(function ($value, $key) use ($modifier) {
+                return Str::startsWith($key, $modifier.':');
             });
 
             // If there no more fields using this scope, let's remove it
