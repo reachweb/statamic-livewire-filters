@@ -11,7 +11,7 @@ trait HandleParams
     public function setParameters($params)
     {
         if ($customUrlParams = $this->handleCustomQueryStringParams()) {
-            $params = array_merge($params, $customUrlParams);
+            $params = $this->mergeParameters($params, $customUrlParams);
         }
         $paramsCollection = collect($params);
 
@@ -173,6 +173,18 @@ trait HandleParams
         }
         unset($this->params[$field.':'.$condition]);
         $this->dispatchParamsUpdated();
+    }
+
+    protected function mergeParameters($params, $urlParams): array
+    {
+        if (isset($params['query_scope']) && isset($urlParams['query_scope'])) {
+            $urlParams['query_scope'] = collect(explode('|', $params['query_scope']))
+                ->merge(explode('|', $urlParams['query_scope']))
+                ->unique()
+                ->implode('|');
+        }
+
+        return array_merge($params, $urlParams);
     }
 
     protected function toPipeSeparatedString($payload): string
