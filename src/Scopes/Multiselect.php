@@ -16,18 +16,20 @@ class Multiselect extends Scope
      */
     public function apply($query, $values)
     {
-        $prefix = $values->get('query_scope').':';
-
-        $filters = collect($values)->filter(function ($value, $key) use ($prefix) {
-            return Str::startsWith($key, $prefix);
-        })->mapWithKeys(function ($value, $key) use ($prefix) {
-            $newKey = Str::after($key, $prefix);
+        collect($values)->filter(function ($value, $key) {
+            return Str::startsWith($key, 'multiselect:');
+        })->mapWithKeys(function ($value, $key) {
+            $newKey = Str::after($key, 'multiselect:');
 
             return [$newKey => explode('|', $value)];
-        })->all();
+        })->each(function ($values, $field) use ($query) {
+            $query->where(function ($query) use ($field, $values) {
+                foreach ($values as $value) {
+                    $query->orWhereJsonContains($field, $value);
+                }
+            });
+        });
 
-        $field = array_key_first($filters);
-
-        return $query->whereJsonContains($field, $filters[$field]);
+        return $query;
     }
 }
