@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 
@@ -90,7 +91,16 @@ trait HandleParams
         $queryScopeKey = 'query_scope';
         $modifierKey = $modifier.':'.$field;
 
-        $this->params[$queryScopeKey] = $modifier;
+        if (isset($this->params[$queryScopeKey])) {
+            $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
+            if (! $existingScopes->contains($modifier)) {
+                $existingScopes->push($modifier);
+            }
+            $this->params[$queryScopeKey] = $existingScopes->implode('|');
+        } else {
+            $this->params[$queryScopeKey] = $modifier;
+        }
+
         $this->params[$modifierKey] = $field === 'resrv_availability' ? $payload : $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -114,8 +124,31 @@ trait HandleParams
     {
         if ($condition === 'query_scope') {
             $queryScopeKey = 'query_scope';
+
+            // First unset the field's data
             $modifierKey = $modifier.':'.$field;
-            unset($this->params[$queryScopeKey], $this->params[$modifierKey]);
+            unset($this->params[$modifierKey]);
+
+            $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
+            $existingParams = collect($this->params)->filter(function ($value, $key) use ($field) {
+                return Str::endsWith($key, ':'.$field);
+            });
+
+            // If there no more fields using this scope, let's remove it
+            if ($existingParams->isEmpty()) {
+                $existingScopes = $existingScopes->filter(function ($scope) use ($modifier) {
+                    return $scope !== $modifier;
+                });
+
+                // If there are no more scopes, let's remove the whole query_scope key,
+                // otherwise, let's update the query_scope key with the remaining scopes
+                if ($existingScopes->isEmpty()) {
+                    unset($this->params[$queryScopeKey]);
+                } else {
+                    $this->params[$queryScopeKey] = $existingScopes->implode('|');
+                }
+            }
+
             $this->dispatchParamsUpdated();
 
             return;

@@ -307,6 +307,61 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     /** @test */
+    public function it_can_set_multiple_query_scope_parameters()
+    {
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('collections', 'clothes')
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: ['xl'],
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl',
+            ])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'query_scope',
+                payload: ['red', 'black'],
+                modifier: 'some_other_scope',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect|some_other_scope',
+                'multiselect:sizes' => 'xl',
+                'some_other_scope:colors' => 'red|black',
+            ])
+            ->dispatch('filter-updated',
+                field: 'origin',
+                condition: 'query_scope',
+                payload: ['china'],
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect|some_other_scope',
+                'multiselect:sizes' => 'xl',
+                'multiselect:origin' => 'china',
+                'some_other_scope:colors' => 'red|black',
+            ])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'query_scope',
+                payload: [],
+                modifier: 'some_other_scope',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl',
+                'multiselect:origin' => 'china',
+            ]);
+    }
+
+    /** @test */
     public function it_sets_collection_sort()
     {
         $params = [
