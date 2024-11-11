@@ -17,8 +17,6 @@ class LfCheckboxFilter extends Component
 
     public $selected = [];
 
-    public $previousSelected = [];
-
     #[Computed(persist: true)]
     public function filterOptions()
     {
@@ -45,7 +43,6 @@ class LfCheckboxFilter extends Component
     public function clear()
     {
         $this->selected = [];
-        $this->previousSelected = [];
         $this->clearFilters();
     }
 
@@ -72,7 +69,6 @@ class LfCheckboxFilter extends Component
     {
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = explode('|', $params[$this->getParamKey()]);
-            $this->previousSelected = $this->selected;
         }
     }
 
