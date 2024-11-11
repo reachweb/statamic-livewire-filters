@@ -100,6 +100,8 @@ class LfTags extends Component
             return;
         }
 
+        $scopes = collect(explode('|', $scopes->first()));
+
         $scopes->each(function ($scopeName) {
             $scopeValues = $this->params->filter(fn ($value, $key) => Str::startsWith($key, $scopeName));
             $this->handleQueryScopeCondition($scopeValues);
@@ -126,7 +128,12 @@ class LfTags extends Component
     {
         $values->each(function ($values, $key) {
             [$scope, $field] = explode(':', $key);
-            $selectedValues = collect(explode('|', $values));
+            if ($this->isNotTaggable($field)) {
+                $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, $scope));
+
+                return;
+            }
+            $selectedValues = is_array($values) ? collect($values)->flatten() : collect(explode('|', $values));
             $selectedValues->each(function ($value) use ($field) {
                 $this->addFieldOptionToTags($field, $value, 'query_scope');
             });
