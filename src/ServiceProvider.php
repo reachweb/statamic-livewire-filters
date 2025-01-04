@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters;
 use Illuminate\Support\Facades\Artisan;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfCount;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
@@ -39,7 +40,7 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $publishables = [
-        __DIR__.'/../resources/build' => 'build',
+        __DIR__ . '/../resources/build' => 'build',
     ];
 
     public function bootAddon()
@@ -55,19 +56,20 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-sort', LfSort::class);
         Livewire::component('lf-tags', LfTags::class);
         Livewire::component('lf-url-handler', LfUrlHandler::class);
+        Livewire::component('lf-count', LfCount::class);
 
-        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'statamic-livewire-filters');
+        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'statamic-livewire-filters');
 
-        $this->loadViewsFrom(__DIR__.'/../resources/views', 'statamic-livewire-filters');
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'statamic-livewire-filters');
 
-        $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'statamic-livewire-filters');
+        $this->mergeConfigFrom(__DIR__ . '/../config/config.php', 'statamic-livewire-filters');
 
         $this->publishes([
-            __DIR__.'/../resources/views' => resource_path('views/vendor/statamic-livewire-filters'),
+            __DIR__ . '/../resources/views' => resource_path('views/vendor/statamic-livewire-filters'),
         ], 'statamic-livewire-filters-views');
 
         $this->publishes([
-            __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
+            __DIR__ . '/../config/config.php' => config_path('statamic-livewire-filters.php'),
         ], 'statamic-livewire-filters-config');
 
         if ($this->app->runningInConsole()) {

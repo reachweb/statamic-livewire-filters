@@ -78,7 +78,6 @@ class LivewireCollection extends Component
             return;
         }
         $this->params['sort'] = $sort;
-
     }
 
     protected function queryString()
@@ -113,6 +112,11 @@ class LivewireCollection extends Component
         // Update the URL if using custom query string
         $this->updateCustomQueryStringUrl();
 
+        // Get total count before pagination to pass to the count component
+        $totalCount = $entries->total();
+
+        $this->dispatch('total-count-updated', count: $totalCount);
+
         if ($this->paginate) {
             return $this->withPagination('entries', $entries);
         }
@@ -122,7 +126,7 @@ class LivewireCollection extends Component
 
     public function render()
     {
-        return view('statamic-livewire-filters::livewire.'.$this->view)->with([
+        return view('statamic-livewire-filters::livewire.' . $this->view)->with([
             ...$this->entries(),
         ]);
     }
