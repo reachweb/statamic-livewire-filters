@@ -10,14 +10,19 @@ class LfClearAllFilters extends Component
 {
     public $view = 'clear-all-filters';
 
+    public $class;
+
     public $params;
 
     public $cleared = false;
 
     #[Computed]
-    public function hasParams()
+    public function showClearButton()
     {
-        return $this->params && collect($this->params)->except(['sort'])->isNotEmpty();
+        return config('statamic-livewire-filters.enable_clear_all_filters')
+            && $this->params
+            && collect($this->params)->except(['sort'])->isNotEmpty()
+            && !$this->cleared;
     }
 
     #[On('clear-all-params-updated')]
