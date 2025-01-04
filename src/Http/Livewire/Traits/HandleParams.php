@@ -71,7 +71,7 @@ trait HandleParams
 
     protected function handleCondition($field, $condition, $payload)
     {
-        $paramKey = $field.':'.$condition;
+        $paramKey = $field . ':' . $condition;
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -79,7 +79,7 @@ trait HandleParams
 
     protected function handleTaxonomyCondition($field, $payload, $modifier)
     {
-        $paramKey = 'taxonomy:'.$field.':'.$modifier;
+        $paramKey = 'taxonomy:' . $field . ':' . $modifier;
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -89,7 +89,7 @@ trait HandleParams
     protected function handleQueryScopeCondition($field, $payload, $modifier)
     {
         $queryScopeKey = 'query_scope';
-        $modifierKey = $modifier.':'.$field;
+        $modifierKey = $modifier . ':' . $field;
 
         if (isset($this->params[$queryScopeKey])) {
             $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
@@ -110,8 +110,8 @@ trait HandleParams
     {
         [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
 
-        $minParamKey = $field.':'.$minModifier;
-        $maxParamKey = $field.':'.$maxModifier;
+        $minParamKey = $field . ':' . $minModifier;
+        $maxParamKey = $field . ':' . $maxModifier;
 
         $this->params[$minParamKey] = $payload['min'];
         $this->params[$maxParamKey] = $payload['max'];
@@ -126,12 +126,12 @@ trait HandleParams
             $queryScopeKey = 'query_scope';
 
             // First unset the field's data
-            $modifierKey = $modifier.':'.$field;
+            $modifierKey = $modifier . ':' . $field;
             unset($this->params[$modifierKey]);
 
             $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
             $existingParams = collect($this->params)->filter(function ($value, $key) use ($modifier) {
-                return Str::startsWith($key, $modifier.':');
+                return Str::startsWith($key, $modifier . ':');
             });
 
             // If there no more fields using this scope, let's remove it
@@ -154,7 +154,7 @@ trait HandleParams
             return;
         }
         if ($condition === 'taxonomy') {
-            $paramKey = 'taxonomy:'.$field.':'.$modifier;
+            $paramKey = 'taxonomy:' . $field . ':' . $modifier;
             unset($this->params[$paramKey]);
             $this->dispatchParamsUpdated();
 
@@ -163,15 +163,15 @@ trait HandleParams
         if ($condition === 'dual_range') {
             [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
 
-            $minParamKey = $field.':'.$minModifier;
-            $maxParamKey = $field.':'.$maxModifier;
+            $minParamKey = $field . ':' . $minModifier;
+            $maxParamKey = $field . ':' . $maxModifier;
 
             unset($this->params[$minParamKey], $this->params[$maxParamKey]);
             $this->dispatchParamsUpdated();
 
             return;
         }
-        unset($this->params[$field.':'.$condition]);
+        unset($this->params[$field . ':' . $condition]);
         $this->dispatchParamsUpdated();
     }
 
@@ -215,7 +215,7 @@ trait HandleParams
 
         // Only include params that have aliases configured
         $segments = collect($this->params)
-            ->filter(fn ($value, $key) => isset($aliases[$key]))
+            ->filter(fn($value, $key) => isset($aliases[$key]))
             ->map(function ($value, $key) use ($aliases) {
                 $urlKey = $aliases[$key];
 
@@ -231,10 +231,10 @@ trait HandleParams
 
         $path = $segments->isEmpty()
             ? ''
-            : $prefix.'/'.$segments->implode('/');
+            : $prefix . '/' . $segments->implode('/');
 
         $fullPath = $path
-            ? trim($this->currentPath, '/').'/'.trim($path, '/')
+            ? trim($this->currentPath, '/') . '/' . trim($path, '/')
             : $this->currentPath;
 
         $this->dispatch('update-url', newUrl: url($fullPath));
@@ -270,6 +270,10 @@ trait HandleParams
     {
         if (config('statamic-livewire-filters.enable_filter_values_count')) {
             $this->dispatch('params-updated', $this->params);
+        }
+
+        if (config('statamic-livewire-filters.enable_clear_all_filters')) {
+            $this->dispatch('clear-all-params-updated', $this->params);
         }
 
         // Dispatching to the tags component

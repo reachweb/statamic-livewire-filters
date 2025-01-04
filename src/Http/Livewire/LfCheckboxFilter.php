@@ -31,7 +31,8 @@ class LfCheckboxFilter extends Component
             $this->validate();
         }
 
-        $this->dispatch('filter-updated',
+        $this->dispatch(
+            'filter-updated',
             field: $this->field,
             condition: $this->condition,
             payload: $this->selected,
@@ -40,6 +41,7 @@ class LfCheckboxFilter extends Component
             ->to(LivewireCollection::class);
     }
 
+    #[On('clear-all-filters')]
     public function clear()
     {
         $this->selected = [];
@@ -74,6 +76,6 @@ class LfCheckboxFilter extends Component
 
     public function render()
     {
-        return view('statamic-livewire-filters::livewire.filters.'.$this->view);
+        return view('statamic-livewire-filters::livewire.filters.' . $this->view);
     }
 }
