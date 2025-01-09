@@ -126,7 +126,7 @@ class LivewireCollection extends Component
 
     public function render()
     {
-        return view('statamic-livewire-filters::livewire.' . $this->view)->with([
+        return view('statamic-livewire-filters::livewire.'.$this->view)->with([
             ...$this->entries(),
         ]);
     }

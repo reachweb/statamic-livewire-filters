@@ -19,6 +19,6 @@ class LfCount extends Component
 
     public function render()
     {
-        return view('statamic-livewire-filters::livewire.ui.' . $this->view);
+        return view('statamic-livewire-filters::livewire.ui.'.$this->view);
     }
 }
