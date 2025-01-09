@@ -76,6 +76,6 @@ class LfCheckboxFilter extends Component
 
     public function render()
     {
-        return view('statamic-livewire-filters::livewire.filters.' . $this->view);
+        return view('statamic-livewire-filters::livewire.filters.'.$this->view);
     }
 }

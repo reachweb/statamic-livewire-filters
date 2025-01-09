@@ -22,7 +22,7 @@ class LfClearAllFilters extends Component
         return config('statamic-livewire-filters.enable_clear_all_filters')
             && $this->params
             && collect($this->params)->except(['sort'])->isNotEmpty()
-            && !$this->cleared;
+            && ! $this->cleared;
     }
 
     #[On('clear-all-params-updated')]
@@ -40,6 +40,6 @@ class LfClearAllFilters extends Component
 
     public function render()
     {
-        return view('statamic-livewire-filters::livewire.ui.' . $this->view);
+        return view('statamic-livewire-filters::livewire.ui.'.$this->view);
     }
 }
