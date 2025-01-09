@@ -272,6 +272,10 @@ trait HandleParams
             $this->dispatch('params-updated', $this->params);
         }
 
+        if (config('statamic-livewire-filters.enable_clear_all_filters')) {
+            $this->dispatch('clear-all-params-updated', $this->params);
+        }
+
         // Dispatching to the tags component
         $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
     }

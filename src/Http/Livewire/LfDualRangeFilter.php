@@ -54,7 +54,8 @@ class LfDualRangeFilter extends Component
             $this->modifier = 'is_after|is_before';
         }
 
-        $this->dispatch('filter-updated',
+        $this->dispatch(
+            'filter-updated',
             field: $this->field,
             condition: $this->condition,
             payload: [
@@ -86,6 +87,14 @@ class LfDualRangeFilter extends Component
         $this->dispatchEvent();
     }
 
+    #[On('clear-all-filters')]
+    public function clear()
+    {
+        $this->selectedMin = $this->min;
+        $this->selectedMax = $this->max;
+        $this->clearFilters();
+    }
+
     #[On('preset-params')]
     public function setPresetValues($params)
     {
@@ -96,7 +105,8 @@ class LfDualRangeFilter extends Component
         if (isset($params[$paramKeys['max']])) {
             $this->selectedMax = $params[$paramKeys['max']];
         }
-        $this->dispatch('dual-range-preset-values',
+        $this->dispatch(
+            'dual-range-preset-values',
             min: $this->selectedMin,
             max: $this->selectedMax,
         );
