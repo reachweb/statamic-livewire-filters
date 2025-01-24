@@ -2,7 +2,6 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
-use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -129,10 +128,10 @@ class LivewireCollection extends Component
         $entries = $this->entries();
 
         // Get the total count of the entries depending on the type of the collection
-        if ($entries instanceof EntryCollection) {
-            $this->entriesCount = $entries->count();
-        } elseif ($entries instanceof LengthAwarePaginator) {
-            $this->entriesCount = $entries->total();
+        if (is_array($entries) && isset($entries['pagination_total'])) {
+            $this->entriesCount = $entries['pagination_total'];
+        } else {
+            $this->entriesCount = $entries['entries'] instanceof EntryCollection ? $entries['entries']->count() : null;
         }
 
         return view('statamic-livewire-filters::livewire.'.$this->view)->with([
