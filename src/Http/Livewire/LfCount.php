@@ -11,7 +11,7 @@ class LfCount extends Component
 
     public $view = 'count';
 
-    #[On('total-count-updated')]
+    #[On('entries-updated')]
     public function updatedCount($count)
     {
         $this->count = $count;

@@ -2,9 +2,11 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Statamic\Entries\EntryCollection;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
 
@@ -16,6 +18,9 @@ class LivewireCollection extends Component
 
     #[Locked]
     public $collections;
+
+    #[Locked]
+    public $entriesCount;
 
     #[Locked]
     public $allowedFilters;
@@ -112,11 +117,6 @@ class LivewireCollection extends Component
         // Update the URL if using custom query string
         $this->updateCustomQueryStringUrl();
 
-        // Get total count before pagination to pass to the count component
-        $totalCount = $entries->total();
-
-        $this->dispatch('total-count-updated', count: $totalCount);
-
         if ($this->paginate) {
             return $this->withPagination('entries', $entries);
         }
@@ -126,13 +126,22 @@ class LivewireCollection extends Component
 
     public function render()
     {
+        $entries = $this->entries();
+
+        // Get the total count of the entries depending on the type of the collection
+        if ($entries instanceof EntryCollection) {
+            $this->entriesCount = $entries->count();
+        } elseif ($entries instanceof LengthAwarePaginator) {
+            $this->entriesCount = $entries->total();
+        }
+
         return view('statamic-livewire-filters::livewire.'.$this->view)->with([
-            ...$this->entries(),
+            ...$entries,
         ]);
     }
 
     public function rendered()
     {
-        $this->dispatch('entries-updated')->self();
+        $this->dispatch('entries-updated', count: $this->entriesCount);
     }
 }
