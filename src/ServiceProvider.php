@@ -72,6 +72,10 @@ class ServiceProvider extends AddonServiceProvider
             __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
         ], 'statamic-livewire-filters-config');
 
+        $this->publishes([
+            __DIR__.'/../resources/lang' => resource_path('lang/vendor/statamic-livewire-filters'),
+        ], 'statamic-livewire-filters-lang');
+
         if ($this->app->runningInConsole()) {
             Artisan::call('statamic-livewire-filters:update');
         }
