@@ -32,6 +32,13 @@ class LfRangeFilter extends Component
 
     public function dispatchEvent()
     {
+        // Clear the filter if we are back to default
+        if ($this->selected === ($this->default ?? $this->min)) {
+            $this->clearFilters();
+
+            return;
+        }
+
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
@@ -52,6 +59,24 @@ class LfRangeFilter extends Component
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = $params[$this->getParamKey()];
         }
+    }
+
+    public function clear(): void
+    {
+        $this->selected = $this->default ?? $this->min;
+
+        $this->clearFilters();
+    }
+
+    #[On('clear-option')]
+    public function clearOption($tag)
+    {
+        if ($tag['field'] !== $this->field) {
+            return;
+        }
+
+        $this->selected = $this->default ?? $this->min;
+        $this->dispatchEvent();
     }
 
     public function render()

@@ -117,6 +117,56 @@ class LfRangeFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_can_be_reset_using_the_clear_method()
+    {
+        Livewire::test(LfRangeFilter::class, [
+            'field' => 'max_items',
+            'blueprint' => 'pages.pages',
+            'condition' => 'gte',
+            'min' => 1,
+            'max' => 4,
+            'default' => 2,
+        ])
+            ->set('selected', 3)
+            ->assertDispatched('filter-updated',
+                field: 'max_items',
+                condition: 'gte',
+                payload: 3,
+            )
+            ->call('clear')
+            ->assertSet('selected', 2)
+            ->assertDispatched('clear-filter',
+                field: 'max_items',
+                condition: 'gte',
+            );
+    }
+
+    /** @test */
+    public function it_can_be_reset_using_the_clear_option_event()
+    {
+        Livewire::test(LfRangeFilter::class, [
+            'field' => 'max_items',
+            'blueprint' => 'pages.pages',
+            'condition' => 'gte',
+            'min' => 1,
+            'max' => 4,
+            'default' => 2,
+        ])
+            ->set('selected', 3)
+            ->assertDispatched('filter-updated',
+                field: 'max_items',
+                condition: 'gte',
+                payload: 3,
+            )
+            ->dispatch('clear-option', ['field' => 'max_items', 'value' => 3])
+            ->assertSet('selected', 2)
+            ->assertDispatched('clear-filter',
+                field: 'max_items',
+                condition: 'gte',
+            );
+    }
+
+    /** @test */
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfRangeFilter::class, [
