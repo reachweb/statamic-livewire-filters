@@ -48,6 +48,13 @@ class LfDualRangeFilter extends Component
         $min = $this->selectedMin;
         $max = $this->selectedMax;
 
+        // If we are back to the default values clear the filter
+        if ($min == $this->min && $max == $this->max) {
+            $this->clearFilters();
+
+            return;
+        }
+
         if ($this->statamic_field['type'] === 'date') {
             $min = Carbon::createFromDate($this->selectedMin)->startOfYear()->format('Y-m-d');
             $max = Carbon::createFromDate($this->selectedMax)->endOfYear()->format('Y-m-d');
@@ -84,6 +91,41 @@ class LfDualRangeFilter extends Component
         }
 
         $this->dispatchEvent();
+    }
+
+    public function clear(): void
+    {
+        $this->selectedMin = $this->min;
+        $this->selectedMax = $this->max;
+
+        $this->dispatch('dual-range-preset-values',
+            min: $this->selectedMin,
+            max: $this->selectedMax,
+        );
+
+        $this->clearFilters();
+    }
+
+    #[On('clear-option')]
+    public function clearOption($tag)
+    {
+        if ($tag['field'] !== $this->field) {
+            return;
+        }
+
+        if ($tag['value'] == $this->selectedMin) {
+            $this->selectedMin = $this->min;
+        }
+
+        if ($tag['value'] == $this->selectedMax) {
+            $this->selectedMax = $this->max;
+        }
+
+        $this->dispatchEvent();
+        $this->dispatch('dual-range-preset-values',
+            min: $this->selectedMin,
+            max: $this->selectedMax,
+        );
     }
 
     #[On('preset-params')]
