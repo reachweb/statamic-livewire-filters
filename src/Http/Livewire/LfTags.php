@@ -67,6 +67,7 @@ class LfTags extends Component
         // Order is critical here
         $this->parseQueryScopes();
         $this->parseTaxonomyTerms();
+        $this->parseRanges();
         $this->parseConditions();
     }
 
@@ -79,6 +80,28 @@ class LfTags extends Component
                 $this->addFieldOptionToTags($field, $value, $condition);
             });
         });
+    }
+
+    public function parseRanges()
+    {
+        $rangeConditions = ['gte', 'lte', 'gt', 'lt', 'is_after', 'is_before'];
+
+        $ranges = $this->params->filter(fn ($value, $key) => Str::contains($key, $rangeConditions)
+        );
+
+        if ($ranges->isEmpty()) {
+            return;
+        }
+
+        $ranges->each(function ($value, $key) {
+            [$field, $condition] = explode(':', $key);
+            collect(explode('|', $value))->each(function ($value) use ($field, $condition) {
+                $this->addFieldOptionToTags($field, $value, $condition);
+            });
+        });
+
+        $this->params = $this->params->reject(fn ($value, $key) => Str::contains($key, $rangeConditions)
+        );
     }
 
     public function parseTaxonomyTerms()
@@ -148,6 +171,7 @@ class LfTags extends Component
         }
         $fieldLabel = $this->statamicFields->get($field)['display'] ?? $field;
         $optionLabel = $this->statamicFields->get($field)['options'][$value] ?? $value;
+
         $tag = [
             'field' => $field,
             'value' => $value,
