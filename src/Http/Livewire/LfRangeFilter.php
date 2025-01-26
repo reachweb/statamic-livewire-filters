@@ -61,6 +61,7 @@ class LfRangeFilter extends Component
         }
     }
 
+    #[On('clear-all-filters')]
     public function clear(): void
     {
         $this->selected = $this->default ?? $this->min;

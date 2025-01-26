@@ -183,6 +183,19 @@ class LfRadioFilterTest extends TestCase
             ->assertSet('selected', '');
     }
 
+    /** @test */
+    public function it_clears_the_value_when_clear_all_filters_event_is_fired()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', 'option1')
+            ->dispatch('clear-all-filters')
+            ->assertSet('selected', '')
+            ->assertDispatched('clear-filter',
+                field: 'item_options',
+                condition: 'is'
+            );
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

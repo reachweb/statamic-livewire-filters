@@ -24,6 +24,7 @@ class LfTextFilter extends Component
             ->to(LivewireCollection::class);
     }
 
+    #[On('clear-all-filters')]
     public function clear()
     {
         $this->selected = '';

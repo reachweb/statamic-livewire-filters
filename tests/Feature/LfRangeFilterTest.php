@@ -167,6 +167,26 @@ class LfRangeFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_clears_the_value_when_clear_all_filters_event_is_fired()
+    {
+        Livewire::test(LfRangeFilter::class, [
+            'field' => 'max_items',
+            'blueprint' => 'pages.pages',
+            'condition' => 'gte',
+            'min' => 1,
+            'max' => 4,
+            'default' => 2,
+        ])
+            ->set('selected', 3)
+            ->dispatch('clear-all-filters')
+            ->assertSet('selected', 2)
+            ->assertDispatched('clear-filter',
+                field: 'max_items',
+                condition: 'gte'
+            );
+    }
+
+    /** @test */
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfRangeFilter::class, [
