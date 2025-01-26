@@ -4,6 +4,7 @@ return [
     // UI Elements
     'all' => 'All',
     'clear_filters' => 'Clear filter',
+    'clear_all' => 'Clear all',
     'default' => 'Default',
     'entries' => '{0} entries|{1} entry|[2,*] entries',
     'to' => 'to',
