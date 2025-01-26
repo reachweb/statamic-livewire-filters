@@ -268,6 +268,26 @@ class LfDualRangeFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_clears_the_value_when_clear_all_filters_event_is_fired()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 2,
+        ])
+            ->set('selectedMin', 5)
+            ->dispatch('clear-all-filters')
+            ->assertSet('selectedMin', 2)
+            ->assertDispatched('clear-filter',
+                field: 'cabins',
+                condition: 'dual_range'
+            );
+    }
+
+    #[Test]
     public function collection_component_handles_different_conditions_by_modifier()
     {
         Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']])

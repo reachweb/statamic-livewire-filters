@@ -271,6 +271,19 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     /** @test */
+    public function it_clears_the_value_when_clear_all_filters_event_is_fired()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', ['option1', 'option2'])
+            ->dispatch('clear-all-filters')
+            ->assertSet('selected', [])
+            ->assertDispatched('clear-filter',
+                field: 'item_options',
+                condition: 'is'
+            );
+    }
+
+    /** @test */
     public function it_can_reorder_term_filter_values_by_slug()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'slug:asc'])
