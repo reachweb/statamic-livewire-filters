@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Statamic\Entries\EntryCollection;
 use Statamic\Tags\Collection\Entries;
 
 trait HandleEntriesCount
@@ -35,5 +36,16 @@ trait HandleEntriesCount
         }
 
         return [$this->getParamKey() => $option];
+    }
+
+    protected function countAllEntries(array $entries): int
+    {
+        if (isset($entries['pagination_total'])) {
+            return (int) $entries['pagination_total'];
+        } elseif ($entries['entries'] instanceof EntryCollection) {
+            return $entries['entries']->count();
+        }
+
+        return 0;
     }
 }

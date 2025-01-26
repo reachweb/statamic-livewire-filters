@@ -5,13 +5,16 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Statamic\Entries\EntryCollection;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
 
 class LivewireCollection extends Component
 {
-    use Hookable, Traits\GenerateParams, Traits\HandleParams, Traits\WithPagination;
+    use Hookable,
+        Traits\GenerateParams,
+        Traits\HandleEntriesCount,
+        Traits\HandleParams,
+        Traits\WithPagination;
 
     public $params;
 
@@ -127,12 +130,7 @@ class LivewireCollection extends Component
     {
         $entries = $this->entries();
 
-        // Get the total count of the entries depending on the type of the collection
-        if (is_array($entries) && isset($entries['pagination_total'])) {
-            $this->entriesCount = $entries['pagination_total'];
-        } else {
-            $this->entriesCount = $entries['entries'] instanceof EntryCollection ? $entries['entries']->count() : null;
-        }
+        $this->entriesCount = $this->countAllEntries($entries);
 
         return view('statamic-livewire-filters::livewire.'.$this->view)->with([
             ...$entries,
