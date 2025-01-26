@@ -37,6 +37,13 @@ trait HandleParams
         return false;
     }
 
+    protected function getParamsCount(): int
+    {
+        return collect($this->params)->reject(function ($value, $key) {
+            return $key === 'sort' || $key === 'query_scope';
+        })->count();
+    }
+
     protected function extractCollectionKeys($paramsCollection)
     {
         $collectionKeys = ['from', 'in', 'folder', 'use', 'collection'];

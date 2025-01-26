@@ -139,6 +139,6 @@ class LivewireCollection extends Component
 
     public function rendered()
     {
-        $this->dispatch('entries-updated', count: $this->entriesCount);
+        $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->getParamsCount());
     }
 }
