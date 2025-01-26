@@ -40,7 +40,14 @@ trait HandleParams
     protected function getParamsCount(): int
     {
         return collect($this->params)->reject(function ($value, $key) {
-            return $key === 'sort' || $key === 'query_scope';
+            if ($key === 'sort' || $key === 'query_scope') {
+                return true;
+            }
+            if ($key === 'resrv_search:resrv_availability') {
+                if (isset($value['dates']) && count($value['dates']) === 0) {
+                    return true;
+                }
+            }
         })->count();
     }
 
