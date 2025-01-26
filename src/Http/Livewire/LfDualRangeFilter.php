@@ -93,6 +93,7 @@ class LfDualRangeFilter extends Component
         $this->dispatchEvent();
     }
 
+    #[On('clear-all-filters')]
     public function clear(): void
     {
         $this->selectedMin = $this->min;

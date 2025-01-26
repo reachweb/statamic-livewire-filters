@@ -33,6 +33,7 @@ class LfDateFilter extends Component
         return $fieldOptions->only(['earliest_date', 'latest_date'])->all();
     }
 
+    #[On('clear-all-filters')]
     public function clear()
     {
         $this->selected = '';

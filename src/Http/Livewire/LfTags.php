@@ -166,6 +166,11 @@ class LfTags extends Component
         $this->dispatch('clear-option', $tag);
     }
 
+    public function clearAll()
+    {
+        $this->dispatch('clear-all-filters');
+    }
+
     public function isNotTaggable($field)
     {
         return ! in_array($field, $this->fields);

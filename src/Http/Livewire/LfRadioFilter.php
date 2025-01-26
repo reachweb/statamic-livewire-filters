@@ -40,17 +40,18 @@ class LfRadioFilter extends Component
             ->to(LivewireCollection::class);
     }
 
-    public function clear()
-    {
-        $this->selected = '';
-        $this->clearFilters();
-    }
-
     public function rules()
     {
         return [
             'selected' => ['required', Rule::in(array_keys($this->filterOptions()))],
         ];
+    }
+
+    #[On('clear-all-filters')]
+    public function clear()
+    {
+        $this->selected = '';
+        $this->clearFilters();
     }
 
     #[On('clear-option')]
