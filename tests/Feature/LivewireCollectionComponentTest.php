@@ -95,6 +95,8 @@ class LivewireCollectionComponentTest extends TestCase
                 'title:is' => 'I Love Guitars',
                 'item_options:is' => 'option1',
             ])
+            ->assertSet('activeFilters', 2)
+            ->assertSet('entriesCount', 0)
             ->assertDispatched('entries-updated')
             ->dispatch('filter-updated',
                 field: 'title',

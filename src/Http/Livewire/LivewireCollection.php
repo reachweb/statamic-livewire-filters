@@ -25,6 +25,9 @@ class LivewireCollection extends Component
     public $entriesCount;
 
     #[Locked]
+    public $activeFilters;
+
+    #[Locked]
     public $allowedFilters;
 
     #[Locked]
@@ -136,6 +139,7 @@ class LivewireCollection extends Component
         $entries = $this->entries();
 
         $this->entriesCount = $this->countAllEntries($entries);
+        $this->activeFilters = $this->getParamsCount();
 
         return view('statamic-livewire-filters::livewire.'.$this->view)->with([
             ...$entries,
@@ -144,6 +148,6 @@ class LivewireCollection extends Component
 
     public function rendered()
     {
-        $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->getParamsCount());
+        $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->activeFilters);
     }
 }
