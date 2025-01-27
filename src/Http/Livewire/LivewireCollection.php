@@ -110,6 +110,11 @@ class LivewireCollection extends Component
         }
     }
 
+    public function clearAll()
+    {
+        $this->dispatch('clear-all-filters');
+    }
+
     public function entries()
     {
         $entries = (new Entries($this->generateParams()))->get();
