@@ -12,8 +12,8 @@ class LivewireCollection extends Component
 {
     use Hookable,
         Traits\GenerateParams,
-        Traits\HandleEntriesCount,
         Traits\HandleParams,
+        Traits\HandleTotalEntriesCount,
         Traits\WithPagination;
 
     public $params;
