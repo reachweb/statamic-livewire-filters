@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Livewire\Attributes\Locked;
 use Reach\StatamicLivewireFilters\Exceptions\FieldOptionsCannotFindTaxonomyField;
 use Reach\StatamicLivewireFilters\Exceptions\FieldOptionsCannotSortException;
+use Statamic\Facades\Site;
 use Statamic\Facades\Taxonomy;
 
 trait IsSortable
@@ -93,13 +94,14 @@ trait IsSortable
     protected function getTaxonomyTermsSortedBy($handle, $sortBy, $sortDirection): void
     {
         $taxonomy = Taxonomy::findByHandle($handle);
+        $site = Site::current()->handle();
 
         // Check if the field exists
         if (! $taxonomy->termBlueprint()->fields()->all()->has($sortBy)) {
             throw new FieldOptionsCannotFindTaxonomyField($sortBy, $handle);
         }
 
-        $this->statamic_field['options'] = $taxonomy->queryTerms()->orderBy($sortBy, $sortDirection)->get()->flatMap(function ($term) {
+        $this->statamic_field['options'] = $taxonomy->queryTerms()->where('site', $site)->orderBy($sortBy, $sortDirection)->get()->flatMap(function ($term) {
             return [
                 $term->slug() => $term->title(),
             ];
