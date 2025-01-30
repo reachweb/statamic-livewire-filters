@@ -94,16 +94,17 @@ trait IsSortable
     protected function getTaxonomyTermsSortedBy($handle, $sortBy, $sortDirection): void
     {
         $taxonomy = Taxonomy::findByHandle($handle);
-        $site = Site::current()->handle();
 
         // Check if the field exists
         if (! $taxonomy->termBlueprint()->fields()->all()->has($sortBy)) {
             throw new FieldOptionsCannotFindTaxonomyField($sortBy, $handle);
         }
 
+        $site = Site::current()->handle();
+
         $this->statamic_field['options'] = $taxonomy->queryTerms()->where('site', $site)->orderBy($sortBy, $sortDirection)->get()->flatMap(function ($term) {
             return [
-                $term->slug() => $term->title(),
+                $term->inDefaultLocale()->slug() => $term->title(),
             ];
         })->all();
     }

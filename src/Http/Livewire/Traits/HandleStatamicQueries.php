@@ -18,7 +18,7 @@ trait HandleStatamicQueries
 
         return $taxonomy->queryTerms()->where('site', $site)->get()->flatMap(function ($term) {
             return [
-                $term->slug() => $term->title(),
+                $term->inDefaultLocale()->slug() => $term->title(),
             ];
         });
     }
