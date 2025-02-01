@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 
 trait HandleParams
@@ -216,7 +217,7 @@ trait HandleParams
         }
     }
 
-    #[On('preset-params')]
+    #[Renderless, On('preset-params')]
     public function updateCustomQueryStringUrl(): void
     {
         if (config('statamic-livewire-filters.custom_query_string') === false) {
