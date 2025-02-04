@@ -14,7 +14,7 @@ class HandleFiltersQueryString
             return $next($request);
         }
 
-        $path = $request->path();
+        $path = request()->path() === 'livewire/update' ? url()->previous() : request()->path();
         $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
 
         $segments = explode('/', $path);

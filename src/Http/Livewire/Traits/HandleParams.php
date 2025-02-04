@@ -248,8 +248,19 @@ trait HandleParams
             ? ''
             : $prefix.'/'.$segments->implode('/');
 
+        // Trim and sanitize the current path.
+        $currentPathTrimmed = trim($this->currentPath, '/');
+
+        // If the currentPath already includes the prefix, strip it and anything after.
+        $prefixMarker = $prefix.'/';
+        $prefixPos = strpos($currentPathTrimmed, $prefixMarker);
+        if ($prefixPos !== false) {
+            // Keep only the part before the prefix marker.
+            $currentPathTrimmed = rtrim(substr($currentPathTrimmed, 0, $prefixPos), '/');
+        }
+
         $fullPath = $path
-            ? trim($this->currentPath, '/').'/'.trim($path, '/')
+            ? ($currentPathTrimmed ? $currentPathTrimmed.'/' : '').trim($path, '/')
             : $this->currentPath;
 
         $this->dispatch('update-url', newUrl: url($fullPath));
