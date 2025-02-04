@@ -33,13 +33,18 @@ class LivewireCollection extends Component
     #[Locked]
     public $currentPath;
 
+    #[Locked]
     public $paginate;
 
+    #[Locked]
     public $view = 'livewire-collection';
+
+    #[Locked]
+    public $lazyLoadView = 'lazyload-placeholder';
 
     public function mount($params)
     {
-        $this->currentPath = request()->path();
+        $this->currentPath = request()->path() === 'livewire/update' ? url()->previous() : request()->path();
         $this->allowedFilters = false;
         if (is_null($this->params)) {
             $this->setParameters($params);
@@ -144,6 +149,11 @@ class LivewireCollection extends Component
         return view('statamic-livewire-filters::livewire.'.$this->view)->with([
             ...$entries,
         ]);
+    }
+
+    public function placeholder()
+    {
+        return view('statamic-livewire-filters::livewire.ui.'.$this->lazyLoadView);
     }
 
     public function rendered()
