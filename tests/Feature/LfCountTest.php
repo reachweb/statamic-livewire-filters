@@ -62,6 +62,7 @@ class LfCountTest extends TestCase
     public function test_it_renders_the_component_and_shows_the_text()
     {
         Livewire::test(LfCount::class)
+            ->dispatch('entries-updated', 1)
             ->assertSee('entry');
     }
 
