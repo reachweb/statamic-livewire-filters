@@ -32,7 +32,23 @@ trait HandleParams
             config('statamic-livewire-filters.enable_query_string') === false &&
             request()->has('params')
         ) {
-            return request()->get('params');
+            // Get and validate params
+            $params = request()->validate([
+                'params' => 'array',
+                'params.*' => 'string|max:255',
+            ])['params'] ?? [];
+
+            return collect($params)
+                ->map(function ($value) {
+                    $value = htmlspecialchars($value);
+                    $value = strip_tags($value);
+                    $value = Str::before($value, '?');
+
+                    // Additional sanitization
+                    return preg_replace('/[<>\'";]/', '', $value);
+                })
+                ->filter()
+                ->all();
         }
 
         return false;
