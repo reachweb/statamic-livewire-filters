@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Reach\StatamicLivewireFilters\Exceptions\BlueprintNotFoundException;
 use Reach\StatamicLivewireFilters\Exceptions\FieldNotFoundException;
 use Statamic\Facades\Blueprint;
+use Statamic\Facades\Site;
 use Statamic\Facades\Taxonomy;
 
 trait HandleStatamicQueries
@@ -13,9 +14,11 @@ trait HandleStatamicQueries
     {
         $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
 
+        ray(Site::current());
+
         return $taxonomy->queryTerms()->get()->flatMap(function ($term) {
             return [
-                $term->slug() => $term->title(),
+                $term->inDefaultLocale()->slug() => $term->in(Site::current()->handle())->title(),
             ];
         });
     }
