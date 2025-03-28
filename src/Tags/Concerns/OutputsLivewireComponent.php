@@ -8,12 +8,18 @@ trait OutputsLivewireComponent
 {
     public function renderLivewireComponent($name, $params = [])
     {
-        if ($this->params->has('lazy') && $this->params['lazy'] !== false) {
-            unset($params['lazy']);
+        // Define special parameters to extract
+        $specialParams = ['lazy', 'scrollTo'];
 
-            return Livewire::mount($name, [$params, 'lazy' => true]);
-        }
+        $options = collect($specialParams)
+            ->filter(fn ($param) => $this->params->has($param))
+            ->mapWithKeys(fn ($param) => [$param => $this->params->get($param)])
+            ->all();
 
-        return Livewire::mount($name, [$params]);
+        $filteredParams = collect($params)
+            ->except($specialParams)
+            ->all();
+
+        return Livewire::mount($name, array_merge(['params' => $filteredParams], $options));
     }
 }

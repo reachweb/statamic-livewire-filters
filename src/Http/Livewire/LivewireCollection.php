@@ -44,6 +44,9 @@ class LivewireCollection extends Component
     #[Locked]
     public $lazyLoadView = 'lazyload-placeholder';
 
+    #[Locked]
+    public $scrollTo = null;
+
     public function mount($params)
     {
         $this->currentPath = request()->path() === 'livewire/update' ? url()->previous() : request()->path();
