@@ -14,8 +14,6 @@ trait HandleStatamicQueries
     {
         $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
 
-        ray(Site::current());
-
         return $taxonomy->queryTerms()->get()->flatMap(function ($term) {
             return [
                 $term->inDefaultLocale()->slug() => $term->in(Site::current()->handle())->title(),
