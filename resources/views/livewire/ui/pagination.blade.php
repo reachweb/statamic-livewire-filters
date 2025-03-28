@@ -1,11 +1,11 @@
 @php
-if (! isset($scrollTo)) {
-    $scrollTo = 'body';
+if (! isset($this->scrollTo)) {
+    $this->scrollTo = 'body';
 }
 
-$scrollIntoViewJsSnippet = ($scrollTo !== false)
+$scrollIntoViewJsSnippet = ($this->scrollTo !== false)
     ? <<<JS
-       (\$el.closest('{$scrollTo}') || document.querySelector('{$scrollTo}')).scrollIntoView({ behavior: 'smooth'})
+       (\$el.closest('{$this->scrollTo}') || document.querySelector('{$this->scrollTo}')).scrollIntoView({ behavior: 'smooth'})
     JS
     : '';
 @endphp
