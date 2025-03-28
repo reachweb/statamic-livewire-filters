@@ -11,6 +11,8 @@ class LfTextFilter extends Component
 
     public $view = 'lf-text';
 
+    public $placeholder = '';
+
     public $selected = '';
 
     public function updatedSelected()

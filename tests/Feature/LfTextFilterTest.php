@@ -140,6 +140,14 @@ class LfTextFilterTest extends TestCase
             );
     }
 
+    /** @test */
+    public function it_renders_a_placeholder()
+    {
+        Livewire::test(LfTextFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is', 'placeholder' => 'Search'])
+            ->assertSet('placeholder', 'Search')
+            ->assertSeeHtml('placeholder="Search"');
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
