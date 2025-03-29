@@ -4,6 +4,8 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 trait HandleFieldOptions
 {
+    use HandleStatamicQueries;
+
     protected function addTermsToOptions($field)
     {
         $terms = collect();
@@ -18,6 +20,26 @@ trait HandleFieldOptions
             [
                 'options' => $terms->collapse()->all(),
                 'counts' => $terms->collapse()->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
+            ]
+        ));
+
+        return $field;
+    }
+
+    protected function addEntriesToOptions($field)
+    {
+        $entries = collect();
+        $collections = collect($field->config()['collections']);
+
+        $collections->each(function ($collection) use ($entries) {
+            $entries->push($this->getCollectionEntries($collection)->all());
+        });
+
+        $field->setConfig(array_merge(
+            $field->config(),
+            [
+                'options' => $entries->collapse()->all(),
+                'counts' => $entries->collapse()->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
             ]
         ));
 

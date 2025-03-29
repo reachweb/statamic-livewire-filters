@@ -37,6 +37,8 @@ trait IsLivewireFilter
 
         if ($field->type() == 'terms') {
             $field = $this->addTermsToOptions($field);
+        } elseif ($field->type() == 'entries') {
+            $field = $this->addEntriesToOptions($field);
         } elseif ($this->hasOptionsInConfig($field)) {
             $field = $this->transformOptionsArray($field);
             $field = $this->addCountsArrayToConfig($field);
