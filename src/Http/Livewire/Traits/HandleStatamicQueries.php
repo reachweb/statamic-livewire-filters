@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Reach\StatamicLivewireFilters\Exceptions\BlueprintNotFoundException;
 use Reach\StatamicLivewireFilters\Exceptions\FieldNotFoundException;
 use Statamic\Facades\Blueprint;
+use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 use Statamic\Facades\Taxonomy;
 
@@ -19,6 +20,26 @@ trait HandleStatamicQueries
                 $term->inDefaultLocale()->slug() => $term->in(Site::current()->handle())->title(),
             ];
         });
+    }
+
+    protected function getCollectionEntries($collection_handle)
+    {
+        return Entry::query()
+            ->where('collection', $collection_handle)
+            ->where('site', Site::current()->handle())
+            ->whereStatus('published')
+            ->get()
+            ->flatMap(function ($entry) {
+                if (config('statamic-livewire-filters.use_origin_id_for_entries_field')) {
+                    return [
+                        $entry->hasOrigin() ? $entry->origin()->id() : $entry->id() => $entry->title,
+                    ];
+                }
+
+                return [
+                    $entry->id() => $entry->title,
+                ];
+            });
     }
 
     public function getStatamicBlueprint()

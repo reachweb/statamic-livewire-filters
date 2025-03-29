@@ -7,6 +7,9 @@ return [
     // Validate that the values of radio and checkbox filters are in the available options array
     'validate_filter_values' => true,
 
+    // Use origin id for entries field
+    'use_origin_id_for_entries_field' => true,
+
     // If enabled the addon will preset the term parameters in any taxonomy term routes
     'enable_term_routes' => false,
 

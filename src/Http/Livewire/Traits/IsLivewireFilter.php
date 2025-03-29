@@ -34,18 +34,45 @@ trait IsLivewireFilter
     {
         $blueprint = $this->getStatamicBlueprint();
         $field = $this->getStatamicField($blueprint);
-
-        if ($field->type() == 'terms') {
-            $field = $this->addTermsToOptions($field);
-        } elseif ($this->hasOptionsInConfig($field)) {
-            $field = $this->transformOptionsArray($field);
-            $field = $this->addCountsArrayToConfig($field);
-        } elseif ($this->hasCustomOptions()) {
-            $field = $this->addCustomOptionsToConfig($field);
-        }
-
+    
+        $field = $this->processFieldByType($field);
+    
         $this->statamic_field = $field->toArray();
     }
+    
+    protected function processFieldByType($field)
+    {
+        $fieldType = $field->type();
+        
+        // Try to call a type-specific processor method if it exists
+        $processorMethod = 'process' . ucfirst($fieldType) . 'Field';
+        if (method_exists($this, $processorMethod)) {
+            return $this->$processorMethod($field);
+        }
+        
+        // Process by configuration
+        if ($this->hasOptionsInConfig($field)) {
+            $field = $this->transformOptionsArray($field);
+            return $this->addCountsArrayToConfig($field);
+        }
+        
+        if ($this->hasCustomOptions()) {
+            return $this->addCustomOptionsToConfig($field);
+        }
+        
+        // Return unmodified field if no processors applied
+        return $field;
+    }
+
+    protected function processTermsField($field)
+    {
+        return $this->addTermsToOptions($field);
+    }
+
+    protected function processEntriesField($field)
+    {
+        return $this->addEntriesToOptions($field);
+    }  
 
     public function clearFilters()
     {

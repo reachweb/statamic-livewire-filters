@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
+use Statamic\Entries\Entry;
 use Statamic\Facades;
 use Statamic\Facades\Site;
 
@@ -101,6 +102,59 @@ class LfCheckboxFilterTest extends TestCase
         ]);
 
         $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
+
+        // Setup for Entries field test
+        Facades\Collection::make('instruments')->save();
+
+        $instrumentsBlueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $instrumentsBlueprint->setHandle('instruments')->setNamespace('collections.instruments')->save();
+
+        $this->makeEntry(Facades\Collection::findByHandle('instruments'), 'guitar')->set('title', 'Guitar')->save();
+        $this->makeEntry(Facades\Collection::findByHandle('instruments'), 'drums')->set('title', 'Drums')->save();
+        $this->makeEntry(Facades\Collection::findByHandle('instruments'), 'piano')->set('title', 'Piano')->save();
+
+        // Add posts blueprint with entries field
+        Facades\Collection::make('posts')->save();
+        $postsBlueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'related_instruments',
+                            'field' => [
+                                'type' => 'entries',
+                                'display' => 'Related Instruments',
+                                'collections' => [
+                                    'instruments',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $postsBlueprint->setHandle('posts')->setNamespace('collections.posts')->save();
     }
 
     /** @test */
@@ -465,6 +519,75 @@ class LfCheckboxFilterTest extends TestCase
             ->assertDontSee('Red')
             ->assertDontSee('Black')
             ->assertDontSee('Yellow');
+    }
+
+    /** @test */
+    public function it_renders_the_component_and_gets_the_options_for_entries_field()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is'])
+            ->assertSee('Guitar')
+            ->assertSee('Drums')
+            ->assertSee('Piano');
+    }
+
+    /** @test */
+    public function it_changes_the_value_of_selected_property_when_an_entry_is_selected_and_sends_an_event()
+    {
+        $guitarId = Entry::query()
+            ->where('collection', 'instruments')
+            ->where('slug', 'guitar')
+            ->first()
+            ->id();
+
+        $drumsId = Entry::query()
+            ->where('collection', 'instruments')
+            ->where('slug', 'drums')
+            ->first()
+            ->id();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->set('selected', [$guitarId])
+            ->assertSet('selected', [$guitarId])
+            ->assertDispatched('filter-updated',
+                field: 'related_instruments',
+                condition: 'is',
+                payload: [$guitarId],
+            )
+            ->set('selected', [$guitarId, $drumsId])
+            ->assertSet('selected', [$guitarId, $drumsId])
+            ->assertDispatched('filter-updated',
+                field: 'related_instruments',
+                condition: 'is',
+                payload: [$guitarId, $drumsId],
+            );
+    }
+
+    /** @test */
+    public function it_does_not_accept_an_invalid_entry_value()
+    {
+        Config::set('statamic-livewire-filters.validate_filter_values', true);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->set('selected', ['not-a-valid-entry-id'])
+            ->assertHasErrors('selected')
+            ->assertNotDispatched('filter-updated');
+    }
+
+    /** @test */
+    public function it_loads_preset_params_for_entries_field()
+    {
+        $guitarId = Entry::query()
+            ->where('collection', 'instruments')
+            ->where('slug', 'guitar')
+            ->first()
+            ->id();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->dispatch('preset-params', ['related_instruments:is' => $guitarId])
+            ->assertSet('selected', [$guitarId]);
     }
 
     protected function makeEntry($collection, $slug)
