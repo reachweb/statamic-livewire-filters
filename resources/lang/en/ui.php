@@ -9,6 +9,7 @@ return [
     'entries' => '{0} entries|{1} entry|[2,*] entries',
     'to' => 'to',
     'value' => 'Value',
+    'please_select' => 'Please select',
 
     // Conditions
     'any' => ':',
