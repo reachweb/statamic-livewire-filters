@@ -150,6 +150,10 @@ trait HandleParams
     #[On('clear-filter')]
     public function clearFilter($field, $condition, $modifier): void
     {
+        if (! $this->fieldExistsInParams($field, $condition, $modifier)) {
+            return;
+        }
+
         if ($condition === 'query_scope') {
             $queryScopeKey = 'query_scope';
 
@@ -181,16 +185,16 @@ trait HandleParams
 
             return;
         }
-        
+
         $paramKey = $this->generateParamKey($field, $condition, $modifier);
-        
+
         if (is_array($paramKey)) {
             // Handle dual_range case which returns an array of keys
             unset($this->params[$paramKey['min']], $this->params[$paramKey['max']]);
         } else {
             unset($this->params[$paramKey]);
         }
-        
+
         $this->dispatchParamsUpdated();
     }
 
@@ -323,20 +327,20 @@ trait HandleParams
         if ($condition === 'query_scope') {
             return $modifier.':'.$field;
         }
-        
+
         if ($condition === 'taxonomy') {
             return 'taxonomy:'.$field.':'.$modifier;
         }
-        
+
         if ($condition === 'dual_range') {
             [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
-            
+
             return [
                 'min' => $field.':'.$minModifier,
                 'max' => $field.':'.$maxModifier,
             ];
         }
-        
+
         return $field.':'.$condition;
     }
 }
