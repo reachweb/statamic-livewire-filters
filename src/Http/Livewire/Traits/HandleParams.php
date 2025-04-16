@@ -102,7 +102,7 @@ trait HandleParams
 
     protected function handleCondition($field, $condition, $payload)
     {
-        $paramKey = $field.':'.$condition;
+        $paramKey = $this->generateParamKey($field, $condition);
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -110,7 +110,7 @@ trait HandleParams
 
     protected function handleTaxonomyCondition($field, $payload, $modifier)
     {
-        $paramKey = 'taxonomy:'.$field.':'.$modifier;
+        $paramKey = $this->generateParamKey($field, 'taxonomy', $modifier);
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -120,7 +120,7 @@ trait HandleParams
     protected function handleQueryScopeCondition($field, $payload, $modifier)
     {
         $queryScopeKey = 'query_scope';
-        $modifierKey = $modifier.':'.$field;
+        $paramKey = $this->generateParamKey($field, 'query_scope', $modifier);
 
         if (isset($this->params[$queryScopeKey])) {
             $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
@@ -132,20 +132,17 @@ trait HandleParams
             $this->params[$queryScopeKey] = $modifier;
         }
 
-        $this->params[$modifierKey] = $field === 'resrv_availability' ? $payload : $this->toPipeSeparatedString($payload);
+        $this->params[$paramKey] = $field === 'resrv_availability' ? $payload : $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
     }
 
     protected function handleDualRangeCondition($field, $payload, $modifier)
     {
-        [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
+        $paramKeys = $this->generateParamKey($field, 'dual_range', $modifier);
 
-        $minParamKey = $field.':'.$minModifier;
-        $maxParamKey = $field.':'.$maxModifier;
-
-        $this->params[$minParamKey] = $payload['min'];
-        $this->params[$maxParamKey] = $payload['max'];
+        $this->params[$paramKeys['min']] = $payload['min'];
+        $this->params[$paramKeys['max']] = $payload['max'];
 
         $this->dispatchParamsUpdated();
     }
@@ -157,8 +154,8 @@ trait HandleParams
             $queryScopeKey = 'query_scope';
 
             // First unset the field's data
-            $modifierKey = $modifier.':'.$field;
-            unset($this->params[$modifierKey]);
+            $paramKey = $this->generateParamKey($field, 'query_scope', $modifier);
+            unset($this->params[$paramKey]);
 
             $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
             $existingParams = collect($this->params)->filter(function ($value, $key) use ($modifier) {
@@ -184,26 +181,29 @@ trait HandleParams
 
             return;
         }
-        if ($condition === 'taxonomy') {
-            $paramKey = 'taxonomy:'.$field.':'.$modifier;
+        
+        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+        
+        if (is_array($paramKey)) {
+            // Handle dual_range case which returns an array of keys
+            unset($this->params[$paramKey['min']], $this->params[$paramKey['max']]);
+        } else {
             unset($this->params[$paramKey]);
-            $this->dispatchParamsUpdated();
-
-            return;
         }
-        if ($condition === 'dual_range') {
-            [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
-
-            $minParamKey = $field.':'.$minModifier;
-            $maxParamKey = $field.':'.$maxModifier;
-
-            unset($this->params[$minParamKey], $this->params[$maxParamKey]);
-            $this->dispatchParamsUpdated();
-
-            return;
-        }
-        unset($this->params[$field.':'.$condition]);
+        
         $this->dispatchParamsUpdated();
+    }
+
+    public function fieldExistsInParams($field, $condition, $modifier): bool
+    {
+        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+
+        if (is_array($paramKey)) {
+            // Handle dual_range case which returns an array of keys
+            return isset($this->params[$paramKey['min']]) || isset($this->params[$paramKey['max']]);
+        }
+
+        return isset($this->params[$paramKey]);
     }
 
     protected function mergeParameters($params, $urlParams): array
@@ -316,5 +316,27 @@ trait HandleParams
 
         // Dispatching to the tags component
         $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
+    }
+
+    protected function generateParamKey(string $field, string $condition, ?string $modifier = null): string|array
+    {
+        if ($condition === 'query_scope') {
+            return $modifier.':'.$field;
+        }
+        
+        if ($condition === 'taxonomy') {
+            return 'taxonomy:'.$field.':'.$modifier;
+        }
+        
+        if ($condition === 'dual_range') {
+            [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
+            
+            return [
+                'min' => $field.':'.$minModifier,
+                'max' => $field.':'.$maxModifier,
+            ];
+        }
+        
+        return $field.':'.$condition;
     }
 }
