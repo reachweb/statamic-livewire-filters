@@ -10,20 +10,6 @@
             if (count === 0) return '{{ trans('statamic-livewire-filters::ui.please_select') }}';
             return this.selectedLabels.join(', ');
         },
-        highlightFirstMatchingOption(pressedKey) {
-            if (pressedKey === 'Enter') return
-
-            const option = this.options.find((item) =>
-                item.label.toLowerCase().startsWith(pressedKey.toLowerCase()),
-            )
-            if (option) {
-                const index = this.options.indexOf(option)
-                const allOptions = document.querySelectorAll('.combobox-option')
-                if (allOptions[index]) {
-                    allOptions[index].focus()
-                }
-            }
-        },
         handleOptionToggle(option) {
             if (option.checked) {
                 this.selectedOptions.push(option.value)
@@ -41,7 +27,6 @@
     class="w-full flex flex-col" 
     x-modelable="selectedOptions"
     wire:model.live="selected"
-    x-on:keydown="highlightFirstMatchingOption($event.key)" 
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
 >
     <div class="relative w-full">
