@@ -49,6 +49,9 @@ class LfTags extends Component
             if ($field->type() == 'terms') {
                 $field = $this->addTermsToOptions($field);
             }
+            if ($field->type() == 'entries') {
+                $field = $this->addEntriesToOptions($field);
+            }
             $statamicFields->put($field_handle, $field->toArray());
         }
 
