@@ -15,7 +15,11 @@ class LfCheckboxFilter extends Component
 
     public $options;
 
-    public $selected = [];
+    public array $selected = [];
+
+    public bool $searchable = false;
+
+    public string $placeholder = '';
 
     #[Computed(persist: true)]
     public function filterOptions()

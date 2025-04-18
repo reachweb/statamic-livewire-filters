@@ -24,6 +24,7 @@ trait HandleEntriesCount
             $params = array_merge($params, $this->getOptionParam($option));
             $this->statamic_field['counts'][$option] = (new Entries($this->generateParamsForCount($this->collection, $params)))->count();
         }
+        $this->dispatch('counts-updated', $this->counts());
     }
 
     protected function getOptionParam($option)

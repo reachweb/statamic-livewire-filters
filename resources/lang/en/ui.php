@@ -10,6 +10,8 @@ return [
     'to' => 'to',
     'value' => 'Value',
     'please_select' => 'Please select',
+    'search' => 'Search',
+    'no_results' => 'No results found',
 
     // Conditions
     'any' => ':',
