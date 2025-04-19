@@ -169,7 +169,7 @@ class LfCheckboxFilterTest extends TestCase
     /** @test */
     public function it_renders_the_component_with_the_combobox_and_gets_the_options_for_a_checkbox()
     {
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'view' => 'lf-checkbox-dropdown'])
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'view' => 'lf-checkbox-advanced'])
             ->assertSee('Option 1')
             ->assertSee('Option 2')
             ->assertSee('Option 3')
