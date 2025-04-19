@@ -15,9 +15,4 @@
             </option>
         @endforeach
     </select>
-    @unless ($selected == '')
-    <div class="mt-4">
-        @include('statamic-livewire-filters::livewire.ui.clear-filters-button')
-    </div>
-    @endunless
 </div>
