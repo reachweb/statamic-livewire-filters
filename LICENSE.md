@@ -1,3 +1,5 @@
+## License
+
 Copyright © Iosif Chatzimichail | Reach Web Agency
 
 Permission is hereby granted to any person obtaining a copy of this software
@@ -38,3 +40,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
 LIABILITY, INCLUDING SPECIAL, INCIDENTAL AND CONSEQUENTIAL DAMAGES, WHETHER IN
 AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Attributions
+
+- The checkbox dropdown and advanced select filters are based on the combobox component of [PenguinUI](https://www.penguinui.com/) under [MIT license](https://www.penguinui.com/docs/license).
+- All icons are sourced from [Heroicons](https://heroicons.com/) under MIT License
