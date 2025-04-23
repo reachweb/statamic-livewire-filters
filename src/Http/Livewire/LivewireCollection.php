@@ -5,14 +5,13 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use MarcoRieser\Livewire\RestoreCurrentSite;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
 
 class LivewireCollection extends Component
 {
     use Hookable,
-        RestoreCurrentSite,
+        Traits\RestoreSite,
         Traits\GenerateParams,
         Traits\HandleParams,
         Traits\HandleTotalEntriesCount,
