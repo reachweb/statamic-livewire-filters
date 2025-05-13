@@ -11,10 +11,10 @@ use Statamic\Tags\Collection\Entries;
 class LivewireCollection extends Component
 {
     use Hookable,
-        Traits\RestoreSite,
         Traits\GenerateParams,
         Traits\HandleParams,
         Traits\HandleTotalEntriesCount,
+        Traits\RestoreSite,
         Traits\WithPagination;
 
     public $params;

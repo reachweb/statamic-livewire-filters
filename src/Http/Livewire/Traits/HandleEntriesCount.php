@@ -14,6 +14,10 @@ trait HandleEntriesCount
     #[Computed]
     public function counts()
     {
+        if ($this->options !== null && is_array($this->options)) {
+            return collect($this->options)->keys()->flatMap(fn ($option) => [$option => null])->all();
+        }
+
         return $this->statamic_field['counts'];
     }
 

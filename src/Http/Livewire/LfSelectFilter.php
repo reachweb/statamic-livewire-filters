@@ -14,6 +14,7 @@ class LfSelectFilter extends LfRadioFilter
     {
         if ($this->selected === '') {
             $this->clear();
+
             return;
         }
 

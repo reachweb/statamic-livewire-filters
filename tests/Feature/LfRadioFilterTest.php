@@ -196,6 +196,41 @@ class LfRadioFilterTest extends TestCase
             );
     }
 
+    /** @test */
+    public function it_uses_custom_options_when_provided()
+    {
+        $customOptions = [
+            'custom1' => 'Custom 1',
+            'custom2' => 'Custom 2',
+        ];
+
+        Livewire::test(LfRadioFilter::class, [
+            'field' => 'item_options',
+            'blueprint' => 'pages.pages',
+            'condition' => 'is',
+            'options' => $customOptions,
+        ])
+            ->assertSee('Custom 1')
+            ->assertSee('Custom 2')
+            ->assertDontSee('Option 1')
+            ->assertDontSee('Option 2')
+            ->assertDontSee('Option 3');
+    }
+
+    /** @test */
+    public function it_ignores_non_array_options()
+    {
+        Livewire::test(LfRadioFilter::class, [
+            'field' => 'item_options',
+            'blueprint' => 'pages.pages',
+            'condition' => 'is',
+            'options' => 'not-an-array',
+        ])
+            ->assertSee('Option 1')
+            ->assertSee('Option 2')
+            ->assertSee('Option 3');
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

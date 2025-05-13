@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -13,13 +14,18 @@ class LfRadioFilter extends Component
 
     public $view = 'lf-radio';
 
+    #[Locked]
     public $options;
 
     public $selected = '';
 
     #[Computed(persist: true)]
-    public function filterOptions()
+    public function filterOptions(): array
     {
+        if ($this->options !== null && is_array($this->options)) {
+            return $this->options;
+        }
+
         if (isset($this->statamic_field['options'])) {
             return $this->statamic_field['options'];
         }

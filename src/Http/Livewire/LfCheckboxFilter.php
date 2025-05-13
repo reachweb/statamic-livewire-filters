@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -13,6 +14,7 @@ class LfCheckboxFilter extends Component
 
     public $view = 'lf-checkbox';
 
+    #[Locked]
     public $options;
 
     public array $selected = [];
@@ -22,8 +24,12 @@ class LfCheckboxFilter extends Component
     public string $placeholder = '';
 
     #[Computed(persist: true)]
-    public function filterOptions()
+    public function filterOptions(): array
     {
+        if ($this->options !== null && is_array($this->options)) {
+            return $this->options;
+        }
+
         if (isset($this->statamic_field['options'])) {
             return $this->statamic_field['options'];
         }
