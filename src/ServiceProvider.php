@@ -40,7 +40,7 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $publishables = [
-        __DIR__.'/../resources/build' => 'build',
+        __DIR__.'/../resources/frontend' => 'frontend',
     ];
 
     public function bootAddon()
