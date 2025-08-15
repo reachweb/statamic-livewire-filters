@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
-import tailwindcss from 'tailwindcss';
-import autoprefixer from 'autoprefixer';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+    plugins: [
+        tailwindcss(),
+    ],
     build: {
         outDir: 'resources/frontend',
         emptyOutDir: false,
@@ -37,13 +39,5 @@ export default defineConfig({
                 },
             },
         }
-    },
-    css: {
-        postcss: {
-            plugins: [
-                tailwindcss(),
-                autoprefixer(),
-            ],
-        },
     },
 });

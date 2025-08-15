@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
-@plugin "@tailwindcss/forms" {
-    strategy: class
-}
+@plugin "@tailwindcss/forms";
 
 @source "./resources/**/*.antlers.html";
 @source "./resources/**/*.blade.php";
