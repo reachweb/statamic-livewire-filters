@@ -1,0 +1,19 @@
+@theme {
+    --color-lf-accent: var(--color-sky-700); /* Main accent color */
+    --color-lf-subtle:  color-mix(in oklab, var(--color-gray-900) 5%, transparent); /* Lighter color */
+    --color-lf-text: var(--color-gray-900); /* Main text color */
+    --color-lf-input-bg: var(--color-gray-50); /* Background of input elements */
+
+
+    --color-lf-border: var(--color-gray-300); /* Border color */
+    --lf-border-width: 1px; /* Main border width */
+    --radius-lf: var(--radius-lg); /* Border radius */
+    --radius-lf-sm: var(--radius-sm); /* Border radius for checkboxes and smaller items */
+
+
+    --text-lf: var(--text-sm); /* Main text size */
+
+    --spacing-lf: calc(var(--spacing) * 2.5);
+    --spacing-lf-icon: calc(var(--spacing) * 10);
+    
+}
