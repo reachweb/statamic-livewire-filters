@@ -51,11 +51,11 @@
         <button 
             type="button" 
             role="combobox" 
-            class="inline-flex w-full items-center justify-between whitespace-nowrap bg-lf-input-bg border-(length:--lf-border-width) border-lf-border text-lf-text text-lf rounded-lf p-lf hover:bg-lf-subtle transition-colors duration-150" 
+            class="inline-flex w-full items-center justify-between whitespace-nowrap bg-lf-input-bg border-(length:--lf-border-width) border-lf-border text-lf-text text-lf rounded-lf p-lf hover:bg-lf-subtle transition-colors duration-150 aria-expanded:border-lf-accent aria-expanded:ring-1 aria-expanded:ring-lf-accent"
             aria-haspopup="listbox" 
             aria-controls="itemsListbox" 
             x-on:click="isOpen = ! isOpen; checkPosition()" 
-            x-on:keydown.down.prevent="openedWithKeyboard = true" 
+            x-on:keydown.down.prevent="openedWithKeyboard = true"
             x-on:keydown.enter.prevent="openedWithKeyboard = true" 
             x-on:keydown.space.prevent="openedWithKeyboard = true" 
             x-bind:aria-label="setLabelText()" 
