@@ -3,7 +3,7 @@
         <div class="flex items-center">
             <input 
                 type="text" 
-                class="form-input bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                class="form-input bg-lf-input-bg border-(length:--lf-border-width) border-lf-border text-lf-text text-lf rounded-lf focus:ring-lf-accent focus:border-lf-accent block w-full p-lf"
                 id="{{ $field }}"
                 @if ($placeholder !== '')
                 placeholder="{{ $placeholder }}"

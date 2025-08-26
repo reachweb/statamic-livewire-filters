@@ -14,6 +14,8 @@ class LfDateFilter extends Component
 
     public $selected = '';
 
+    public $placeholder = '';
+
     public function updatedSelected()
     {
         $this->dispatch('filter-updated',
