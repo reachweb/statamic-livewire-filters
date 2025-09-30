@@ -64,7 +64,7 @@
         >
             <span class="w-full text-lf leading-6 text-start overflow-hidden text-ellipsis whitespace-nowrap" x-text="setLabelText()"></span>
             <span class="inline-flex gap-x-2 items-center">
-                <svg x-cloak x-on:click.stop="selected = ''; resetSearch();" x-show="selected !== ''" xmlns="http://www.w3.org/2000/svg" fill="none" class="size-5" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" >
+                <svg x-cloak x-on:click.stop="selected = ''; resetSearch();" x-show="selected !== ''" xmlns="http://www.w3.org/2000/svg" fill="none" class="size-5 cursor-pointer" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-label="{{ __('statamic-livewire-filters::ui.clear') }}">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>                  
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5" x-bind:class="isOpen || openedWithKeyboard ? 'rotate-180' : ''"> 
@@ -88,14 +88,14 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" class="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-neutral-600/50" aria-hidden="true" >
                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
                 </svg>
-                <input 
-                    type="text" 
-                    class="w-full rounded-t-lf bg-lf-input-bg border-(length:--lf-border-width) border-lf-border py-2.5 pl-11 pr-4 text-lf text-lf-text focus:outline-hidden focus-visible:ring-lf-accent disabled:cursor-not-allowed disabled:opacity-75" 
-                    name="searchField" 
-                    aria-label="Search" 
-                    x-on:input="getFilteredOptions($el.value)" 
-                    x-ref="searchField" 
-                    placeholder="{{ __('statamic-livewire-filters::ui.search') }}" 
+                <input
+                    type="text"
+                    class="w-full rounded-t-lf bg-lf-input-bg border-(length:--lf-border-width) border-lf-border py-2.5 pl-11 pr-4 text-lf text-lf-text focus:outline-hidden focus-visible:ring-lf-accent disabled:cursor-not-allowed disabled:opacity-75"
+                    name="searchField"
+                    aria-label="{{ __('statamic-livewire-filters::ui.search_options') }}"
+                    x-on:input="getFilteredOptions($el.value)"
+                    x-ref="searchField"
+                    placeholder="{{ __('statamic-livewire-filters::ui.search') }}"
                 />
             </div>
             @endif

@@ -2,6 +2,7 @@
     --color-lf-accent: var(--color-sky-700); /* Main accent color */
     --color-lf-subtle:  color-mix(in oklab, var(--color-gray-900) 5%, transparent); /* Lighter color */
     --color-lf-text: var(--color-gray-900); /* Main text color */
+    --color-lf-muted: var(--color-gray-500); /* Muted/secondary text color */
     --color-lf-input-bg: var(--color-gray-50); /* Background of input elements */
 
 
@@ -15,5 +16,5 @@
 
     --spacing-lf: calc(var(--spacing) * 2.5);
     --spacing-lf-icon: calc(var(--spacing) * 10);
-    
+
 }

@@ -3,6 +3,7 @@
 return [
     // UI Elements
     'all' => 'All',
+    'clear' => 'Clear',
     'clear_filters' => 'Clear filter',
     'clear_all' => 'Clear all',
     'default' => 'Default',
@@ -11,6 +12,8 @@ return [
     'value' => 'Value',
     'please_select' => 'Please select',
     'search' => 'Search',
+    'search_options' => 'Search options',
+    'select_date' => 'Select date',
     'no_results' => 'No results found',
 
     // Conditions
