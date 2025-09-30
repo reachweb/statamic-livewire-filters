@@ -11,6 +11,10 @@
             format: '{{ $format }}',
             minRange: {{ $minRange }},
             init() {
+                if (!window.noUiSlider) {
+                    console.error('noUiSlider is not loaded');
+                    return;
+                }
                 const slider = $refs.slider;
                 window.noUiSlider.create(slider, {
                     start: [this.selectedMin, this.selectedMax],

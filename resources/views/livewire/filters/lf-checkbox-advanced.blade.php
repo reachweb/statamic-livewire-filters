@@ -27,9 +27,9 @@
                 label.toLowerCase().includes(query.toLowerCase())
             )
             if (this.options.length === 0) {
-                this.$refs.noResultsMessage.classList.remove('hidden')
+                this.$refs.noResultsMessage?.classList.remove('hidden')
             } else {
-                this.$refs.noResultsMessage.classList.add('hidden')
+                this.$refs.noResultsMessage?.classList.add('hidden')
             }
         },
         updateSelectedLabels() {
@@ -72,7 +72,7 @@
         >
             <span class="w-full text-lf leading-6 text-start overflow-hidden text-ellipsis whitespace-nowrap" x-text="setLabelText()"></span>
             <div class="flex gap-x-2 items-center">
-                <svg x-cloak x-on:click.stop="selectedOptions = []; resetSearch();" x-show="selectedOptions.length > 0" xmlns="http://www.w3.org/2000/svg" fill="none" class="size-5 cursor-pointer" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" >
+                <svg x-cloak x-on:click.stop="selectedOptions = []; resetSearch();" x-show="selectedOptions.length > 0" xmlns="http://www.w3.org/2000/svg" fill="none" class="size-5 cursor-pointer" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-label="{{ __('statamic-livewire-filters::ui.clear') }}">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>                
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5" x-bind:class="isOpen || openedWithKeyboard ? 'rotate-180' : ''"> 
@@ -92,17 +92,17 @@
         >
             @if ($this->searchable)
             <div class="relative">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" class="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-neutral-600/50 dark:text-neutral-300/50" aria-hidden="true" >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" class="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-lf-muted" aria-hidden="true" >
                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
                 </svg>
-                <input 
-                    type="text" 
-                    class="w-full rounded-t-lf bg-lf-input-bg border-b-(length:--lf-border-width) border-lf-border py-2.5 pl-11 pr-4 text-lf text-lf-text focus:outline-hidden focus-visible:ring-lf-accent disabled:cursor-not-allowed disabled:opacity-75" 
-                    name="searchField" 
-                    aria-label="Search" 
-                    x-on:input="getFilteredOptions($el.value)" 
-                    x-ref="searchField" 
-                    placeholder="{{ __('statamic-livewire-filters::ui.search') }}" 
+                <input
+                    type="text"
+                    class="w-full rounded-t-lf bg-lf-input-bg border-b-(length:--lf-border-width) border-lf-border py-2.5 pl-11 pr-4 text-lf text-lf-text focus:outline-hidden focus-visible:ring-lf-accent disabled:cursor-not-allowed disabled:opacity-75"
+                    name="searchField"
+                    aria-label="{{ __('statamic-livewire-filters::ui.search_options') }}"
+                    x-on:input.debounce.150ms="getFilteredOptions($el.value)"
+                    x-ref="searchField"
+                    placeholder="{{ __('statamic-livewire-filters::ui.search') }}"
                 />
             </div>
             @endif
@@ -122,8 +122,8 @@
                 
                 <template x-for="[value, label] in options" x-bind:key="value">
                     <li role="option">
-                        <label 
-                            class="flex items-center gap-2 px-4 py-2 text-sm text-neutral-600" 
+                        <label
+                            class="flex items-center gap-2 px-4 py-2 text-sm text-lf-text"
                             x-bind:for="'checkboxOption' + value"
                         >
                             <div class="relative flex items-center">
@@ -139,7 +139,7 @@
                             <span>
                                 <span x-text="label"></span>
                                 @if (config('statamic-livewire-filters.enable_filter_values_count') === true)
-                                <span class="text-gray-500 ml-1" x-show="counts && counts[value] !== undefined" x-text="'(' + (counts[value]) + ')'"></span>
+                                <span class="text-lf-muted ml-1" x-show="counts && counts[value] !== undefined" x-text="'(' + (counts[value]) + ')'"></span>
                                 @endif
                             </span>
                         </label>

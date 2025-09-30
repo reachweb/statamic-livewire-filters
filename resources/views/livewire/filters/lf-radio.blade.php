@@ -9,13 +9,13 @@
                 wire:model.live="selected"
                 value="{{ $value }}"
             >
-            <label 
-                for="{{ $field }}-{{ $value }}" 
-                class="ml-2 text-gray-900"
+            <label
+                for="{{ $field }}-{{ $value }}"
+                class="ml-2 text-lf-text"
             >
                 {{ $label }}
                 @if ($this->counts[$value] !== null)
-                <span class="text-gray-500 ml-1">({{ $this->counts[$value] }})</span>
+                <span class="text-lf-muted ml-1">({{ $this->counts[$value] }})</span>
                 @endif
             </label>
         </div>
