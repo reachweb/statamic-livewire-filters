@@ -22,17 +22,19 @@
                 label.toLowerCase().includes(query.toLowerCase())
             )
             if (this.options.length === 0) {
-                this.$refs.noResultsMessage.classList.remove('hidden')
+                this.$refs.noResultsMessage?.classList.remove('hidden')
             } else {
-                this.$refs.noResultsMessage.classList.add('hidden')
+                this.$refs.noResultsMessage?.classList.add('hidden')
             }
         },
         updateSelectedLabel() {
             this.selectedLabel = this.allOptions[this.selected] || this.selected;
         },
         resetSearch() {
-            this.$refs.searchField.value = '';
-            this.getFilteredOptions('');
+            if (this.$refs.searchField) {
+                this.$refs.searchField.value = '';
+                this.getFilteredOptions('');
+            }
         },
         checkPosition() {
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
@@ -85,7 +87,7 @@
         >
             @if ($this->searchable)
             <div class="relative">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" class="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-neutral-600/50" aria-hidden="true" >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" class="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-lf-muted" aria-hidden="true" >
                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
                 </svg>
                 <input
@@ -93,7 +95,7 @@
                     class="w-full rounded-t-lf bg-lf-input-bg border-(length:--lf-border-width) border-lf-border py-2.5 pl-11 pr-4 text-lf text-lf-text focus:outline-hidden focus-visible:ring-lf-accent disabled:cursor-not-allowed disabled:opacity-75"
                     name="searchField"
                     aria-label="{{ __('statamic-livewire-filters::ui.search_options') }}"
-                    x-on:input="getFilteredOptions($el.value)"
+                    x-on:input.debounce.150ms="getFilteredOptions($el.value)"
                     x-ref="searchField"
                     placeholder="{{ __('statamic-livewire-filters::ui.search') }}"
                 />
@@ -125,7 +127,7 @@
                         <span>
                             <span x-bind:class="selected == value ? 'font-bold' : null" x-text="label"></span>
                             @if (config('statamic-livewire-filters.enable_filter_values_count') === true)
-                            <span class="text-gray-500 ml-1" x-show="counts && counts[value] !== undefined" x-text="'(' + (counts[value]) + ')'"></span>
+                            <span class="text-lf-muted ml-1" x-show="counts && counts[value] !== undefined" x-text="'(' + (counts[value]) + ')'"></span>
                             @endif
                         </span> 
                         <span class="sr-only" x-text="selected == value ? 'selected' : null"></span>
