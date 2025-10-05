@@ -50,4 +50,6 @@ return [
     'regex' => ' matches ',
     'starts_with' => ' starts with',
     'query_scope' => ':',
+    'overlaps' => ':',
+    'doesnt_overlap' => ':',
 ];
