@@ -306,7 +306,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             })
-            ->assertSeeHtml('<span class="text-gray-500 ml-1">(2)</span>');
+            ->assertSeeHtml('<span class="text-lf-muted ml-1">(2)</span>');
     }
 
     /** @test */
