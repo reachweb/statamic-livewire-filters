@@ -31,7 +31,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
         ]);
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $uses = array_flip(class_uses_recursive(static::class));
 

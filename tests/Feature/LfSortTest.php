@@ -7,7 +7,7 @@ use Statamic\Facades;
 
 class LfSortTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 

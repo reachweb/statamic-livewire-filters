@@ -16,7 +16,7 @@ class HooksTest extends TestCase
 
     protected $music;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
