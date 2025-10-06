@@ -369,22 +369,6 @@ class LfToggleFilterTest extends TestCase
     }
 
     /** @test */
-    public function it_shows_clear_button_when_selected()
-    {
-        Livewire::test(LfToggleFilter::class, [
-            'field' => 'car_type',
-            'blueprint' => 'cars.car',
-            'condition' => 'contains',
-            'preset_value' => '4x4|SUV|Cabrio',
-            'label' => 'Special Cars',
-        ])
-            ->set('selected', false)
-            ->assertDontSee('Clear')
-            ->set('selected', true)
-            ->assertSee('Clear');
-    }
-
-    /** @test */
     public function it_can_clear_via_the_clear_method()
     {
         Livewire::test(LfToggleFilter::class, [

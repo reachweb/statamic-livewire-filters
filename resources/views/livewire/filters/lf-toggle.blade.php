@@ -11,9 +11,4 @@
         </div>
         <span class="ms-3 text-lf-text">{{ $label }}</span>
     </label>
-    @if ($selected)
-    <div class="mt-4">
-        @include('statamic-livewire-filters::livewire.ui.clear-filters-button')
-    </div>
-    @endif
 </div>
