@@ -14,6 +14,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfUrlHandler;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
@@ -53,6 +54,7 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-range-filter', LfRangeFilter::class);
         Livewire::component('lf-text-filter', LfTextFilter::class);
         Livewire::component('lf-select-filter', LfSelectFilter::class);
+        Livewire::component('lf-toggle-filter', LfToggleFilter::class);
         Livewire::component('lf-sort', LfSort::class);
         Livewire::component('lf-tags', LfTags::class);
         Livewire::component('lf-url-handler', LfUrlHandler::class);
