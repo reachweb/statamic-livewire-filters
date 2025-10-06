@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -432,6 +433,70 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', true)
             ->call('$refresh')
             ->assertSet('selected', true);
+    }
+
+    /** @test */
+    public function it_does_not_activate_when_preset_params_value_does_not_match()
+    {
+        Livewire::test(LfToggleFilter::class, [
+            'field' => 'car_type',
+            'blueprint' => 'cars.car',
+            'condition' => 'contains',
+            'preset_value' => '4x4|SUV|Cabrio',
+            'label' => 'Special Cars',
+        ])
+            ->assertSet('selected', false)
+            ->dispatch('preset-params', ['car_type:contains' => 'Sedan|Coupe'])
+            ->assertSet('selected', false);
+    }
+
+    /** @test */
+    public function it_activates_only_when_preset_params_value_exactly_matches()
+    {
+        Livewire::test(LfToggleFilter::class, [
+            'field' => 'car_type',
+            'blueprint' => 'cars.car',
+            'condition' => 'contains',
+            'preset_value' => '4x4|SUV|Cabrio',
+            'label' => 'Special Cars',
+        ])
+            ->assertSet('selected', false)
+            ->dispatch('preset-params', ['car_type:contains' => '4x4|SUV|Cabrio'])
+            ->assertSet('selected', true);
+    }
+
+    /** @test */
+    public function it_remains_inactive_when_different_field_has_matching_value()
+    {
+        Livewire::test(LfToggleFilter::class, [
+            'field' => 'car_type',
+            'blueprint' => 'cars.car',
+            'condition' => 'contains',
+            'preset_value' => '4x4|SUV|Cabrio',
+            'label' => 'Special Cars',
+        ])
+            ->assertSet('selected', false)
+            ->dispatch('preset-params', ['different_field:contains' => '4x4|SUV|Cabrio'])
+            ->assertSet('selected', false);
+    }
+
+    /** @test */
+    public function it_integrates_with_livewire_collection_filter_updates()
+    {
+        // Test that toggle filter can work alongside LivewireCollection
+        $component = Livewire::test(LivewireCollection::class, [
+            'params' => ['from' => 'cars'],
+        ]);
+
+        // Simulate a toggle being turned on
+        $component->dispatch('filter-updated',
+            field: 'car_type',
+            condition: 'contains',
+            payload: '4x4|SUV|Cabrio',
+            modifier: 'any'
+        );
+
+        $component->assertSet('params', ['car_type:contains' => '4x4|SUV|Cabrio']);
     }
 
     protected function makeEntry($collection, $slug)
