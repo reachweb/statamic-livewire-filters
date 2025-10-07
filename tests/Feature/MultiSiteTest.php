@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -16,7 +17,7 @@ use Statamic\Facades\Site;
 
 class MultiSiteTest extends TestCase
 {
-    use PreventSavingStacheItemsToDisk;
+    use FakesViews, PreventSavingStacheItemsToDisk;
 
     protected $collection;
 
@@ -651,6 +652,70 @@ class MultiSiteTest extends TestCase
             ->dispatch('preset-params', ['taxonomy:colors:any' => 'red'])
             ->assertSet('selected', ['red'])
             ->assertSee('Rot'); // Display should be in German
+    }
+
+    #[Test]
+    public function it_can_hook_into_livewire_fetched_entries_in_multisite()
+    {
+        $this->withFakeViews();
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} - {{ site_name }} {{ /entries }}</div>');
+
+        // Create English entries
+        Site::setCurrent('en');
+        $redShirt = EntryFactory::id('red-shirt')
+            ->collection('clothes')
+            ->slug('red-shirt')
+            ->locale('en')
+            ->data(['title' => 'Red Shirt'])
+            ->create();
+
+        $blueShirt = EntryFactory::id('blue-shirt')
+            ->collection('clothes')
+            ->slug('blue-shirt')
+            ->locale('en')
+            ->data(['title' => 'Blue Shirt'])
+            ->create();
+
+        // Create Spanish translations
+        EntryFactory::id('red-shirt-es')
+            ->collection('clothes')
+            ->slug('camisa-roja')
+            ->locale('es')
+            ->origin($redShirt->id())
+            ->data(['title' => 'Camisa Roja'])
+            ->create();
+
+        EntryFactory::id('blue-shirt-es')
+            ->collection('clothes')
+            ->slug('camisa-azul')
+            ->locale('es')
+            ->origin($blueShirt->id())
+            ->data(['title' => 'Camisa Azul'])
+            ->create();
+
+        // Hook that adds site name to each entry
+        LivewireCollection::hook('livewire-fetched-entries', function ($entries, $next) {
+            $entries->transform(function ($entry) {
+                return $entry->set('site_name', Site::current()->name());
+            });
+
+            return $next($entries);
+        });
+
+        // Test hook works in English site
+        Site::setCurrent('en');
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt - English')
+            ->assertSee('Blue Shirt - English')
+            ->assertDontSee('Camisa Roja');
+
+        // Test hook works in Spanish site
+        Site::setCurrent('es');
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Camisa Roja - Spanish')
+            ->assertSee('Camisa Azul - Spanish')
+            ->assertDontSee('Red Shirt');
     }
 
     protected function makeEntry($collection, $slug)
