@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
@@ -24,6 +25,8 @@ class MultiSiteTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Config::set('statamic.system.multisite', true);
 
         // Setup multi-language support with three sites
         Site::setSites([

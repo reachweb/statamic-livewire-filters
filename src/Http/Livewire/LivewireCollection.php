@@ -14,7 +14,6 @@ class LivewireCollection extends Component
         Traits\GenerateParams,
         Traits\HandleParams,
         Traits\HandleTotalEntriesCount,
-        Traits\RestoreSite,
         Traits\WithPagination;
 
     public $params;

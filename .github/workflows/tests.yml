@@ -15,11 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - php: 8.2
-            laravel: 10.*
-            os: ubuntu-latest
-            framework: "^10.0"
-            testbench: "^8.0"
           - php: 8.3
             laravel: 11.*
             os: ubuntu-latest
