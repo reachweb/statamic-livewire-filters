@@ -71,6 +71,10 @@ class ServiceProvider extends AddonServiceProvider
         ], 'statamic-livewire-filters-views');
 
         $this->publishes([
+            __DIR__.'/../resources/css/theme.css' => resource_path('css/livewire-filters-theme.css'),
+        ], 'statamic-livewire-filters-theme');
+
+        $this->publishes([
             __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
         ], 'statamic-livewire-filters-config');
 
