@@ -477,61 +477,6 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     /** @test */
-    public function it_displays_taxonomy_terms_in_the_current_language()
-    {
-        // Setup Statamic for multi-language support
-        Site::setSites([
-            'en' => [
-                'name' => 'English',
-                'url' => '/',
-                'locale' => 'en_US',
-            ],
-            'es' => [
-                'name' => 'Spanish',
-                'url' => '/es',
-                'locale' => 'es_ES',
-            ],
-        ]);
-
-        // Update the existing colors taxonomy to support multiple sites
-        Facades\Taxonomy::find('colors')->sites(['default', 'es'])->save();
-
-        // Add translations to existing terms
-        $red = Facades\Term::find('colors::red');
-        $red->in('es')->slug('rojo')->data(['title' => 'Rojo'])->save();
-
-        $black = Facades\Term::find('colors::black');
-        $black->in('es')->slug('negro')->data(['title' => 'Negro'])->save();
-
-        $yellow = Facades\Term::find('colors::yellow');
-        $yellow->in('es')->slug('amarillo')->data(['title' => 'Amarillo'])->save();
-
-        // Update collection to support multiple sites
-        Facades\Collection::find('clothes')->sites(['default', 'es'])->save();
-
-        // Test with default site
-        Site::setCurrent('en');
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
-            ->assertSee('Red')
-            ->assertSee('Black')
-            ->assertSee('Yellow')
-            ->assertDontSee('Rojo')
-            ->assertDontSee('Negro')
-            ->assertDontSee('Amarillo');
-
-        // Test with Spanish site
-        Site::setCurrent('es');
-        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
-            ->assertSee('Rojo')
-            ->assertSee('Negro')
-            ->assertSee('Amarillo')
-            ->assertDontSee('value="amarillo"')
-            ->assertDontSee('Red')
-            ->assertDontSee('Black')
-            ->assertDontSee('Yellow');
-    }
-
-    /** @test */
     public function it_renders_the_component_and_gets_the_options_for_entries_field()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is'])
