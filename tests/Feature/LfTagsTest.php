@@ -8,6 +8,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use PHPUnit\Framework\Attributes\Test;
 
 class LfTagsTest extends TestCase
 {
@@ -92,7 +93,7 @@ class LfTagsTest extends TestCase
         $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_option_labels_for_a_checkboxes_field()
     {
         $component = Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages']);
@@ -104,7 +105,7 @@ class LfTagsTest extends TestCase
         ], $component->statamicFields->get('item_options')['options']);
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_term_titles_for_a_taxonomy_field()
     {
         $component = Livewire::test(LfTags::class, ['fields' => 'colors', 'blueprint' => 'clothes.clothes']);
@@ -116,7 +117,7 @@ class LfTagsTest extends TestCase
         ], $component->statamicFields->get('colors')['options']);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
@@ -126,7 +127,7 @@ class LfTagsTest extends TestCase
         $this->assertNotEmpty($component->statamicFields);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_blueprint_not_found_exception_if_the_blueprint_doesnt_exist()
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
@@ -136,7 +137,7 @@ class LfTagsTest extends TestCase
         $this->assertNotEmpty($component->statamicFields);
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_tag_when_a_filter_is_updated()
     {
         Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages'])
@@ -144,7 +145,7 @@ class LfTagsTest extends TestCase
             ->assertSee('Checkbox: Option 1');
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_render_the_tag_when_a_filter_is_not_in_the_fields_array()
     {
         Livewire::test(LfTags::class, ['fields' => 'some_other_option', 'blueprint' => 'pages.pages'])
@@ -152,7 +153,7 @@ class LfTagsTest extends TestCase
             ->assertDontSee('Checkbox: Option 1');
     }
 
-    /** @test */
+    #[Test]
     public function it_dispatches_the_clear_option_event()
     {
         Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages'])

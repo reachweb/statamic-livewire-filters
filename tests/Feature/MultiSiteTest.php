@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
@@ -97,7 +98,7 @@ class MultiSiteTest extends TestCase
         $clothesBlueprint->setHandle('clothes')->setNamespace('collections.clothes')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_displays_taxonomy_terms_in_the_current_language()
     {
         // Test with English site
@@ -140,7 +141,7 @@ class MultiSiteTest extends TestCase
             ->assertDontSee('Amarillo');
     }
 
-    /** @test */
+    #[Test]
     public function it_displays_entries_in_the_current_language()
     {
         // Create English entries
@@ -218,7 +219,7 @@ class MultiSiteTest extends TestCase
             ->assertDontSee('Camisa Roja');
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_entries_correctly_in_different_languages()
     {
         // Create English entries with colors
@@ -343,7 +344,7 @@ class MultiSiteTest extends TestCase
             ->assertDontSee('Schwarzes Hemd');
     }
 
-    /** @test */
+    #[Test]
     public function it_displays_select_filter_options_in_the_current_language()
     {
         // Test with English site
@@ -374,7 +375,7 @@ class MultiSiteTest extends TestCase
             ->assertDontSee('Rojo');
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_work_with_text_fields_in_different_languages()
     {
         // Create a new collection with a text field
@@ -497,7 +498,7 @@ class MultiSiteTest extends TestCase
             ->assertDontSee('Laptop');
     }
 
-    /** @test */
+    #[Test]
     public function it_displays_entries_field_options_in_the_current_language()
     {
         // Create a collection for reference entries (brands)
@@ -621,7 +622,7 @@ class MultiSiteTest extends TestCase
             ->assertDontSee('Nike España');
     }
 
-    /** @test */
+    #[Test]
     public function it_maintains_filter_state_when_switching_sites()
     {
         // Test that filter values use slugs (which should work across locales)

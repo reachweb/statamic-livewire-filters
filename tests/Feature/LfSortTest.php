@@ -4,6 +4,7 @@ use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use PHPUnit\Framework\Attributes\Test;
 
 class LfSortTest extends TestCase
 {
@@ -44,14 +45,14 @@ class LfSortTest extends TestCase
         $this->blueprint->setHandle('pages')->setNamespace('collections.'.$this->collection->handle())->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_can_render_the_lf_sort_component()
     {
         Livewire::test(LfSort::class, ['blueprint' => 'pages.pages', 'fields' => 'title|item_options'])
             ->assertSee('Title | ASC');
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_sort_that_is_preset()
     {
         Livewire::test(LfSort::class, ['blueprint' => 'pages.pages', 'fields' => 'title|item_options'])
@@ -60,7 +61,7 @@ class LfSortTest extends TestCase
             ->assertSet('selected', 'title|asc');
     }
 
-    /** @test */
+    #[Test]
     public function it_dispatches_the_event_when_selected_changes()
     {
         Livewire::test(LfSort::class, ['blueprint' => 'pages.pages', 'fields' => 'title|item_options'])

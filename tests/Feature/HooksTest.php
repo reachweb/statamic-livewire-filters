@@ -9,6 +9,7 @@ use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use PHPUnit\Framework\Attributes\Test;
 
 class HooksTest extends TestCase
 {
@@ -36,7 +37,7 @@ class HooksTest extends TestCase
         $this->makeEntry($this->music, 'c')->set('title', 'I Hate Flutes')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_can_hook_into_livewire_fetched_entries()
     {
         $this->withFakeViews();

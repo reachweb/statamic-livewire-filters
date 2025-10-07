@@ -9,6 +9,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use PHPUnit\Framework\Attributes\Test;
 
 class LfRadioFilterTest extends TestCase
 {
@@ -68,7 +69,7 @@ class LfRadioFilterTest extends TestCase
         $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->set('item_options', 'option2')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -77,7 +78,7 @@ class LfRadioFilterTest extends TestCase
             ->assertSee('Option 3');
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
@@ -85,7 +86,7 @@ class LfRadioFilterTest extends TestCase
         Livewire::test(LfRadioFilter::class, ['field' => 'not-a-field', 'blueprint' => 'pages.pages', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_blueprint_not_found_exception_if_the_blueprint_doesnt_exist()
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
@@ -93,7 +94,7 @@ class LfRadioFilterTest extends TestCase
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.not-a-blueprint', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_changes_the_value_of_selected_property_when_an_option_is_set_and_sends_an_event()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -114,7 +115,7 @@ class LfRadioFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_accept_a_value_not_in_the_options_array()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -124,7 +125,7 @@ class LfRadioFilterTest extends TestCase
             ->assertNotDispatched('filter-updated');
     }
 
-    /** @test */
+    #[Test]
     public function it_can_turn_off_validation_in_the_config()
     {
         Config::set('statamic-livewire-filters.validate_filter_values', false);
@@ -140,7 +141,7 @@ class LfRadioFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -149,7 +150,7 @@ class LfRadioFilterTest extends TestCase
             ->assertSet('selected', 'option1');
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_the_count_for_each_entry()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -162,7 +163,7 @@ class LfRadioFilterTest extends TestCase
 
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -171,7 +172,7 @@ class LfRadioFilterTest extends TestCase
             ->assertSet('selected', '');
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_option_is_fired()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -183,7 +184,7 @@ class LfRadioFilterTest extends TestCase
             ->assertSet('selected', '');
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_all_filters_event_is_fired()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -196,7 +197,7 @@ class LfRadioFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_custom_options_when_provided()
     {
         $customOptions = [
@@ -217,7 +218,7 @@ class LfRadioFilterTest extends TestCase
             ->assertDontSee('Option 3');
     }
 
-    /** @test */
+    #[Test]
     public function it_ignores_non_array_options()
     {
         Livewire::test(LfRadioFilter::class, [

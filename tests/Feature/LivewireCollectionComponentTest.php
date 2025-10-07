@@ -10,6 +10,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCo
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use PHPUnit\Framework\Attributes\Test;
 
 class LivewireCollectionComponentTest extends TestCase
 {
@@ -62,7 +63,7 @@ class LivewireCollectionComponentTest extends TestCase
         EntryFactory::collection('clothes')->slug('yellow-shirt')->data(['title' => 'Yellow Shirt', 'colors' => ['yellow']])->create();
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_the_livewire_component_with_parameters()
     {
         $params = [
@@ -75,7 +76,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('collections', 'music');
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_the_livewire_component_with_parameters_and_changes_them_after_filter_updated_event()
     {
         $params = [
@@ -133,7 +134,7 @@ class LivewireCollectionComponentTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_works_for_taxonomy_terms()
     {
         $params = [
@@ -171,7 +172,7 @@ class LivewireCollectionComponentTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_gets_a_list_of_allowed_filters_by_the_parameter()
     {
         $params = [
@@ -188,7 +189,7 @@ class LivewireCollectionComponentTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function allowed_filters_is_false_if_not_set()
     {
         $params = [
@@ -199,7 +200,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('allowedFilters', false);
     }
 
-    /** @test */
+    #[Test]
     public function check_that_filter_works_if_allowed_filters_not_set()
     {
         $params = [
@@ -219,7 +220,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertDontSee('Black Shirt');
     }
 
-    /** @test */
+    #[Test]
     public function check_that_filter_gets_ignored_if_not_in_allowed_filters()
     {
         $params = [
@@ -240,7 +241,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSee('Black Shirt');
     }
 
-    /** @test */
+    #[Test]
     public function it_sets_query_scope_parameters()
     {
         $params = [
@@ -308,7 +309,7 @@ class LivewireCollectionComponentTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_set_multiple_query_scope_parameters()
     {
         $params = [
@@ -373,7 +374,7 @@ class LivewireCollectionComponentTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_sets_collection_sort()
     {
         $params = [
@@ -393,7 +394,7 @@ class LivewireCollectionComponentTest extends TestCase
             )->assertSet('params', []);
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_all_filters_for_a_field()
     {
         $params = [
@@ -417,7 +418,7 @@ class LivewireCollectionComponentTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_dispatch_the_params_updated_event_by_default()
     {
         $params = [
@@ -435,7 +436,7 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertNotDispatched('params-updated');
     }
 
-    /** @test */
+    #[Test]
     public function it_dispatches_the_params_updated_event_if_enabled()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);

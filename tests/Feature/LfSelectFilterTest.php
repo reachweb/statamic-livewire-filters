@@ -8,6 +8,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use PHPUnit\Framework\Attributes\Test;
 
 class LfSelectFilterTest extends TestCase
 {
@@ -67,7 +68,7 @@ class LfSelectFilterTest extends TestCase
         $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -76,7 +77,7 @@ class LfSelectFilterTest extends TestCase
             ->assertSee('Option 3');
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_with_the_combobox_and_gets_the_options_for_a_checkbox()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'view' => 'lf-select-advanced'])
@@ -86,7 +87,7 @@ class LfSelectFilterTest extends TestCase
             ->assertSee('combobox');
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
@@ -94,7 +95,7 @@ class LfSelectFilterTest extends TestCase
         Livewire::test(LfSelectFilter::class, ['field' => 'not-a-field', 'blueprint' => 'pages.pages', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_blueprint_not_found_exception_if_the_blueprint_doesnt_exist()
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
@@ -102,7 +103,7 @@ class LfSelectFilterTest extends TestCase
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.not-a-blueprint', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_changes_the_value_of_selected_property_when_an_option_is_set_and_sends_an_event()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -123,7 +124,7 @@ class LfSelectFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -132,7 +133,7 @@ class LfSelectFilterTest extends TestCase
             ->assertSet('selected', 'option1');
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -141,7 +142,7 @@ class LfSelectFilterTest extends TestCase
             ->assertSet('selected', '');
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_option_is_fired()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -153,7 +154,7 @@ class LfSelectFilterTest extends TestCase
             ->assertSet('selected', '');
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_all_filters_event_is_fired()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])

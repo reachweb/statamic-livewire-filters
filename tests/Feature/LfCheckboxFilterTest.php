@@ -11,6 +11,7 @@ use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Entries\Entry;
 use Statamic\Facades;
 use Statamic\Facades\Site;
+use PHPUnit\Framework\Attributes\Test;
 
 class LfCheckboxFilterTest extends TestCase
 {
@@ -157,7 +158,7 @@ class LfCheckboxFilterTest extends TestCase
         $postsBlueprint->setHandle('posts')->setNamespace('collections.posts')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_options_for_a_checkbox()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -166,7 +167,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSee('Option 3');
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_with_the_combobox_and_gets_the_options_for_a_checkbox()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'view' => 'lf-checkbox-advanced'])
@@ -176,7 +177,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSee('combobox');
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
@@ -184,7 +185,7 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'not-a-field', 'blueprint' => 'pages.pages', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_blueprint_not_found_exception_if_the_blueprint_doesnt_exist()
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
@@ -192,7 +193,7 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.not-a-blueprint', 'condition' => 'is']);
     }
 
-    /** @test */
+    #[Test]
     public function it_changes_the_value_of_selected_property_when_an_option_is_set_and_sends_an_event()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -213,7 +214,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_accept_a_value_not_in_the_options_array()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -223,7 +224,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertNotDispatched('filter-updated');
     }
 
-    /** @test */
+    #[Test]
     public function it_can_turn_off_validation_of_values_in_the_config()
     {
         Config::set('statamic-livewire-filters.validate_filter_values', false);
@@ -239,7 +240,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_shows_taxonomy_terms_and_submits_the_right_events()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
@@ -262,7 +263,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_accept_an_invalid_taxonomy_value()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
@@ -270,7 +271,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertHasErrors('selected');
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -279,7 +280,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['option1']);
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset_for_a_taxonomy_with_modifier()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors',  'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'modifier' => 'any'])
@@ -288,7 +289,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['red']);
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_a_param_that_is_preset_for_a_query_scope()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'query_scope', 'modifier' => 'multiselect'])
@@ -297,7 +298,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', ['option1']);
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_the_count_for_each_entry()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -309,7 +310,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSeeHtml('<span class="text-lf-muted ml-1">(2)</span>');
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -318,7 +319,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', []);
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_option_is_fired()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -335,7 +336,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', []);
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_the_value_when_clear_all_filters_event_is_fired()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -348,7 +349,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_term_filter_values_by_slug()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'slug:asc'])
@@ -357,7 +358,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_term_filter_values_by_title()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'title:desc'])
@@ -366,7 +367,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_checkboxes_filter_values_by_key()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'key:desc'])
@@ -375,7 +376,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_checkboxes_filter_values_by_value()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'label:desc'])
@@ -384,7 +385,7 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_an_exception_for_wrong_sort_parameter()
     {
         $this->expectExceptionMessage('Cannot sort field [item_options] by [slug]');
@@ -392,14 +393,14 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'slug:desc']);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_an_exception_for_wrong_sort_parameter_terms()
     {
         $this->expectExceptionMessage('Cannot sort field [colors] by [key]');
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'key:desc']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_reorder_term_filter_values_by_custom_field()
     {
         Facades\Blueprint::make()->setContents([
@@ -476,7 +477,7 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'brand', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'something:asc']);
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_and_gets_the_options_for_entries_field()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is'])
@@ -485,7 +486,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSee('Piano');
     }
 
-    /** @test */
+    #[Test]
     public function it_changes_the_value_of_selected_property_when_an_entry_is_selected_and_sends_an_event()
     {
         $guitarId = Entry::query()
@@ -518,7 +519,7 @@ class LfCheckboxFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_accept_an_invalid_entry_value()
     {
         Config::set('statamic-livewire-filters.validate_filter_values', true);
@@ -530,7 +531,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertNotDispatched('filter-updated');
     }
 
-    /** @test */
+    #[Test]
     public function it_loads_preset_params_for_entries_field()
     {
         $guitarId = Entry::query()
@@ -545,7 +546,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSet('selected', [$guitarId]);
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_custom_options_when_provided()
     {
         $customOptions = [
@@ -566,7 +567,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertDontSee('Option 3');
     }
 
-    /** @test */
+    #[Test]
     public function it_ignores_non_array_options()
     {
         Livewire::test(LfCheckboxFilter::class, [

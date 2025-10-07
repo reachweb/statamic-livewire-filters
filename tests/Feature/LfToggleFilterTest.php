@@ -9,6 +9,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use PHPUnit\Framework\Attributes\Test;
 
 class LfToggleFilterTest extends TestCase
 {
@@ -100,7 +101,7 @@ class LfToggleFilterTest extends TestCase
         $vehiclesBlueprint->setHandle('vehicles')->setNamespace('collections.vehicles')->save();
     }
 
-    /** @test */
+    #[Test]
     public function it_renders_the_component_with_custom_label()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -114,7 +115,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', false);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
@@ -128,7 +129,7 @@ class LfToggleFilterTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_a_blueprint_not_found_exception_if_the_blueprint_doesnt_exist()
     {
         $this->expectExceptionMessage('Blueprint [not-a-blueprint] not found');
@@ -142,7 +143,7 @@ class LfToggleFilterTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_toggles_on_and_dispatches_filter_updated_event_with_preset_value()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -163,7 +164,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_toggles_off_and_clears_filter()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -184,7 +185,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_works_with_is_condition()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -203,7 +204,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_works_with_taxonomy_condition_and_modifier()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -223,7 +224,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_works_with_query_scope_condition()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -243,7 +244,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_works_with_gte_condition()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -262,7 +263,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_preset_parameters_for_simple_conditions()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -277,7 +278,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', true);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_preset_parameters_for_taxonomy_condition()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -293,7 +294,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', true);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_preset_parameters_for_query_scope_condition()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -309,7 +310,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', true);
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_when_clear_option_event_is_fired()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -331,7 +332,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_clears_when_clear_all_filters_event_is_fired()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -350,7 +351,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_clear_when_clear_option_event_is_for_different_field()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -368,7 +369,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', true);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_clear_via_the_clear_method()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -383,7 +384,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', false);
     }
 
-    /** @test */
+    #[Test]
     public function it_works_with_custom_modifier()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -403,7 +404,7 @@ class LfToggleFilterTest extends TestCase
             );
     }
 
-    /** @test */
+    #[Test]
     public function it_maintains_state_across_updates()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -419,7 +420,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', true);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_activate_when_preset_params_value_does_not_match()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -434,7 +435,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', false);
     }
 
-    /** @test */
+    #[Test]
     public function it_activates_only_when_preset_params_value_exactly_matches()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -449,7 +450,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', true);
     }
 
-    /** @test */
+    #[Test]
     public function it_remains_inactive_when_different_field_has_matching_value()
     {
         Livewire::test(LfToggleFilter::class, [
@@ -464,7 +465,7 @@ class LfToggleFilterTest extends TestCase
             ->assertSet('selected', false);
     }
 
-    /** @test */
+    #[Test]
     public function it_integrates_with_livewire_collection_filter_updates()
     {
         // Test that toggle filter can work alongside LivewireCollection
