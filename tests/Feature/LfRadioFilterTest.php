@@ -5,11 +5,11 @@ namespace Tests\Feature;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
-use PHPUnit\Framework\Attributes\Test;
 
 class LfRadioFilterTest extends TestCase
 {

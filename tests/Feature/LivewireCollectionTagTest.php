@@ -10,7 +10,6 @@ use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
 use Statamic\Facades\Antlers;
-use PHPUnit\Framework\Attributes\Test;
 
 class LivewireCollectionTagTest extends TestCase
 {

@@ -1,10 +1,10 @@
 <?php
 
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
-use PHPUnit\Framework\Attributes\Test;
 
 class LfSortTest extends TestCase
 {

@@ -5,13 +5,12 @@ namespace Tests\Feature;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Entries\Entry;
 use Statamic\Facades;
-use Statamic\Facades\Site;
-use PHPUnit\Framework\Attributes\Test;
 
 class LfCheckboxFilterTest extends TestCase
 {

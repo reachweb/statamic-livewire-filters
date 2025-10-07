@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
-use PHPUnit\Framework\Attributes\Test;
 
 class LfRangeFilterTest extends TestCase
 {

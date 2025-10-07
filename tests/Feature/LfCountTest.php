@@ -8,7 +8,6 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfCount;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
-use PHPUnit\Framework\Attributes\Test;
 
 class LfCountTest extends TestCase
 {
