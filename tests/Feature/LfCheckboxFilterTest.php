@@ -580,6 +580,62 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSee('Option 3');
     }
 
+    #[Test]
+    public function it_displays_key_when_value_is_missing_but_value_takes_precedence()
+    {
+        // Create a blueprint with mixed options - some with values, some without
+        $testBlueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'mixed_options',
+                            'field' => [
+                                'type' => 'checkboxes',
+                                'display' => 'Mixed Options',
+                                'options' => [
+                                    [
+                                        'key' => 'option_with_value',
+                                        'value' => 'Option With Value',
+                                    ],
+                                    [
+                                        'key' => 'option_without_value',
+                                    ],
+                                    [
+                                        'key' => 'another_with_value',
+                                        'value' => 'Another With Value',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $testBlueprint->setHandle('test_mixed')->setNamespace('collections.pages')->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'mixed_options', 'blueprint' => 'pages.test_mixed', 'condition' => 'is'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                // Value should be used when present
+                $this->assertEquals('Option With Value', $statamic_field['options']['option_with_value']);
+                $this->assertEquals('Another With Value', $statamic_field['options']['another_with_value']);
+                // Key should be used when value is missing
+                $this->assertEquals('option_without_value', $statamic_field['options']['option_without_value']);
+
+                return true;
+            })
+            ->assertSee('Option With Value')
+            ->assertSee('option_without_value')
+            ->assertSee('Another With Value');
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

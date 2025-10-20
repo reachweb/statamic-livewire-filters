@@ -59,7 +59,7 @@ trait HandleFieldOptions
         }
         $field->setConfig(array_merge(
             $field->config(),
-            ['options' => $options->flatMap(fn ($option) => [$option['key'] => $option['value']])->all()]
+            ['options' => $options->flatMap(fn ($option) => [$option['key'] => $option['value'] ?? $option['key']])->all()]
         ));
 
         return $field;
