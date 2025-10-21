@@ -636,6 +636,134 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSee('Another With Value');
     }
 
+    #[Test]
+    public function it_can_reorder_entries_filter_values_by_title()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is', 'sort' => 'title:asc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_values($statamic_field['options']) === ['Drums', 'Guitar', 'Piano'];
+            });
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'is', 'sort' => 'title:desc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_values($statamic_field['options']) === ['Piano', 'Guitar', 'Drums'];
+            });
+    }
+
+    #[Test]
+    public function it_can_reorder_dictionary_filter_values_by_key()
+    {
+        // Add a dictionary field to the pages blueprint
+        $dictionaryBlueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'currency',
+                            'field' => [
+                                'type' => 'dictionary',
+                                'display' => 'Currency',
+                                'dictionary' => 'currencies',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $dictionaryBlueprint->setHandle('dict_test')->setNamespace('collections.pages')->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'currency', 'blueprint' => 'pages.dict_test', 'condition' => 'is', 'sort' => 'key:asc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                $keys = array_keys($statamic_field['options']);
+
+                // Check that keys are sorted alphabetically
+                return $keys === collect($keys)->sort()->values()->all();
+            });
+    }
+
+    #[Test]
+    public function it_can_reorder_dictionary_filter_values_by_label()
+    {
+        // Add a dictionary field to the pages blueprint
+        $dictionaryBlueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'country',
+                            'field' => [
+                                'type' => 'dictionary',
+                                'display' => 'Country',
+                                'dictionary' => 'countries',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $dictionaryBlueprint->setHandle('country_test')->setNamespace('collections.pages')->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'country', 'blueprint' => 'pages.country_test', 'condition' => 'is', 'sort' => 'label:asc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                $values = array_values($statamic_field['options']);
+
+                // Check that values are sorted alphabetically
+                return $values === collect($values)->sort()->values()->all();
+            });
+    }
+
+    #[Test]
+    public function it_can_reorder_dictionary_filter_values_by_value()
+    {
+        // Add a dictionary field to the pages blueprint
+        $dictionaryBlueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'country',
+                            'field' => [
+                                'type' => 'dictionary',
+                                'display' => 'Country',
+                                'dictionary' => 'countries',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $dictionaryBlueprint->setHandle('country_value_test')->setNamespace('collections.pages')->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'country', 'blueprint' => 'pages.country_value_test', 'condition' => 'is', 'sort' => 'value:asc'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                $keys = array_keys($statamic_field['options']);
+
+                // Check that keys (country codes) are sorted alphabetically
+                return $keys === collect($keys)->sort()->values()->all();
+            });
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

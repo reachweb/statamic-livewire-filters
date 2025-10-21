@@ -25,7 +25,7 @@ trait IsSortable
         switch ($sortBy) {
             case 'key':
             case 'label':
-                if ($fieldType !== 'checkboxes' && $fieldType !== 'radio' && $fieldType !== 'select') {
+                if ($fieldType !== 'checkboxes' && $fieldType !== 'radio' && $fieldType !== 'select' && $fieldType !== 'dictionary') {
                     throw new FieldOptionsCannotSortException($sortBy, $fieldHandle);
                 }
                 if ($sortBy === 'key') {
@@ -34,9 +34,15 @@ trait IsSortable
                     $this->sortOptionsByValue($sortDirection);
                 }
                 break;
+            case 'value':
+                if ($fieldType !== 'dictionary') {
+                    throw new FieldOptionsCannotSortException($sortBy, $fieldHandle);
+                }
+                $this->sortOptionsByKey($sortDirection);
+                break;
             case 'slug':
             case 'title':
-                if ($fieldType !== 'terms') {
+                if ($fieldType !== 'terms' && $fieldType !== 'entries') {
                     throw new FieldOptionsCannotSortException($sortBy, $fieldHandle);
                 }
                 if ($sortBy === 'slug') {
