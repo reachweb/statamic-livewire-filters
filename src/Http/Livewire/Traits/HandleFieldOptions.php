@@ -2,6 +2,8 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Statamic\Facades\Dictionary;
+
 trait HandleFieldOptions
 {
     use HandleStatamicQueries;
@@ -40,6 +42,32 @@ trait HandleFieldOptions
             [
                 'options' => $entries->collapse()->all(),
                 'counts' => $entries->collapse()->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
+            ]
+        ));
+
+        return $field;
+    }
+
+    protected function addDictionaryToOptions($field)
+    {
+        $dictionaryConfig = $field->config()['dictionary'] ?? null;
+        $dictionaryType = is_array($dictionaryConfig) ? ($dictionaryConfig['type'] ?? null) : $dictionaryConfig;
+
+        if (! $dictionaryType || ! $dictionary = Dictionary::find($dictionaryType)) {
+            return $field;
+        }
+
+        if (is_array($dictionaryConfig)) {
+            $dictionary->setConfig(collect($dictionaryConfig)->except('type')->all());
+        }
+
+        $options = collect($dictionary->options())->mapWithKeys(fn ($label, $key) => [$key => $label])->all();
+
+        $field->setConfig(array_merge(
+            $field->config(),
+            [
+                'options' => $options,
+                'counts' => collect($options)->keys()->flatMap(fn ($key) => [$key => null])->all(),
             ]
         ));
 

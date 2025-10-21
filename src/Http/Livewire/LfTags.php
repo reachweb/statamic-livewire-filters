@@ -52,6 +52,9 @@ class LfTags extends Component
             if ($field->type() == 'entries') {
                 $field = $this->addEntriesToOptions($field);
             }
+            if ($field->type() == 'dictionary') {
+                $field = $this->addDictionaryToOptions($field);
+            }
             $statamicFields->put($field_handle, $field->toArray());
         }
 

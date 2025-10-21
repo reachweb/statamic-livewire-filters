@@ -57,6 +57,14 @@ class LfSelectFilterTest extends TestCase
                                 ],
                             ],
                         ],
+                        [
+                            'handle' => 'country',
+                            'field' => [
+                                'type' => 'dictionary',
+                                'display' => 'Country',
+                                'dictionary' => 'countries',
+                            ],
+                        ],
                     ],
                 ],
             ],
@@ -165,6 +173,15 @@ class LfSelectFilterTest extends TestCase
                 field: 'item_options',
                 condition: 'is'
             );
+    }
+
+    #[Test]
+    public function it_renders_the_component_and_gets_options_from_dictionary_field()
+    {
+        Livewire::test(LfSelectFilter::class, ['field' => 'country', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSee('Afghanistan')
+            ->assertSee('Albania')
+            ->assertSee('Algeria');
     }
 
     protected function makeEntry($collection, $slug)

@@ -48,6 +48,14 @@ class LfTagsTest extends TestCase
                                 ],
                             ],
                         ],
+                        [
+                            'handle' => 'country',
+                            'field' => [
+                                'type' => 'dictionary',
+                                'display' => 'Country',
+                                'dictionary' => 'countries',
+                            ],
+                        ],
                     ],
                 ],
             ],
@@ -166,6 +174,37 @@ class LfTagsTest extends TestCase
                 'optionLabel' => 'Option 1',
                 'condition' => 'is',
             ]);
+    }
+
+    #[Test]
+    public function it_renders_the_component_and_gets_dictionary_options_for_a_dictionary_field()
+    {
+        $component = Livewire::test(LfTags::class, ['fields' => 'country', 'blueprint' => 'pages.pages']);
+
+        $options = $component->statamicFields->get('country')['options'];
+
+        // Verify we have dictionary options loaded
+        $this->assertIsArray($options);
+        $this->assertNotEmpty($options);
+
+        // Check for some known countries from the countries dictionary
+        $this->assertArrayHasKey('AFG', $options);
+        $this->assertArrayHasKey('USA', $options);
+        $this->assertArrayHasKey('GBR', $options);
+
+        // Verify the format includes country names
+        $this->assertStringContainsString('Afghanistan', $options['AFG']);
+        $this->assertStringContainsString('United States', $options['USA']);
+        $this->assertStringContainsString('United Kingdom', $options['GBR']);
+    }
+
+    #[Test]
+    public function it_renders_the_tag_when_a_dictionary_filter_is_updated()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'country', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['country:is' => 'USA'])
+            ->assertSee('Country:')
+            ->assertSee('United States');
     }
 
     protected function makeEntry($collection, $slug)

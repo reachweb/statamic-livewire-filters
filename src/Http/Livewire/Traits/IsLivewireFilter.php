@@ -75,6 +75,11 @@ trait IsLivewireFilter
         return $this->addEntriesToOptions($field);
     }
 
+    protected function processDictionaryField($field)
+    {
+        return $this->addDictionaryToOptions($field);
+    }
+
     public function clearFilters()
     {
         $this->dispatch('clear-filter',
