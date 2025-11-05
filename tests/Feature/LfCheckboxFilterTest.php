@@ -310,6 +310,89 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_calculates_the_count_for_dictionary_field()
+    {
+        // Create entries with country values
+        $this->makeEntry($this->collection, 'entry1')->set('title', 'Entry 1')->set('country', 'USA')->save();
+        $this->makeEntry($this->collection, 'entry2')->set('title', 'Entry 2')->set('country', 'USA')->save();
+        $this->makeEntry($this->collection, 'entry3')->set('title', 'Entry 3')->set('country', 'GBR')->save();
+
+        // Add country field to pages blueprint
+        $blueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'country',
+                            'field' => [
+                                'type' => 'dictionary',
+                                'display' => 'Country',
+                                'dictionary' => 'countries',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $blueprint->setHandle('pages_with_country')->setNamespace('collections.pages')->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'country', 'blueprint' => 'pages.pages_with_country', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                // USA should have 2, GBR should have 1, others should have 0
+                return $statamic_field['counts']['USA'] === 2
+                    && $statamic_field['counts']['GBR'] === 1
+                    && $statamic_field['counts']['AFG'] === 0;
+            });
+    }
+
+    #[Test]
+    public function it_calculates_counts_correctly_when_other_filters_are_applied()
+    {
+        // This test ensures counts are recalculated when params are updated
+        // Using simple option values that we already know work
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', [])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                // After params-updated event, counts should be populated
+                // Based on setUp: option1=2 (entries a,b), option2=1 (entry c), option3=0
+                return $statamic_field['counts']['option1'] === 2
+                    && $statamic_field['counts']['option2'] === 1
+                    && $statamic_field['counts']['option3'] === 0;
+            });
+    }
+
+    #[Test]
+    public function it_calculates_the_count_for_entries_field()
+    {
+        // Create some posts that reference instruments
+        $postsCollection = Facades\Collection::findByHandle('posts');
+
+        $this->makeEntry($postsCollection, 'post1')->set('title', 'Post 1')->set('related_instruments', 'guitar')->save();
+        $this->makeEntry($postsCollection, 'post2')->set('title', 'Post 2')->set('related_instruments', 'guitar')->save();
+        $this->makeEntry($postsCollection, 'post3')->set('title', 'Post 3')->set('related_instruments', 'drums')->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'overlaps'])
+            ->assertSet('selected', [])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                // Guitar should have 2, Drums should have 1, Piano should have 0
+                return $statamic_field['counts']['guitar'] === 2
+                    && $statamic_field['counts']['drums'] === 1
+                    && $statamic_field['counts']['piano'] === 0;
+            });
+    }
+
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
