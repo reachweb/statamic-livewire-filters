@@ -25,38 +25,65 @@ trait HandleEntriesCount
     public function updateCounts($params)
     {
         $fieldHandle = $this->statamic_field['handle'];
-        $fieldType = $this->statamic_field['type'];
 
-        // For fields that can have many options, use batch optimization
-        if (in_array($fieldType, ['entries', 'terms', 'dictionary'])) {
-            $this->updateCountsWithBatchQuery($params, $fieldHandle);
-        } else {
-            // For other field types (checkboxes, radio, select, etc.), use the standard approach
-            $this->updateCountsStandard($params);
-        }
+        $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
+
+        $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
 
         $this->dispatch('counts-updated', $this->counts());
     }
 
-    protected function updateCountsStandard($params)
+    protected function removeCurrentFieldFromParams($params, $fieldHandle)
     {
-        foreach (array_keys($this->statamic_field['options']) as $option) {
-            $optionParams = array_merge($params, $this->getOptionParam($option));
-            $this->statamic_field['counts'][$option] = (new Entries($this->generateParamsForCount($this->collection, $optionParams)))->count();
+        $baseParams = [];
+
+        foreach ($params as $key => $value) {
+            // Check if this is a dual_range field (has min/max keys)
+            if ($this->condition === 'dual_range') {
+                // Skip both min and max keys for the current field
+                if (str_starts_with($key, $fieldHandle.':')) {
+                    continue;
+                }
+            }
+
+            // Skip standard field parameters
+            if (str_starts_with($key, $fieldHandle.':')) {
+                continue;
+            }
+
+            // Skip taxonomy parameters
+            if (str_starts_with($key, 'taxonomy:'.$fieldHandle)) {
+                continue;
+            }
+
+            // Handle query_scope - need to check if this field uses query_scope
+            if ($this->condition === 'query_scope' && str_ends_with($key, ':'.$fieldHandle)) {
+                // Also need to clean up the query_scope parameter if this was the only scope
+                if ($key === 'query_scope') {
+                    // Remove the modifier from the pipe-separated list
+                    $scopes = explode('|', $value);
+                    $scopes = array_filter($scopes, fn ($scope) => $scope !== $this->modifier);
+
+                    if (empty($scopes)) {
+                        continue; // Skip the query_scope key entirely if no scopes left
+                    }
+
+                    $baseParams[$key] = implode('|', $scopes);
+
+                    continue;
+                }
+
+                continue;
+            }
+
+            $baseParams[$key] = $value;
         }
+
+        return $baseParams;
     }
 
-    protected function updateCountsWithBatchQuery($params, $fieldHandle)
+    protected function updateCountsWithBatchQuery($baseParams, $fieldHandle)
     {
-        // Get all entries matching the base params (without the current field filter)
-        $baseParams = [];
-        foreach ($params as $key => $value) {
-            if (! str_starts_with($key, $fieldHandle.':')
-                && ! str_starts_with($key, 'taxonomy:'.$fieldHandle)
-                && ! ($this->condition === 'query_scope' && str_ends_with($key, ':'.$fieldHandle))) {
-                $baseParams[$key] = $value;
-            }
-        }
 
         $entries = (new Entries($this->generateParamsForCount($this->collection, $baseParams)))->get();
 
