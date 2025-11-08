@@ -154,6 +154,11 @@ trait HandleParams
             return;
         }
 
+        // Reset pagination when clearing a filter
+        if (method_exists($this, 'resetPagination')) {
+            $this->resetPagination();
+        }
+
         if ($condition === 'query_scope') {
             $queryScopeKey = 'query_scope';
 
