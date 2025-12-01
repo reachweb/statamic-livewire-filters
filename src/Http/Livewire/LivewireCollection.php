@@ -40,7 +40,7 @@ class LivewireCollection extends Component
     public $view = 'livewire-collection';
 
     #[Locked]
-    public $lazyLoadView = 'lazyload-placeholder';
+    public $lazyPlaceholder = 'lazyload-placeholder';
 
     #[Locked]
     public $scrollTo = null;
@@ -156,7 +156,7 @@ class LivewireCollection extends Component
 
     public function placeholder()
     {
-        return view('statamic-livewire-filters::livewire.ui.'.$this->lazyLoadView);
+        return view('statamic-livewire-filters::livewire.ui.'.$this->lazyPlaceholder);
     }
 
     public function rendered()

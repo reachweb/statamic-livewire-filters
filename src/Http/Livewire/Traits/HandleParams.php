@@ -18,6 +18,7 @@ trait HandleParams
 
         $this->extractCollectionKeys($paramsCollection);
         $this->extractView($paramsCollection);
+        $this->extractLazyPlaceholder($paramsCollection);
         $this->extractPagination($paramsCollection);
         $this->extractAllowedFilters($paramsCollection);
 
@@ -83,6 +84,13 @@ trait HandleParams
     {
         if ($paramsCollection->has('view')) {
             $this->view = $paramsCollection->pull('view');
+        }
+    }
+
+    protected function extractLazyPlaceholder($paramsCollection)
+    {
+        if ($paramsCollection->has('lazy-placeholder')) {
+            $this->lazyPlaceholder = $paramsCollection->pull('lazy-placeholder');
         }
     }
 

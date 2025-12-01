@@ -465,4 +465,28 @@ class LivewireCollectionComponentTest extends TestCase
             )
             ->assertNotDispatched('params-updated');
     }
+
+    #[Test]
+    public function it_sets_lazy_placeholder_from_parameter()
+    {
+        $params = [
+            'from' => 'music',
+            'lazy-placeholder' => 'custom-placeholder',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('lazyPlaceholder', 'custom-placeholder')
+            ->assertSet('collections', 'music');
+    }
+
+    #[Test]
+    public function it_uses_default_lazy_placeholder_when_not_set()
+    {
+        $params = [
+            'from' => 'music',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('lazyPlaceholder', 'lazyload-placeholder');
+    }
 }
