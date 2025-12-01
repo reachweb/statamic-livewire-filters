@@ -154,9 +154,11 @@ class LivewireCollection extends Component
         ]);
     }
 
-    public function placeholder()
+    public function placeholder(array $params = [])
     {
-        return view('statamic-livewire-filters::livewire.ui.'.$this->lazyPlaceholder);
+        $lazyPlaceholder = $params['params']['lazy-placeholder'] ?? $this->lazyPlaceholder;
+
+        return view('statamic-livewire-filters::livewire.ui.'.$lazyPlaceholder);
     }
 
     public function rendered()

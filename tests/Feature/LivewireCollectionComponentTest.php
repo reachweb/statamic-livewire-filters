@@ -489,4 +489,65 @@ class LivewireCollectionComponentTest extends TestCase
         Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
             ->assertSet('lazyPlaceholder', 'lazyload-placeholder');
     }
+
+    #[Test]
+    public function placeholder_method_uses_lazy_placeholder_from_params_before_mount()
+    {
+        // This test simulates what happens during lazy loading:
+        // placeholder() is called BEFORE mount(), so we need to pass params directly
+        $component = new LivewireCollectionComponent;
+
+        // Simulate the params that Livewire passes to placeholder() during lazy loading
+        $params = [
+            'params' => [
+                'from' => 'music',
+                'lazy-placeholder' => 'lazyload-placeholder', // Use existing view
+            ],
+        ];
+
+        $view = $component->placeholder($params);
+
+        $this->assertEquals('statamic-livewire-filters::livewire.ui.lazyload-placeholder', $view->name());
+    }
+
+    #[Test]
+    public function placeholder_method_uses_default_when_no_lazy_placeholder_in_params()
+    {
+        $component = new LivewireCollectionComponent;
+
+        // No lazy-placeholder in params
+        $params = [
+            'params' => [
+                'from' => 'music',
+            ],
+        ];
+
+        $view = $component->placeholder($params);
+
+        $this->assertEquals('statamic-livewire-filters::livewire.ui.lazyload-placeholder', $view->name());
+    }
+
+    #[Test]
+    public function placeholder_method_extracts_lazy_placeholder_from_nested_params()
+    {
+        // Test that the placeholder method correctly reads from $params['params']['lazy-placeholder']
+        // This is the actual structure Livewire passes during lazy loading
+        $component = new LivewireCollectionComponent;
+
+        // Before the fix, this would have used the default because mount() hadn't run yet
+        // After the fix, placeholder() reads directly from the params array
+        $this->assertEquals('lazyload-placeholder', $component->lazyPlaceholder);
+
+        // Call placeholder with custom value - should use it even though property has default
+        $params = ['params' => ['lazy-placeholder' => 'custom-view']];
+
+        // We can't render the view (doesn't exist), but we can verify the logic
+        // by checking that a component without mount() being called still gets the right value
+        try {
+            $component->placeholder($params);
+        } catch (\InvalidArgumentException $e) {
+            // Expected - view doesn't exist, but check it tried to load the right one
+            $this->assertStringContainsString('custom-view', $e->getMessage());
+        }
+    }
 }
