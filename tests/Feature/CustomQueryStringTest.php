@@ -114,6 +114,28 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function it_decodes_url_encoded_values_on_page_load()
+    {
+        $this->withStandardFakeViews();
+
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection:pages }}');
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        // URL with encoded space (%20) - should decode to "I Love"
+        $response = $this->get('/filters/title/I%20Love');
+
+        // Make sure the params are decoded from the URL
+        $this->assertEquals(
+            ['title:contains' => 'I Love'],
+            request()->query('params')
+        );
+
+        // Should match entries containing "I Love" (decoded value)
+        $response->assertSee('I Love Guitars')->assertSee('I Love Drums')->assertDontSee('I Hate Flutes');
+    }
+
+    #[Test]
     public function it_dispatched_the_update_url_event_with_the_correct_url()
     {
         $params = [

@@ -76,8 +76,8 @@ class HandleFiltersQueryString
                 break;
             }
 
-            $key = $segments[$i];
-            $value = $segments[$i + 1];
+            $key = rawurldecode($segments[$i]);
+            $value = rawurldecode($segments[$i + 1]);
 
             if (! isset($aliases[$key])) {
                 continue;
