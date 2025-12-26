@@ -2,7 +2,6 @@
 
 namespace Reach\StatamicLivewireFilters;
 
-use Illuminate\Support\Facades\Artisan;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCount;
@@ -77,9 +76,5 @@ class ServiceProvider extends AddonServiceProvider
         $this->publishes([
             __DIR__.'/../config/config.php' => config_path('statamic-livewire-filters.php'),
         ], 'statamic-livewire-filters-config');
-
-        if ($this->app->runningInConsole()) {
-            Artisan::call('statamic-livewire-filters:update');
-        }
     }
 }
