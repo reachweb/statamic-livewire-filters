@@ -300,7 +300,8 @@ trait HandleParams
 
         // Preserve pagination page parameter if on page > 1
         if ($this->paginate && method_exists($this, 'getPage') && $this->getPage() > 1) {
-            $newUrl .= '?page='.$this->getPage();
+            $separator = str_contains($newUrl, '?') ? '&' : '?';
+            $newUrl .= $separator.'page='.$this->getPage();
         }
 
         $this->dispatch('update-url', newUrl: $newUrl);

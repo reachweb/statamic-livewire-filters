@@ -189,4 +189,32 @@ class CustomQueryStringTest extends TestCase
             ->assertDispatched('update-url')
             ->assertDispatched('update-url', fn ($name, $payload) => ! str_contains($payload['newUrl'], 'page='));
     }
+
+    #[Test]
+    public function it_combines_filter_path_and_page_parameter_correctly()
+    {
+        $params = [
+            'from' => 'pages',
+            'paginate' => 1,
+            'item_options:is' => 'option1',
+        ];
+
+        // Verify the full URL structure: filter path + query string page parameter
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->set('paginators.page', 2)
+            ->dispatch('preset-params', ['item_options:is' => 'option1'])
+            ->assertDispatched('update-url')
+            ->assertDispatched('update-url', function ($_, $payload) {
+                $url = $payload['newUrl'];
+
+                // URL should contain the filter path segment
+                $hasFilterPath = str_contains($url, 'filters/item_options/option1');
+
+                // URL should have properly formatted query string (? not duplicated)
+                $hasValidQueryString = str_contains($url, '?page=2');
+                $noMalformedUrl = substr_count($url, '?') === 1;
+
+                return $hasFilterPath && $hasValidQueryString && $noMalformedUrl;
+            });
+    }
 }

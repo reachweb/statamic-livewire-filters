@@ -107,10 +107,11 @@ class LivewireCollection extends Component
         }
 
         // When using custom query string, disable Livewire's pagination URL handling
-        // We handle it ourselves in updateCustomQueryStringUrl()
+        // to prevent a double pushState (which causes an extra render).
+        // We handle pagination URL ourselves in updateCustomQueryStringUrl().
         if (config('statamic-livewire-filters.custom_query_string') !== false) {
             return [
-                'paginators.page' => ['except' => null, 'history' => false],
+                'paginators.page' => ['except' => '', 'history' => false],
             ];
         }
 
