@@ -296,7 +296,15 @@ trait HandleParams
             ? ($currentPathTrimmed ? $currentPathTrimmed.'/' : '').trim($path, '/')
             : $this->currentPath;
 
-        $this->dispatch('update-url', newUrl: url($fullPath));
+        $newUrl = url($fullPath);
+
+        // Preserve pagination page parameter if on page > 1
+        if ($this->paginate && method_exists($this, 'getPage') && $this->getPage() > 1) {
+            $separator = str_contains($newUrl, '?') ? '&' : '?';
+            $newUrl .= $separator.'page='.$this->getPage();
+        }
+
+        $this->dispatch('update-url', newUrl: $newUrl);
     }
 
     protected function getConfigAliases(): array

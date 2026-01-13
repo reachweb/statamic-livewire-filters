@@ -154,4 +154,67 @@ class CustomQueryStringTest extends TestCase
             ->assertDispatched('update-url')
             ->assertDispatched('update-url', fn ($name, $payload) => str_contains($payload['newUrl'], 'filters/title/I Love Guitars/item_options/option1'));
     }
+
+    #[Test]
+    public function it_includes_page_parameter_in_url_when_on_page_greater_than_one()
+    {
+        $params = [
+            'from' => 'pages',
+            'paginate' => 1,
+            'item_options:is' => 'option1',
+        ];
+
+        // Simulate user on page 2 with filters applied
+        // The preset-params event triggers updateCustomQueryStringUrl
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->set('paginators.page', 2)
+            ->dispatch('preset-params', ['item_options:is' => 'option1'])
+            ->assertDispatched('update-url')
+            ->assertDispatched('update-url', fn ($name, $payload) => str_contains($payload['newUrl'], 'page=2'));
+    }
+
+    #[Test]
+    public function it_does_not_include_page_parameter_when_on_page_one()
+    {
+        $params = [
+            'from' => 'pages',
+            'paginate' => 1,
+            'item_options:is' => 'option1',
+        ];
+
+        // On page 1, no page parameter should be in URL
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->set('paginators.page', 1)
+            ->dispatch('preset-params', ['item_options:is' => 'option1'])
+            ->assertDispatched('update-url')
+            ->assertDispatched('update-url', fn ($name, $payload) => ! str_contains($payload['newUrl'], 'page='));
+    }
+
+    #[Test]
+    public function it_combines_filter_path_and_page_parameter_correctly()
+    {
+        $params = [
+            'from' => 'pages',
+            'paginate' => 1,
+            'item_options:is' => 'option1',
+        ];
+
+        // Verify the full URL structure: filter path + query string page parameter
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->set('paginators.page', 2)
+            ->dispatch('preset-params', ['item_options:is' => 'option1'])
+            ->assertDispatched('update-url')
+            ->assertDispatched('update-url', function ($_, $payload) {
+                $url = $payload['newUrl'];
+
+                // URL should contain the filter path segment
+                $hasFilterPath = str_contains($url, 'filters/item_options/option1');
+
+                // URL should have properly formatted query string (? not duplicated)
+                $hasValidQueryString = str_contains($url, '?page=2');
+                $noMalformedUrl = substr_count($url, '?') === 1;
+
+                return $hasFilterPath && $hasValidQueryString && $noMalformedUrl;
+            });
+    }
 }
