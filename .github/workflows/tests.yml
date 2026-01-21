@@ -17,16 +17,24 @@ jobs:
         include:
           - php: 8.3
             laravel: 11.*
+            statamic: 5.*
             os: ubuntu-latest
             framework: "^11.0"
             testbench: "^9.0"
           - php: 8.4
             laravel: 12.*
+            statamic: 5.*
+            os: ubuntu-latest
+            framework: "^12.0"
+            testbench: "^10.0"
+          - php: 8.4
+            laravel: 12.*
+            statamic: 6.*
             os: ubuntu-latest
             framework: "^12.0"
             testbench: "^10.0"
 
-    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.os }}
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - S${{ matrix.statamic }} - ${{ matrix.os }}
 
     steps:
       - name: Checkout code
@@ -67,7 +75,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer require "laravel/framework:${{ matrix.framework }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer require "laravel/framework:${{ matrix.framework }}" "orchestra/testbench:${{ matrix.testbench }}" "statamic/cms:${{ matrix.statamic }}" --no-interaction --no-update
           composer update --prefer-dist --no-interaction
 
       - name: Execute tests
