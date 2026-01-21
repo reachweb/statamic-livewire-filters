@@ -2,6 +2,8 @@
 
 namespace Reach\StatamicLivewireFilters\Tests;
 
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use Statamic\Extend\Manifest;
 use Statamic\Facades\Site;
 
@@ -62,6 +64,8 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     {
         parent::resolveApplicationConfiguration($app);
 
+        $this->registerLivewireUpdateRoute($app);
+
         $configs = [
             'assets', 'cp', 'forms', 'routes', 'static_caching',
             'stache', 'system', 'users',
@@ -116,5 +120,18 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
         $viewPaths[] = __DIR__.'/__fixtures__/views/';
 
         $app['config']->set('view.paths', $viewPaths);
+    }
+
+    protected function registerLivewireUpdateRoute($app): void
+    {
+        // Livewire 3.7.4+ uses app()->booted() to register routes which can cause timing issues in tests.
+        // We need to set the update route before Statamic's catch-all route is matched.
+        $app->booted(function () {
+            Livewire::setUpdateRoute(function ($handle) {
+                return Route::post('/livewire/update', $handle)
+                    ->middleware('web')
+                    ->name('livewire.update');
+            });
+        });
     }
 }
