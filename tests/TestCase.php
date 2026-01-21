@@ -4,7 +4,6 @@ namespace Reach\StatamicLivewireFilters\Tests;
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
-use Statamic\Extend\Manifest;
 use Statamic\Facades\Site;
 
 abstract class TestCase extends \Orchestra\Testbench\TestCase
@@ -78,7 +77,12 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
 
     protected function getEnvironmentSetUp($app)
     {
-        $app->make(Manifest::class)->manifest = [
+        // Statamic 6 moved Manifest from Statamic\Extend to Statamic\Addons
+        $manifestClass = class_exists(\Statamic\Extend\Manifest::class)
+            ? \Statamic\Extend\Manifest::class
+            : \Statamic\Addons\Manifest::class;
+
+        $app->make($manifestClass)->manifest = [
             'reach/statamic-livewire-filters' => [
                 'id' => 'reach/statamic-livewire-filters',
                 'namespace' => 'Reach\\StatamicLivewireFilters',
