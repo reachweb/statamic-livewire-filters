@@ -281,8 +281,14 @@ trait HandleParams
             ? ''
             : $prefix.'/'.$segments->implode('/');
 
-        // Trim and sanitize the current path.
-        $currentPathTrimmed = trim($this->currentPath, '/');
+        // Separate path and query string from currentPath
+        $currentPathOnly = Str::before($this->currentPath, '?');
+        $existingQueryString = Str::contains($this->currentPath, '?')
+            ? Str::after($this->currentPath, '?')
+            : '';
+
+        // Trim and sanitize the current path (without query string).
+        $currentPathTrimmed = trim($currentPathOnly, '/');
 
         // If the currentPath already includes the prefix, strip it and anything after.
         $prefixMarker = $prefix.'/';
@@ -294,14 +300,26 @@ trait HandleParams
 
         $fullPath = $path
             ? ($currentPathTrimmed ? $currentPathTrimmed.'/' : '').trim($path, '/')
-            : $this->currentPath;
+            : $currentPathOnly;
 
         $newUrl = url($fullPath);
 
-        // Preserve pagination page parameter if on page > 1
+        // Build query string parameters
+        $queryParams = [];
+
+        // Preserve existing query string parameters (e.g., tracking params like _gl)
+        if ($existingQueryString) {
+            parse_str($existingQueryString, $queryParams);
+        }
+
+        // Add pagination page parameter if on page > 1
         if ($this->paginate && method_exists($this, 'getPage') && $this->getPage() > 1) {
-            $separator = str_contains($newUrl, '?') ? '&' : '?';
-            $newUrl .= $separator.'page='.$this->getPage();
+            $queryParams['page'] = $this->getPage();
+        }
+
+        // Append query string if we have parameters
+        if (! empty($queryParams)) {
+            $newUrl .= '?'.http_build_query($queryParams);
         }
 
         $this->dispatch('update-url', newUrl: $newUrl);
