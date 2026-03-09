@@ -718,6 +718,78 @@ class MultiSiteTest extends TestCase
             ->assertDontSee('Red Shirt');
     }
 
+    #[Test]
+    public function it_displays_taxonomy_terms_in_the_current_language_when_sorted_by_custom_field()
+    {
+        // Add a custom "order" field to the colors taxonomy blueprint
+        Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => ['type' => 'text'],
+                        ],
+                        [
+                            'handle' => 'order',
+                            'field' => ['type' => 'text'],
+                        ],
+                    ],
+                ],
+            ],
+        ])->setHandle('colors')->setNamespace('taxonomies.colors')->save();
+
+        // Update terms with order values
+        $red = Facades\Term::find('colors::red');
+        $red->inDefaultLocale()->set('order', '3')->save();
+
+        $black = Facades\Term::find('colors::black');
+        $black->inDefaultLocale()->set('order', '1')->save();
+
+        $yellow = Facades\Term::find('colors::yellow');
+        $yellow->inDefaultLocale()->set('order', '2')->save();
+
+        // Test English with custom sort - keys should be default-locale slugs in sort order
+        Site::setCurrent('en');
+        Livewire::test(LfCheckboxFilter::class, [
+            'field' => 'colors',
+            'blueprint' => 'clothes.clothes',
+            'condition' => 'taxonomy',
+            'sort' => 'order:asc',
+        ])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['black', 'yellow', 'red']
+                    && array_values($statamic_field['options']) === ['Black', 'Yellow', 'Red'];
+            });
+
+        // Test Spanish with custom sort - THIS IS THE KEY TEST
+        // Before the fix, this would show a random mix of English/Spanish
+        Site::setCurrent('es');
+        Livewire::test(LfCheckboxFilter::class, [
+            'field' => 'colors',
+            'blueprint' => 'clothes.clothes',
+            'condition' => 'taxonomy',
+            'sort' => 'order:asc',
+        ])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['black', 'yellow', 'red']
+                    && array_values($statamic_field['options']) === ['Negro', 'Amarillo', 'Rojo'];
+            });
+
+        // Test German with custom sort
+        Site::setCurrent('de');
+        Livewire::test(LfCheckboxFilter::class, [
+            'field' => 'colors',
+            'blueprint' => 'clothes.clothes',
+            'condition' => 'taxonomy',
+            'sort' => 'order:asc',
+        ])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_keys($statamic_field['options']) === ['black', 'yellow', 'red']
+                    && array_values($statamic_field['options']) === ['Schwarz', 'Gelb', 'Rot'];
+            });
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

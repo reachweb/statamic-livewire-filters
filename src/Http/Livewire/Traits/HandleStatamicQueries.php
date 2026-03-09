@@ -15,11 +15,13 @@ trait HandleStatamicQueries
     {
         $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
 
-        return $taxonomy->queryTerms()->get()->flatMap(function ($term) {
-            return [
-                $term->inDefaultLocale()->slug() => $term->in(Site::current()->handle())->title(),
-            ];
-        });
+        return $taxonomy->queryTerms()->get()
+            ->unique(fn ($term) => $term->inDefaultLocale()->slug())
+            ->flatMap(function ($term) {
+                return [
+                    $term->inDefaultLocale()->slug() => ($term->in(Site::current()->handle()) ?? $term->inDefaultLocale())->title(),
+                ];
+            });
     }
 
     protected function getCollectionEntries($collection_handle)

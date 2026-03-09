@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Livewire\Attributes\Locked;
 use Reach\StatamicLivewireFilters\Exceptions\FieldOptionsCannotFindTaxonomyField;
 use Reach\StatamicLivewireFilters\Exceptions\FieldOptionsCannotSortException;
+use Statamic\Facades\Site;
 use Statamic\Facades\Taxonomy;
 
 trait IsSortable
@@ -93,7 +94,7 @@ trait IsSortable
             throw new FieldOptionsCannotSortException($sortBy, $fieldHandle);
         }
 
-        $terms = $this->getTaxonomyTermsSortedBy($fieldHandle, $sortBy, $sortDirection);
+        $this->getTaxonomyTermsSortedBy($fieldHandle, $sortBy, $sortDirection);
     }
 
     protected function getTaxonomyTermsSortedBy($handle, $sortBy, $sortDirection): void
@@ -105,10 +106,13 @@ trait IsSortable
             throw new FieldOptionsCannotFindTaxonomyField($sortBy, $handle);
         }
 
-        $this->statamic_field['options'] = $taxonomy->queryTerms()->orderBy($sortBy, $sortDirection)->get()->flatMap(function ($term) {
-            return [
-                $term->slug() => $term->title(),
-            ];
-        })->all();
+        $this->statamic_field['options'] = $taxonomy->queryTerms()
+            ->orderBy($sortBy, $sortDirection)->get()
+            ->unique(fn ($term) => $term->inDefaultLocale()->slug())
+            ->flatMap(function ($term) {
+                return [
+                    $term->inDefaultLocale()->slug() => ($term->in(Site::current()->handle()) ?? $term->inDefaultLocale())->title(),
+                ];
+            })->all();
     }
 }
