@@ -2,7 +2,9 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Statamic\Facades\Blink;
 use Statamic\Facades\Dictionary;
+use Statamic\Facades\Site;
 
 trait HandleFieldOptions
 {
@@ -10,42 +12,24 @@ trait HandleFieldOptions
 
     protected function addTermsToOptions($field)
     {
-        $terms = collect();
-        $taxonomies = collect($field->config()['taxonomies']);
-
-        $taxonomies->each(function ($taxonomy) use ($terms) {
-            $terms->push($this->getTaxonomyTerms($taxonomy)->all());
+        $options = Blink::once($this->fieldOptionsCacheKey('terms', $field->config()['taxonomies'] ?? []), function () use ($field) {
+            return collect($field->config()['taxonomies'] ?? [])
+                ->flatMap(fn ($taxonomy) => $this->getTaxonomyTerms($taxonomy))
+                ->all();
         });
 
-        $field->setConfig(array_merge(
-            $field->config(),
-            [
-                'options' => $terms->collapse()->all(),
-                'counts' => $terms->collapse()->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
-            ]
-        ));
-
-        return $field;
+        return $this->setFieldOptionsAndCounts($field, $options);
     }
 
     protected function addEntriesToOptions($field)
     {
-        $entries = collect();
-        $collections = collect($field->config()['collections']);
-
-        $collections->each(function ($collection) use ($entries) {
-            $entries->push($this->getCollectionEntries($collection)->all());
+        $options = Blink::once($this->fieldOptionsCacheKey('entries', $field->config()['collections'] ?? []), function () use ($field) {
+            return collect($field->config()['collections'] ?? [])
+                ->flatMap(fn ($collection) => $this->getCollectionEntries($collection))
+                ->all();
         });
 
-        $field->setConfig(array_merge(
-            $field->config(),
-            [
-                'options' => $entries->collapse()->all(),
-                'counts' => $entries->collapse()->keys()->flatMap(fn ($slug) => [$slug => null])->all(),
-            ]
-        ));
-
-        return $field;
+        return $this->setFieldOptionsAndCounts($field, $options);
     }
 
     protected function addDictionaryToOptions($field)
@@ -61,17 +45,11 @@ trait HandleFieldOptions
             $dictionary->setConfig(collect($dictionaryConfig)->except('type')->all());
         }
 
-        $options = collect($dictionary->options())->mapWithKeys(fn ($label, $key) => [$key => $label])->all();
+        $options = Blink::once($this->fieldOptionsCacheKey('dictionary', $dictionaryConfig), function () use ($dictionary) {
+            return collect($dictionary->options())->mapWithKeys(fn ($label, $key) => [$key => $label])->all();
+        });
 
-        $field->setConfig(array_merge(
-            $field->config(),
-            [
-                'options' => $options,
-                'counts' => collect($options)->keys()->flatMap(fn ($key) => [$key => null])->all(),
-            ]
-        ));
-
-        return $field;
+        return $this->setFieldOptionsAndCounts($field, $options);
     }
 
     protected function hasOptionsInConfig($field)
@@ -120,5 +98,28 @@ trait HandleFieldOptions
         ));
 
         return $field;
+    }
+
+    protected function setFieldOptionsAndCounts($field, array $options)
+    {
+        $field->setConfig(array_merge(
+            $field->config(),
+            [
+                'options' => $options,
+                'counts' => array_fill_keys(array_keys($options), null),
+            ]
+        ));
+
+        return $field;
+    }
+
+    protected function fieldOptionsCacheKey(string $type, $config): string
+    {
+        return 'statamic-livewire-filters.field-options.'.$type.'.'.md5(serialize([
+            'collection' => $this->collection ?? null,
+            'site' => Site::current()->handle(),
+            'config' => $config,
+            'use_origin_id_for_entries_field' => config('statamic-livewire-filters.use_origin_id_for_entries_field'),
+        ]));
     }
 }
