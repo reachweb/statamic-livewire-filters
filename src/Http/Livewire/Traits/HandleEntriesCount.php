@@ -4,12 +4,14 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Reach\StatamicLivewireFilters\Support\CountEntries;
 use Statamic\Entries\EntryCollection;
-use Statamic\Tags\Collection\Entries;
 
 trait HandleEntriesCount
 {
     use GenerateParams;
+
+    protected array $countQueryCache = [];
 
     #[Computed]
     public function counts()
@@ -84,23 +86,15 @@ trait HandleEntriesCount
 
     protected function updateCountsWithBatchQuery($baseParams, $fieldHandle)
     {
-
-        $entries = (new Entries($this->generateParamsForCount($this->collection, $baseParams)))->get();
-
         $this->statamic_field['counts'] = array_fill_keys(array_keys($this->statamic_field['options']), 0);
 
-        // If no entries, return
-        if (! $entries instanceof EntryCollection || $entries->isEmpty()) {
+        $fieldValues = $this->getCountFieldValues($baseParams, $fieldHandle);
+
+        if ($fieldValues->isEmpty()) {
             return;
         }
 
-        foreach ($entries as $entry) {
-            $fieldValue = $entry->get($fieldHandle);
-
-            if ($fieldValue === null) {
-                continue;
-            }
-
+        foreach ($fieldValues as $fieldValue) {
             // Handle array values (entries, terms fields can be multi-select)
             if (is_array($fieldValue)) {
                 foreach ($fieldValue as $value) {
@@ -113,6 +107,30 @@ trait HandleEntriesCount
                 $this->statamic_field['counts'][$fieldValue]++;
             }
         }
+    }
+
+    protected function getCountFieldValues(array $baseParams, string $fieldHandle)
+    {
+        $cacheKey = $this->countQueryCacheKey($baseParams, $fieldHandle);
+
+        if (array_key_exists($cacheKey, $this->countQueryCache)) {
+            return $this->countQueryCache[$cacheKey];
+        }
+
+        return $this->countQueryCache[$cacheKey] = (new CountEntries(
+            $this->generateParamsForCount($this->collection, $baseParams)
+        ))->pluck($fieldHandle);
+    }
+
+    protected function countQueryCacheKey(array $baseParams, string $fieldHandle): string
+    {
+        ksort($baseParams);
+
+        return md5(serialize([
+            'collection' => $this->collection,
+            'field' => $fieldHandle,
+            'params' => $baseParams,
+        ]));
     }
 
     protected function getOptionParam($option)
