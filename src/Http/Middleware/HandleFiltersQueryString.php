@@ -20,7 +20,12 @@ class HandleFiltersQueryString
             return $next($request);
         }
 
-        $path = $isLivewireRequest ? url()->previous() : $request->path();
+        if ($isLivewireRequest) {
+            $previousUrl = url()->previous();
+            $path = ltrim(parse_url($previousUrl, PHP_URL_PATH) ?? '/', '/');
+        } else {
+            $path = $request->path();
+        }
         $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
 
         $segments = explode('/', $path);
