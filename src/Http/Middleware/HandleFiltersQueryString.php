@@ -22,8 +22,9 @@ class HandleFiltersQueryString
 
         if ($isLivewireRequest) {
             $referer = $request->headers->get('referer');
-            $path = $referer
-                ? ltrim(parse_url($referer, PHP_URL_PATH) ?? '/', '/')
+            $refererPath = $referer ? parse_url($referer, PHP_URL_PATH) : null;
+            $path = is_string($refererPath)
+                ? ltrim($refererPath, '/')
                 : $request->path();
         } else {
             $path = $request->path();

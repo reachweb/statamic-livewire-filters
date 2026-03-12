@@ -51,18 +51,25 @@ class LivewireCollection extends Component
             $referer = request()->headers->get('referer');
             if ($referer) {
                 $parsed = parse_url($referer);
-                $path = ltrim($parsed['path'] ?? '/', '/');
+                if (! is_array($parsed)) {
+                    $this->currentPath = '/';
+                } else {
+                    $path = ltrim($parsed['path'] ?? '/', '/');
 
-                $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
-                if ($prefix) {
-                    $prefixPos = strpos($path, $prefix.'/');
-                    if ($prefixPos !== false) {
-                        $path = rtrim(substr($path, 0, $prefixPos), '/');
+                    // Strip custom query string filter segments using segment matching
+                    // to avoid false positives on partial matches (e.g. /myfilters/).
+                    $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+                    if ($prefix) {
+                        $segments = explode('/', $path);
+                        $prefixIndex = array_search($prefix, $segments);
+                        if ($prefixIndex !== false) {
+                            $path = implode('/', array_slice($segments, 0, $prefixIndex));
+                        }
                     }
-                }
 
-                $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
-                $this->currentPath = $path.$query;
+                    $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
+                    $this->currentPath = $path.$query;
+                }
             } else {
                 $this->currentPath = '/';
             }
