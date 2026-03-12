@@ -48,20 +48,24 @@ class LivewireCollection extends Component
     public function mount($params)
     {
         if (request()->hasHeader('X-Livewire')) {
-            $previousUrl = url()->previous();
-            $parsed = parse_url($previousUrl);
-            $path = ltrim($parsed['path'] ?? '/', '/');
+            $referer = request()->headers->get('referer');
+            if ($referer) {
+                $parsed = parse_url($referer);
+                $path = ltrim($parsed['path'] ?? '/', '/');
 
-            $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
-            if ($prefix) {
-                $prefixPos = strpos($path, $prefix.'/');
-                if ($prefixPos !== false) {
-                    $path = rtrim(substr($path, 0, $prefixPos), '/');
+                $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+                if ($prefix) {
+                    $prefixPos = strpos($path, $prefix.'/');
+                    if ($prefixPos !== false) {
+                        $path = rtrim(substr($path, 0, $prefixPos), '/');
+                    }
                 }
-            }
 
-            $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
-            $this->currentPath = $path.$query;
+                $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
+                $this->currentPath = $path.$query;
+            } else {
+                $this->currentPath = request()->path();
+            }
         } else {
             $this->currentPath = request()->path();
         }

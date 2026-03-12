@@ -229,9 +229,6 @@ class CustomQueryStringTest extends TestCase
         $request->headers->set('X-Livewire', 'true');
         $request->headers->set('Referer', 'http://localhost/filters/item_options/option2');
 
-        // Set as app request so url()->previous() can read the Referer header
-        $this->app->instance('request', $request);
-
         $middleware->handle($request, function ($req) {
             // The middleware should have parsed filter params from the Referer
             $this->assertEquals(
@@ -254,9 +251,6 @@ class CustomQueryStringTest extends TestCase
         $request = Request::create('/livewire/update', 'POST');
         $request->headers->set('X-Livewire', 'true');
         $request->headers->set('Referer', 'http://localhost/blog/filters/item_options/option1/title/I%20Love');
-
-        // Set as app request so url()->previous() can read the Referer header
-        $this->app->instance('request', $request);
 
         $middleware->handle($request, function ($req) {
             // Should parse multiple filter params
