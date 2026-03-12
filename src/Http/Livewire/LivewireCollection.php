@@ -64,7 +64,7 @@ class LivewireCollection extends Component
                 $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
                 $this->currentPath = $path.$query;
             } else {
-                $this->currentPath = request()->path();
+                $this->currentPath = '/';
             }
         } else {
             $this->currentPath = request()->path();
