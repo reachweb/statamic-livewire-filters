@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -216,5 +218,57 @@ class CustomQueryStringTest extends TestCase
 
                 return $hasFilterPath && $hasValidQueryString && $noMalformedUrl;
             });
+    }
+
+    #[Test]
+    public function it_parses_filter_params_from_livewire_request_referer()
+    {
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/livewire/update', 'POST');
+        $request->headers->set('X-Livewire', 'true');
+        $request->headers->set('Referer', 'http://localhost/filters/item_options/option2');
+
+        // Set as app request so url()->previous() can read the Referer header
+        $this->app->instance('request', $request);
+
+        $middleware->handle($request, function ($req) {
+            // The middleware should have parsed filter params from the Referer
+            $this->assertEquals(
+                ['item_options:is' => 'option2'],
+                $req->input('params')
+            );
+
+            // The request path should NOT be rewritten for Livewire requests
+            $this->assertEquals('livewire/update', $req->path());
+
+            return response('ok');
+        });
+    }
+
+    #[Test]
+    public function it_does_not_rewrite_request_path_for_livewire_requests()
+    {
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/livewire/update', 'POST');
+        $request->headers->set('X-Livewire', 'true');
+        $request->headers->set('Referer', 'http://localhost/blog/filters/item_options/option1/title/I%20Love');
+
+        // Set as app request so url()->previous() can read the Referer header
+        $this->app->instance('request', $request);
+
+        $middleware->handle($request, function ($req) {
+            // Should parse multiple filter params
+            $this->assertEquals(
+                ['item_options:is' => 'option1', 'title:contains' => 'I Love'],
+                $req->input('params')
+            );
+
+            // Request path must remain unchanged for Livewire to route correctly
+            $this->assertEquals('livewire/update', $req->path());
+
+            return response('ok');
+        });
     }
 }

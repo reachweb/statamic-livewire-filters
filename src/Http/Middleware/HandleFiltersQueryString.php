@@ -10,20 +10,28 @@ class HandleFiltersQueryString
 {
     public function handle(Request $request, Closure $next): mixed
     {
-        if ($this->shouldSkip() || ! $this->shouldProcessRequest($request)) {
+        if ($this->shouldSkip()) {
             return $next($request);
         }
 
-        $path = request()->path() === 'livewire/update' ? url()->previous() : request()->path();
+        $isLivewireRequest = $request->hasHeader('X-Livewire');
+
+        if (! $isLivewireRequest && ! $this->shouldProcessRequest($request)) {
+            return $next($request);
+        }
+
+        if ($isLivewireRequest) {
+            $previousUrl = url()->previous();
+            $path = ltrim(parse_url($previousUrl, PHP_URL_PATH) ?? '/', '/');
+        } else {
+            $path = $request->path();
+        }
         $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
 
         $segments = explode('/', $path);
         $filterIndex = array_search($prefix, $segments);
 
         if ($filterIndex !== false) {
-            // Extract the base URL (everything before /filters/)
-            $baseUrl = implode('/', array_slice($segments, 0, $filterIndex));
-
             // Extract and parse filter segments
             $filterSegments = array_slice($segments, $filterIndex + 1);
             $params = $this->parseFilterSegments($filterSegments);
@@ -31,19 +39,24 @@ class HandleFiltersQueryString
             // Add params to request
             $request->merge(['params' => $params]);
 
-            // Modify the PathInfo and RequestUri at the Symfony level
-            $request->server->set('PATH_INFO', '/'.$baseUrl);
-            $request->server->set('REQUEST_URI', '/'.$baseUrl);
+            // Only rewrite the request path for non-Livewire requests
+            if (! $isLivewireRequest) {
+                $baseUrl = implode('/', array_slice($segments, 0, $filterIndex));
 
-            // Update the internal request parsing
-            $request->initialize(
-                $request->query->all(),
-                $request->request->all(),
-                $request->attributes->all(),
-                $request->cookies->all(),
-                $request->files->all(),
-                $request->server->all()
-            );
+                // Modify the PathInfo and RequestUri at the Symfony level
+                $request->server->set('PATH_INFO', '/'.$baseUrl);
+                $request->server->set('REQUEST_URI', '/'.$baseUrl);
+
+                // Update the internal request parsing
+                $request->initialize(
+                    $request->query->all(),
+                    $request->request->all(),
+                    $request->attributes->all(),
+                    $request->cookies->all(),
+                    $request->files->all(),
+                    $request->server->all()
+                );
+            }
         }
 
         return $next($request);

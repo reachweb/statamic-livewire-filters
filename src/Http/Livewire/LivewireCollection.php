@@ -47,7 +47,15 @@ class LivewireCollection extends Component
 
     public function mount($params)
     {
-        $this->currentPath = request()->path() === 'livewire/update' ? url()->previous() : request()->path();
+        if (request()->hasHeader('X-Livewire')) {
+            $previousUrl = url()->previous();
+            $parsed = parse_url($previousUrl);
+            $path = ltrim($parsed['path'] ?? '/', '/');
+            $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
+            $this->currentPath = $path.$query;
+        } else {
+            $this->currentPath = request()->path();
+        }
         $this->allowedFilters = false;
         if (is_null($this->params)) {
             $this->setParameters($params);
