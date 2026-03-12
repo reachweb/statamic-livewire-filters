@@ -131,8 +131,8 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
         // Livewire 3.7.4+ uses app()->booted() to register routes which can cause timing issues in tests.
         // We need to set the update route before Statamic's catch-all route is matched.
         $app->booted(function () {
-            Livewire::setUpdateRoute(function ($handle) {
-                return Route::post('/livewire/update', $handle)
+            Livewire::setUpdateRoute(function ($handle, $path = '/livewire/update') {
+                return Route::post($path, $handle)
                     ->middleware('web')
                     ->name('livewire.update');
             });
