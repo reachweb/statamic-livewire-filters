@@ -51,6 +51,15 @@ class LivewireCollection extends Component
             $previousUrl = url()->previous();
             $parsed = parse_url($previousUrl);
             $path = ltrim($parsed['path'] ?? '/', '/');
+
+            $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+            if ($prefix) {
+                $prefixPos = strpos($path, $prefix.'/');
+                if ($prefixPos !== false) {
+                    $path = rtrim(substr($path, 0, $prefixPos), '/');
+                }
+            }
+
             $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
             $this->currentPath = $path.$query;
         } else {
