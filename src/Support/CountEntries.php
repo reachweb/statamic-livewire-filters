@@ -11,7 +11,17 @@ class CountEntries extends StatamicEntries
     public function pluck(string $column): Collection
     {
         try {
-            return $this->query()->pluck($column);
+            $query = $this->query();
+
+            if ($limit = $this->params->int('limit')) {
+                $query->limit($limit);
+            }
+
+            if ($offset = $this->params->int('offset')) {
+                $query->offset($offset);
+            }
+
+            return $query->pluck($column);
         } catch (NoResultsExpected $exception) {
             return collect();
         }
