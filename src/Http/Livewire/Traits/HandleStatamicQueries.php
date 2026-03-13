@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Reach\StatamicLivewireFilters\Exceptions\BlueprintNotFoundException;
 use Reach\StatamicLivewireFilters\Exceptions\FieldNotFoundException;
+use Statamic\Facades\Blink;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
@@ -13,42 +14,63 @@ trait HandleStatamicQueries
 {
     protected function getTaxonomyTerms($taxonomy_handle)
     {
-        $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
+        $siteHandle = Site::current()->handle();
 
-        return $taxonomy->queryTerms()->get()
-            ->unique(fn ($term) => $term->inDefaultLocale()->slug())
-            ->flatMap(function ($term) {
-                return [
-                    $term->inDefaultLocale()->slug() => ($term->in(Site::current()->handle()) ?? $term->inDefaultLocale())->title(),
-                ];
-            });
+        return Blink::once("statamic-livewire-filters.taxonomy-terms.{$siteHandle}.{$taxonomy_handle}", function () use ($taxonomy_handle, $siteHandle) {
+            $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
+
+            return $taxonomy->queryTerms()->get()
+                ->unique(fn ($term) => $term->inDefaultLocale()->slug())
+                ->flatMap(function ($term) use ($siteHandle) {
+                    return [
+                        $term->inDefaultLocale()->slug() => ($term->in($siteHandle) ?? $term->inDefaultLocale())->title(),
+                    ];
+                });
+        });
     }
 
     protected function getCollectionEntries($collection_handle)
     {
-        return Entry::query()
-            ->where('collection', $collection_handle)
-            ->where('site', Site::current()->handle())
-            ->whereStatus('published')
-            ->get()
-            ->flatMap(function ($entry) {
-                if (config('statamic-livewire-filters.use_origin_id_for_entries_field')) {
-                    return [
-                        $entry->hasOrigin() ? $entry->origin()->id() : $entry->id() => $entry->title,
-                    ];
-                }
+        $siteHandle = Site::current()->handle();
+        $useOriginId = config('statamic-livewire-filters.use_origin_id_for_entries_field');
+        $cacheKey = sprintf(
+            'statamic-livewire-filters.collection-entries.%s.%s.%s',
+            $siteHandle,
+            $collection_handle,
+            $useOriginId ? 'origin' : 'entry'
+        );
 
-                return [
-                    $entry->id() => $entry->title,
-                ];
-            });
+        return Blink::once($cacheKey, function () use ($collection_handle, $siteHandle, $useOriginId) {
+            return Entry::query()
+                ->where('collection', $collection_handle)
+                ->where('site', $siteHandle)
+                ->whereStatus('published')
+                ->get()
+                ->flatMap(function ($entry) use ($useOriginId) {
+                    if ($useOriginId) {
+                        return [
+                            $entry->hasOrigin() ? $entry->origin()->id() : $entry->id() => $entry->title,
+                        ];
+                    }
+
+                    return [
+                        $entry->id() => $entry->title,
+                    ];
+                });
+        });
     }
 
     public function getStatamicBlueprint()
     {
-        if ($blueprint = Blueprint::find('collections.'.$this->collection.'.'.$this->blueprint)) {
+        $blueprint = Blink::once(
+            'statamic-livewire-filters.blueprint.'.$this->collection.'.'.$this->blueprint,
+            fn () => Blueprint::find('collections.'.$this->collection.'.'.$this->blueprint)
+        );
+
+        if ($blueprint) {
             return $blueprint;
         }
+
         throw new BlueprintNotFoundException($this->blueprint);
     }
 
