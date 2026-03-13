@@ -47,7 +47,35 @@ class LivewireCollection extends Component
 
     public function mount($params)
     {
-        $this->currentPath = request()->path() === 'livewire/update' ? url()->previous() : request()->path();
+        if (request()->hasHeader('X-Livewire')) {
+            $referer = request()->headers->get('referer');
+            if ($referer) {
+                $parsed = parse_url($referer);
+                if (! is_array($parsed)) {
+                    $this->currentPath = '/';
+                } else {
+                    $path = ltrim($parsed['path'] ?? '/', '/');
+
+                    // Strip custom query string filter segments using segment matching
+                    // to avoid false positives on partial matches (e.g. /myfilters/).
+                    $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+                    if ($prefix) {
+                        $segments = explode('/', $path);
+                        $prefixIndex = array_search($prefix, $segments);
+                        if ($prefixIndex !== false) {
+                            $path = implode('/', array_slice($segments, 0, $prefixIndex));
+                        }
+                    }
+
+                    $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
+                    $this->currentPath = $path.$query;
+                }
+            } else {
+                $this->currentPath = '/';
+            }
+        } else {
+            $this->currentPath = request()->path();
+        }
         $this->allowedFilters = false;
         if (is_null($this->params)) {
             $this->setParameters($params);

@@ -291,11 +291,12 @@ trait HandleParams
         $currentPathTrimmed = trim($currentPathOnly, '/');
 
         // If the currentPath already includes the prefix, strip it and anything after.
-        $prefixMarker = $prefix.'/';
-        $prefixPos = strpos($currentPathTrimmed, $prefixMarker);
-        if ($prefixPos !== false) {
-            // Keep only the part before the prefix marker.
-            $currentPathTrimmed = rtrim(substr($currentPathTrimmed, 0, $prefixPos), '/');
+        // Use segment-based matching to avoid false positives on partial matches
+        // (e.g. /myfilters/ should not match prefix "filters").
+        $segments = explode('/', $currentPathTrimmed);
+        $prefixIndex = array_search($prefix, $segments, true);
+        if ($prefixIndex !== false) {
+            $currentPathTrimmed = implode('/', array_slice($segments, 0, $prefixIndex));
         }
 
         $fullPath = $path
