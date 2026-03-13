@@ -847,6 +847,105 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
+    #[Test]
+    public function it_calculates_the_count_for_taxonomy_terms()
+    {
+        $clothesCollection = Facades\Collection::findByHandle('clothes');
+
+        $this->makeEntry($clothesCollection, 'shirt1')->set('title', 'Red Shirt')->set('colors', ['red'])->save();
+        $this->makeEntry($clothesCollection, 'shirt2')->set('title', 'Red and Black Shirt')->set('colors', ['red', 'black'])->save();
+        $this->makeEntry($clothesCollection, 'shirt3')->set('title', 'Yellow Shirt')->set('colors', ['yellow'])->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts']['red'] === 2
+                    && $statamic_field['counts']['black'] === 1
+                    && $statamic_field['counts']['yellow'] === 1;
+            });
+    }
+
+    #[Test]
+    public function it_calculates_the_count_for_multi_value_entries_field()
+    {
+        $postsCollection = Facades\Collection::findByHandle('posts');
+
+        $this->makeEntry($postsCollection, 'post1')->set('title', 'Post 1')->set('related_instruments', ['guitar', 'drums'])->save();
+        $this->makeEntry($postsCollection, 'post2')->set('title', 'Post 2')->set('related_instruments', ['guitar', 'piano'])->save();
+        $this->makeEntry($postsCollection, 'post3')->set('title', 'Post 3')->set('related_instruments', ['drums'])->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'overlaps'])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts']['guitar'] === 2
+                    && $statamic_field['counts']['drums'] === 2
+                    && $statamic_field['counts']['piano'] === 1;
+            });
+    }
+
+    #[Test]
+    public function it_calculates_the_count_for_toggle_field()
+    {
+        $toggleBlueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'featured',
+                            'field' => [
+                                'type' => 'toggle',
+                                'display' => 'Featured',
+                                'listable' => 'hidden',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $toggleBlueprint->setHandle('pages_toggle')->setNamespace('collections.pages')->save();
+
+        $this->makeEntry($this->collection, 'toggle1')->set('title', 'Featured 1')->set('featured', true)->save();
+        $this->makeEntry($this->collection, 'toggle2')->set('title', 'Featured 2')->set('featured', true)->save();
+        $this->makeEntry($this->collection, 'toggle3')->set('title', 'Not Featured')->set('featured', false)->save();
+
+        $customOptions = [
+            true => 'Yes',
+            false => 'No',
+        ];
+
+        Livewire::test(LfCheckboxFilter::class, [
+            'field' => 'featured',
+            'collection' => 'pages',
+            'blueprint' => 'pages.pages_toggle',
+            'condition' => 'is',
+            'options' => $customOptions,
+        ])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'][1] === 2
+                    && $statamic_field['counts'][0] === 1;
+            });
+    }
+
+    #[Test]
+    public function it_returns_zero_counts_when_no_entries_match()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['title:is' => 'nonexistent-title-that-matches-nothing'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts']['option1'] === 0
+                    && $statamic_field['counts']['option2'] === 0
+                    && $statamic_field['counts']['option3'] === 0;
+            });
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
