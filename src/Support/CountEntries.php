@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Support;
 
 use Illuminate\Support\Collection;
+use Statamic\Facades\Site;
 use Statamic\Query\EloquentQueryBuilder;
 use Statamic\Tags\Collection\Entries as StatamicEntries;
 use Statamic\Tags\Collection\NoResultsExpected;
@@ -24,7 +25,10 @@ class CountEntries extends StatamicEntries
 
             // Eloquent optimization: pluck directly from the base query to avoid
             // hydrating full Entry objects. Field values are in the JSON data column.
-            if ($query instanceof EloquentQueryBuilder) {
+            // Skip for multisite collections — localized entries inherit field
+            // values from their origin at runtime, and the raw JSON pluck
+            // cannot resolve that fallback chain.
+            if ($query instanceof EloquentQueryBuilder && ! $this->isMultisiteCollection()) {
                 return $this->eloquentPluck($query, $column);
             }
 
@@ -53,5 +57,16 @@ class CountEntries extends StatamicEntries
             // Fall back to standard pluck if raw query fails
             return $query->pluck($column);
         }
+    }
+
+    protected function isMultisiteCollection(): bool
+    {
+        if (! Site::multiEnabled()) {
+            return false;
+        }
+
+        $collection = $this->collections->first();
+
+        return $collection && $collection->sites()->count() > 1;
     }
 }
