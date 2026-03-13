@@ -53,7 +53,7 @@ class CountEntries extends StatamicEntries
 
                 return $value;
             });
-        } catch (\Exception $e) {
+        } catch (\Illuminate\Database\QueryException $e) {
             // Fall back to standard pluck if raw query fails
             return $query->pluck($column);
         }

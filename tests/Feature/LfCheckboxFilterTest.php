@@ -946,6 +946,17 @@ class LfCheckboxFilterTest extends TestCase
             });
     }
 
+    #[Test]
+    public function it_computes_counts_on_initial_ssr_mount()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
+            });
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
