@@ -38,17 +38,6 @@ trait HandleEntriesCount
         $baseParams = [];
 
         foreach ($params as $key => $value) {
-            if ($this->condition === 'query_scope' && $key === 'query_scope') {
-                $scopes = explode('|', $value);
-                $scopes = array_filter($scopes, fn ($scope) => $scope !== $this->modifier);
-
-                if (! empty($scopes)) {
-                    $baseParams[$key] = implode('|', $scopes);
-                }
-
-                continue;
-            }
-
             // Check if this is a dual_range field (has min/max keys)
             if ($this->condition === 'dual_range') {
                 // Skip both min and max keys for the current field
@@ -67,12 +56,30 @@ trait HandleEntriesCount
                 continue;
             }
 
-            // Handle query_scope - need to check if this field uses query_scope
+            // Handle query_scope - skip the current field's scoped param
             if ($this->condition === 'query_scope' && $key === $this->modifier.':'.$fieldHandle) {
                 continue;
             }
 
             $baseParams[$key] = $value;
+        }
+
+        // Clean up the query_scope param only if no remaining params use this scope
+        if ($this->condition === 'query_scope' && isset($baseParams['query_scope'])) {
+            $hasRemainingParams = collect($baseParams)->keys()->contains(
+                fn ($key) => str_starts_with($key, $this->modifier.':')
+            );
+
+            if (! $hasRemainingParams) {
+                $scopes = explode('|', $baseParams['query_scope']);
+                $scopes = array_filter($scopes, fn ($scope) => $scope !== $this->modifier);
+
+                if (empty($scopes)) {
+                    unset($baseParams['query_scope']);
+                } else {
+                    $baseParams['query_scope'] = implode('|', $scopes);
+                }
+            }
         }
 
         return $baseParams;
