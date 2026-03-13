@@ -214,11 +214,5 @@ class LivewireCollection extends Component
     public function rendered()
     {
         $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->activeFilters);
-
-        // SSR fallback: if any filter components rendered before the collection
-        // and missed Blink data, dispatch params-updated so they get counts via AJAX.
-        if (Blink::store('livewire-filters')->pull('needs-initial-counts')) {
-            $this->dispatch('params-updated', $this->params);
-        }
     }
 }

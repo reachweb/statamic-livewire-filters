@@ -26,7 +26,15 @@ trait HandleEntriesCount
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
+        $previousCounts = $this->statamic_field['counts'];
+
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
+
+        // Skip re-render when counts haven't changed (e.g. lazy mount
+        // dispatching params that match the initial SSR computation).
+        if ($previousCounts === $this->statamic_field['counts']) {
+            $this->skipRender();
+        }
 
         $this->dispatch('counts-updated', $this->counts());
     }

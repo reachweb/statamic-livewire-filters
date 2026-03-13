@@ -40,17 +40,12 @@ trait IsLivewireFilter
 
         $this->statamic_field = $field->toArray();
 
-        // Compute initial counts synchronously from Blink (set by LivewireCollection::mount)
-        // to avoid a double HTTP request on first page load.
+        // Compute initial counts synchronously during SSR to avoid AJAX flash.
+        // Uses Blink params if the collection already mounted, otherwise falls
+        // back to empty params (correct for first load with no active filters).
         if (method_exists($this, 'updateCounts') && config('statamic-livewire-filters.enable_filter_values_count')) {
             $initialParams = Blink::store('livewire-filters')->get('initial-params');
-            if ($initialParams !== null) {
-                $this->computeInitialCounts($initialParams);
-            } else {
-                // Flag that this filter rendered before the collection,
-                // so LivewireCollection::rendered() can dispatch params-updated.
-                Blink::store('livewire-filters')->put('needs-initial-counts', true);
-            }
+            $this->computeInitialCounts($initialParams ?? []);
         }
     }
 
