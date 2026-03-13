@@ -83,10 +83,16 @@ class LivewireCollection extends Component
         } else {
             $this->setParameters(array_merge($params, $this->params));
         }
-        // Store params in Blink for sibling filter components to read during
-        // their mount(), avoiding a double HTTP request for initial count loading.
+        // Compute initial filter counts without extra AJAX requests.
         if (config('statamic-livewire-filters.enable_filter_values_count')) {
-            Blink::store('livewire-filters')->put('initial-params', $this->params);
+            if (request()->hasHeader('X-Livewire')) {
+                // Lazy mount: filters already rendered without Blink data,
+                // dispatch so they compute counts via their params-updated listener.
+                $this->dispatch('params-updated', $this->params);
+            } else {
+                // SSR mount: store in Blink for sibling filters to read synchronously.
+                Blink::store('livewire-filters')->put('initial-params', $this->params);
+            }
         }
 
         $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
@@ -208,5 +214,11 @@ class LivewireCollection extends Component
     public function rendered()
     {
         $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->activeFilters);
+
+        // SSR fallback: if any filter components rendered before the collection
+        // and missed Blink data, dispatch params-updated so they get counts via AJAX.
+        if (Blink::store('livewire-filters')->pull('needs-initial-counts')) {
+            $this->dispatch('params-updated', $this->params);
+        }
     }
 }

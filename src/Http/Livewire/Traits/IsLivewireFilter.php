@@ -46,6 +46,10 @@ trait IsLivewireFilter
             $initialParams = Blink::store('livewire-filters')->get('initial-params');
             if ($initialParams !== null) {
                 $this->computeInitialCounts($initialParams);
+            } else {
+                // Flag that this filter rendered before the collection,
+                // so LivewireCollection::rendered() can dispatch params-updated.
+                Blink::store('livewire-filters')->put('needs-initial-counts', true);
             }
         }
     }
