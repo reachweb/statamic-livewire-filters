@@ -15,7 +15,7 @@
             >
                 {{ $label }}
                 @if ($this->counts[$value] !== null)
-                <span class="text-lf-muted ml-1">({{ $this->counts[$value] }})</span>
+                <span class="text-lf-muted ml-1" wire:loading.class="opacity-50">({{ $this->counts[$value] }})</span>
                 @endif
             </label>
         </div>

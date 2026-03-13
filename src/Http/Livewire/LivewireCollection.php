@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Statamic\Facades\Blink;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
 
@@ -82,7 +83,13 @@ class LivewireCollection extends Component
         } else {
             $this->setParameters(array_merge($params, $this->params));
         }
-        $this->dispatchParamsUpdated();
+        // Store params in Blink for sibling filter components to read during
+        // their mount(), avoiding a double HTTP request for initial count loading.
+        if (config('statamic-livewire-filters.enable_filter_values_count')) {
+            Blink::store('livewire-filters')->put('initial-params', $this->params);
+        }
+
+        $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
 
         $this->runHooks('init');
     }
