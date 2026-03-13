@@ -56,27 +56,30 @@ trait HandleEntriesCount
                 continue;
             }
 
-            // Handle query_scope - need to check if this field uses query_scope
-            if ($this->condition === 'query_scope' && str_ends_with($key, ':'.$fieldHandle)) {
-                // Also need to clean up the query_scope parameter if this was the only scope
-                if ($key === 'query_scope') {
-                    // Remove the modifier from the pipe-separated list
-                    $scopes = explode('|', $value);
-                    $scopes = array_filter($scopes, fn ($scope) => $scope !== $this->modifier);
-
-                    if (empty($scopes)) {
-                        continue; // Skip the query_scope key entirely if no scopes left
-                    }
-
-                    $baseParams[$key] = implode('|', $scopes);
-
-                    continue;
-                }
-
+            // Handle query_scope - skip the current field's scoped param
+            if ($this->condition === 'query_scope' && $key === $this->modifier.':'.$fieldHandle) {
                 continue;
             }
 
             $baseParams[$key] = $value;
+        }
+
+        // Clean up the query_scope param only if no remaining params use this scope
+        if ($this->condition === 'query_scope' && isset($baseParams['query_scope'])) {
+            $hasRemainingParams = collect($baseParams)->keys()->contains(
+                fn ($key) => str_starts_with($key, $this->modifier.':')
+            );
+
+            if (! $hasRemainingParams) {
+                $scopes = explode('|', $baseParams['query_scope']);
+                $scopes = array_filter($scopes, fn ($scope) => $scope !== $this->modifier);
+
+                if (empty($scopes)) {
+                    unset($baseParams['query_scope']);
+                } else {
+                    $baseParams['query_scope'] = implode('|', $scopes);
+                }
+            }
         }
 
         return $baseParams;
