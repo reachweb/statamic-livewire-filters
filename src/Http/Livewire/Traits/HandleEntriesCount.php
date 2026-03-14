@@ -4,15 +4,11 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Reach\StatamicLivewireFilters\Support\CountEntries;
+use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Statamic\Entries\EntryCollection;
 
 trait HandleEntriesCount
 {
-    use GenerateParams;
-
-    protected array $countQueryCache = [];
-
     #[Computed]
     public function counts()
     {
@@ -30,7 +26,15 @@ trait HandleEntriesCount
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
+        $previousCounts = $this->statamic_field['counts'];
+
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
+
+        // Skip re-render when counts haven't changed (e.g. lazy mount
+        // dispatching params that match the initial SSR computation).
+        if ($previousCounts === $this->statamic_field['counts']) {
+            $this->skipRender();
+        }
 
         $this->dispatch('counts-updated', $this->counts());
     }
@@ -114,26 +118,7 @@ trait HandleEntriesCount
 
     protected function getCountFieldValues(array $baseParams, string $fieldHandle)
     {
-        $cacheKey = $this->countQueryCacheKey($baseParams, $fieldHandle);
-
-        if (array_key_exists($cacheKey, $this->countQueryCache)) {
-            return $this->countQueryCache[$cacheKey];
-        }
-
-        return $this->countQueryCache[$cacheKey] = (new CountEntries(
-            $this->generateParamsForCount($this->collection, $baseParams)
-        ))->pluck($fieldHandle);
-    }
-
-    protected function countQueryCacheKey(array $baseParams, string $fieldHandle): string
-    {
-        ksort($baseParams);
-
-        return md5(serialize([
-            'collection' => $this->collection,
-            'field' => $fieldHandle,
-            'params' => $baseParams,
-        ]));
+        return app(CountQueryPool::class)->getFieldValues($this->collection, $baseParams, $fieldHandle);
     }
 
     protected function getOptionParam($option)

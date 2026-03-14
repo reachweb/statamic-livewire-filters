@@ -11,6 +11,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCo
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use Statamic\Facades\Blink;
 
 class LivewireCollectionComponentTest extends TestCase
 {
@@ -525,6 +526,24 @@ class LivewireCollectionComponentTest extends TestCase
         $view = $component->placeholder($params);
 
         $this->assertEquals('statamic-livewire-filters::livewire.ui.lazyload-placeholder', $view->name());
+    }
+
+    #[Test]
+    public function it_stores_initial_params_in_blink_during_ssr_when_counts_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $params = [
+            'from' => 'music',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertNotDispatched('params-updated');
+
+        $initialParams = Blink::store('livewire-filters')->get('initial-params');
+
+        $this->assertIsArray($initialParams);
+        $this->assertArrayNotHasKey('from', $initialParams);
     }
 
     #[Test]
