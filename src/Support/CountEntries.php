@@ -45,7 +45,7 @@ class CountEntries extends StatamicEntries
 
             // JSON-stored arrays come back as strings -- decode them
             return $results->map(function ($value) {
-                if (is_string($value)) {
+                if (is_string($value) && isset($value[0]) && ($value[0] === '[' || $value[0] === '{')) {
                     $decoded = json_decode($value, true);
 
                     return is_array($decoded) ? $decoded : $value;

@@ -43,7 +43,7 @@ trait IsLivewireFilter
         // Compute initial counts synchronously during SSR to avoid AJAX flash.
         // Uses Blink params if the collection already mounted, otherwise falls
         // back to empty params (correct for first load with no active filters).
-        if (method_exists($this, 'updateCounts') && config('statamic-livewire-filters.enable_filter_values_count')) {
+        if (! request()->hasHeader('X-Livewire') && method_exists($this, 'updateCounts') && config('statamic-livewire-filters.enable_filter_values_count')) {
             $initialParams = Blink::store('livewire-filters')->get('initial-params');
             $this->computeInitialCounts($initialParams ?? []);
         }
