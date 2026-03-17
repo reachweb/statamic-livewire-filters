@@ -2,7 +2,7 @@
     x-data="{
         allOptions: @js($this->filter_options),
         options: [],
-        counts: {},
+        counts: @js($this->counts),
         isOpen: false,
         openedWithKeyboard: false,
         openUpwards: false,
@@ -139,7 +139,7 @@
                             <span>
                                 <span x-text="label"></span>
                                 @if (config('statamic-livewire-filters.enable_filter_values_count') === true)
-                                <span class="text-lf-muted ml-1" x-show="counts && counts[value] !== undefined" x-text="'(' + (counts[value]) + ')'"></span>
+                                <span class="text-lf-muted ml-1" x-show="counts[value] != null" x-text="'(' + (counts[value]) + ')'"></span>
                                 @endif
                             </span>
                         </label>

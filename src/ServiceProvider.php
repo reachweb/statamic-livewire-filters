@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters;
 
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
+use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCount;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
@@ -42,6 +43,13 @@ class ServiceProvider extends AddonServiceProvider
     protected $publishables = [
         __DIR__.'/../resources/frontend' => 'frontend',
     ];
+
+    public function register()
+    {
+        parent::register();
+
+        $this->app->scoped(CountQueryPool::class);
+    }
 
     public function bootAddon()
     {

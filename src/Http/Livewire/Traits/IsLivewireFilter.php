@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Statamic\Facades\Blink;
 
 trait IsLivewireFilter
 {
@@ -38,6 +39,21 @@ trait IsLivewireFilter
         $field = $this->processFieldByType($field);
 
         $this->statamic_field = $field->toArray();
+
+        // Compute initial counts synchronously during SSR to avoid AJAX flash.
+        // Uses Blink params if the collection already mounted, otherwise falls
+        // back to empty params (correct for first load with no active filters).
+        if (! request()->hasHeader('X-Livewire') && method_exists($this, 'updateCounts') && config('statamic-livewire-filters.enable_filter_values_count')) {
+            $initialParams = Blink::store('livewire-filters')->get('initial-params');
+            $this->computeInitialCounts($initialParams ?? []);
+        }
+    }
+
+    protected function computeInitialCounts(array $params): void
+    {
+        $fieldHandle = $this->statamic_field['handle'];
+        $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
+        $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
     }
 
     protected function processFieldByType($field)

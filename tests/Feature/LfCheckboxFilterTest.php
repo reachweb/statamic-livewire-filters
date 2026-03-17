@@ -306,7 +306,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             })
-            ->assertSeeHtml('<span class="text-lf-muted ml-1">(2)</span>');
+            ->assertSeeHtml('<span class="text-lf-muted ml-1" wire:loading.class="opacity-50">(2)</span>');
     }
 
     #[Test]
@@ -943,6 +943,17 @@ class LfCheckboxFilterTest extends TestCase
                 return $statamic_field['counts']['option1'] === 0
                     && $statamic_field['counts']['option2'] === 0
                     && $statamic_field['counts']['option3'] === 0;
+            });
+    }
+
+    #[Test]
+    public function it_computes_counts_on_initial_ssr_mount()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             });
     }
 

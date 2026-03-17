@@ -20,16 +20,6 @@ trait GenerateParams
         );
     }
 
-    protected function generateParamsForCount($collection, $params)
-    {
-        return Parameters::make(array_merge(
-            ['from' => $collection],
-            $params,
-        ),
-            Context::make([])
-        );
-    }
-
     protected function removeParamsNotInAllowedFiltersCollection()
     {
         return collect($this->params)->filter(function ($value, $key) {
