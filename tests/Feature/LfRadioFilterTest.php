@@ -164,6 +164,21 @@ class LfRadioFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_leaves_counts_unset_on_initial_mount_and_populates_them_after_params_updated()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => null, 'option2' => null, 'option3' => null];
+            })
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
+            });
+    }
+
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])

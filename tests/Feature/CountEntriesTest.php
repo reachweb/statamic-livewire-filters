@@ -3,16 +3,20 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Mockery;
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Support\CountEntries;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use Statamic\Query\EloquentQueryBuilder;
 use Statamic\Tags\Context;
 use Statamic\Tags\Parameters;
 
 class CountEntriesTest extends TestCase
 {
+    use MockeryPHPUnitIntegration;
     use PreventSavingStacheItemsToDisk;
 
     protected $collection;
@@ -107,6 +111,45 @@ class CountEntriesTest extends TestCase
 
         $this->assertCount(4, $result);
         $this->assertContains(null, $result->all());
+    }
+
+    #[Test]
+    public function it_uses_the_eloquent_fast_path_for_non_multisite_queries()
+    {
+        $params = Parameters::make(['from' => 'pages'], Context::make([]));
+        $builder = Mockery::mock(EloquentQueryBuilder::class);
+
+        $countEntries = Mockery::mock(CountEntries::class, [$params])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $countEntries->shouldReceive('query')->once()->andReturn($builder);
+        $countEntries->shouldReceive('isMultisiteCollection')->once()->andReturnFalse();
+        $countEntries->shouldReceive('eloquentPluck')->once()->with($builder, 'item_options')->andReturn(collect(['option1', 'option2']));
+
+        $result = $countEntries->pluck('item_options');
+
+        $this->assertSame(['option1', 'option2'], $result->all());
+    }
+
+    #[Test]
+    public function it_falls_back_to_the_standard_pluck_for_multisite_eloquent_queries()
+    {
+        $params = Parameters::make(['from' => 'pages'], Context::make([]));
+        $builder = Mockery::mock(EloquentQueryBuilder::class);
+        $builder->shouldReceive('pluck')->once()->with('item_options')->andReturn(collect(['option1']));
+
+        $countEntries = Mockery::mock(CountEntries::class, [$params])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $countEntries->shouldReceive('query')->once()->andReturn($builder);
+        $countEntries->shouldReceive('isMultisiteCollection')->once()->andReturnTrue();
+        $countEntries->shouldNotReceive('eloquentPluck');
+
+        $result = $countEntries->pluck('item_options');
+
+        $this->assertSame(['option1'], $result->all());
     }
 
     protected function makeEntry($collection, $slug)
