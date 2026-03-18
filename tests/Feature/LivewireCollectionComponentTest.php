@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
@@ -11,7 +12,6 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCo
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
-use Statamic\Facades\Blink;
 
 class LivewireCollectionComponentTest extends TestCase
 {
@@ -468,6 +468,15 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_dispatches_params_updated_on_mount_when_counts_are_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'music']])
+            ->assertDispatched('params-updated');
+    }
+
+    #[Test]
     public function it_sets_lazy_placeholder_from_parameter()
     {
         $params = [
@@ -529,21 +538,18 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
-    public function it_stores_initial_params_in_blink_during_ssr_when_counts_enabled()
+    public function it_dispatches_params_updated_on_lazy_mount_when_counts_are_enabled()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
 
-        $params = [
-            'from' => 'music',
-        ];
+        $request = Request::create('/livewire/update', 'POST');
+        $request->headers->set('X-Livewire', 'true');
+        $request->headers->set('Referer', 'http://localhost/music');
 
-        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
-            ->assertNotDispatched('params-updated');
+        $this->app->instance('request', $request);
 
-        $initialParams = Blink::store('livewire-filters')->get('initial-params');
-
-        $this->assertIsArray($initialParams);
-        $this->assertArrayNotHasKey('from', $initialParams);
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'music']])
+            ->assertDispatched('params-updated');
     }
 
     #[Test]

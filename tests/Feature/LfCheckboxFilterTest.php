@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Entries\Entry;
@@ -947,14 +948,39 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
-    public function it_computes_counts_on_initial_ssr_mount()
+    public function it_leaves_counts_unset_on_initial_mount_and_populates_them_after_params_updated()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => null, 'option2' => null, 'option3' => null];
+            })
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             });
+    }
+
+    #[Test]
+    public function it_computes_counts_from_preset_params_only_after_the_collection_dispatches_params_updated()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $params = ['title:is' => 'I Love Guitars'];
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('preset-params', $params)
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => null, 'option2' => null, 'option3' => null];
+            })
+            ->dispatch('params-updated', $params)
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 0, 'option3' => 0];
+            });
+
+        Livewire::test(LivewireCollection::class, ['params' => array_merge(['from' => 'pages'], $params)])
+            ->assertDispatched('params-updated');
     }
 
     protected function makeEntry($collection, $slug)
