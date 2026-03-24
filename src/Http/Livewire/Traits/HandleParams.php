@@ -287,21 +287,12 @@ trait HandleParams
             ? Str::after($this->currentPath, '?')
             : '';
 
-        // Trim and sanitize the current path (without query string).
-        $currentPathTrimmed = trim($currentPathOnly, '/');
-
-        // If the currentPath already includes the prefix, strip it and anything after.
-        // Use segment-based matching to avoid false positives on partial matches
-        // (e.g. /myfilters/ should not match prefix "filters").
-        $segments = explode('/', $currentPathTrimmed);
-        $prefixIndex = array_search($prefix, $segments, true);
-        if ($prefixIndex !== false) {
-            $currentPathTrimmed = implode('/', array_slice($segments, 0, $prefixIndex));
-        }
+        // Normalize the base path and remove any existing custom query string segments.
+        $currentPathTrimmed = $this->stripCustomQueryStringPrefix($currentPathOnly);
 
         $fullPath = $path
             ? ($currentPathTrimmed ? $currentPathTrimmed.'/' : '').trim($path, '/')
-            : $currentPathOnly;
+            : ($currentPathTrimmed ?: '/');
 
         $newUrl = url($fullPath);
 
@@ -313,9 +304,13 @@ trait HandleParams
             parse_str($existingQueryString, $queryParams);
         }
 
-        // Add pagination page parameter if on page > 1
-        if ($this->paginate && method_exists($this, 'getPage') && $this->getPage() > 1) {
-            $queryParams['page'] = $this->getPage();
+        // Only manage the page query param when this component owns pagination.
+        if ($this->paginate && method_exists($this, 'getPage')) {
+            if ($this->getPage() > 1) {
+                $queryParams['page'] = $this->getPage();
+            } else {
+                unset($queryParams['page']);
+            }
         }
 
         // Append query string if we have parameters
@@ -339,6 +334,38 @@ trait HandleParams
         })->merge(['sort' => 'sort'])
             ->flip()
             ->all();
+    }
+
+    protected function stripCustomQueryStringPrefix(string $path): string
+    {
+        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+        $segments = array_values(array_filter(explode('/', trim($path, '/')), fn ($segment) => $segment !== ''));
+
+        if (! $prefix) {
+            return implode('/', $segments);
+        }
+
+        $prefixIndex = array_search($prefix, $segments, true);
+
+        if ($prefixIndex === false) {
+            return implode('/', $segments);
+        }
+
+        return implode('/', array_slice($segments, 0, $prefixIndex));
+    }
+
+    protected function combinePathAndQuery(string $path, ?string $queryString = null): string
+    {
+        $normalizedPath = trim($path, '/');
+        $normalizedQueryString = $queryString ? ltrim($queryString, '?') : '';
+
+        if ($normalizedPath === '') {
+            return $normalizedQueryString ? '/?'.$normalizedQueryString : '/';
+        }
+
+        return $normalizedQueryString
+            ? $normalizedPath.'?'.$normalizedQueryString
+            : $normalizedPath;
     }
 
     protected function getDualRangeConditions($modifer): array
