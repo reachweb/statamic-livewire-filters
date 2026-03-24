@@ -304,11 +304,13 @@ trait HandleParams
             parse_str($existingQueryString, $queryParams);
         }
 
-        // Add pagination page parameter if on page > 1
-        if ($this->paginate && method_exists($this, 'getPage') && $this->getPage() > 1) {
-            $queryParams['page'] = $this->getPage();
-        } else {
-            unset($queryParams['page']);
+        // Only manage the page query param when this component owns pagination.
+        if ($this->paginate && method_exists($this, 'getPage')) {
+            if ($this->getPage() > 1) {
+                $queryParams['page'] = $this->getPage();
+            } else {
+                unset($queryParams['page']);
+            }
         }
 
         // Append query string if we have parameters

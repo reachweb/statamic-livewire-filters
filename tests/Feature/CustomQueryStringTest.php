@@ -307,6 +307,33 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function it_preserves_existing_page_query_parameters_when_the_component_is_not_paginated()
+    {
+        $component = $this->makeUrlHandlerHarness(
+            params: [
+                'from' => 'pages',
+                'item_options:is' => 'option1',
+            ],
+            currentPath: 'horizontal?page=4&utm_source=google',
+            page: 1
+        );
+
+        $component->updateCustomQueryStringUrl();
+
+        $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
+
+        $this->assertNotNull($updateUrl);
+
+        $url = parse_url($updateUrl['params']['newUrl']);
+
+        parse_str($url['query'] ?? '', $query);
+
+        $this->assertEquals('/horizontal/filters/item_options/option1', $url['path'] ?? null);
+        $this->assertSame('4', $query['page'] ?? null);
+        $this->assertSame('google', $query['utm_source'] ?? null);
+    }
+
+    #[Test]
     public function it_parses_filter_params_from_livewire_request_referer()
     {
         $middleware = new HandleFiltersQueryString;
