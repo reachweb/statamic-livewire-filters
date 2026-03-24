@@ -12,11 +12,15 @@ trait HandleEntriesCount
     #[Computed]
     public function counts()
     {
+        if (isset($this->statamic_field['counts']) && is_array($this->statamic_field['counts'])) {
+            return $this->statamic_field['counts'];
+        }
+
         if ($this->options !== null && is_array($this->options)) {
             return array_fill_keys(array_keys($this->options), null);
         }
 
-        return $this->statamic_field['counts'];
+        return [];
     }
 
     #[On('params-updated')]

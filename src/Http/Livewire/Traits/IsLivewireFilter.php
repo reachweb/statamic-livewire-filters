@@ -42,6 +42,10 @@ trait IsLivewireFilter
 
     protected function processFieldByType($field)
     {
+        if ($this->hasCustomOptions()) {
+            return $this->addCustomOptionsToConfig($field);
+        }
+
         $fieldType = $field->type();
 
         // Try to call a type-specific processor method if it exists
@@ -55,10 +59,6 @@ trait IsLivewireFilter
             $field = $this->transformOptionsArray($field);
 
             return $this->addCountsArrayToConfig($field);
-        }
-
-        if ($this->hasCustomOptions()) {
-            return $this->addCustomOptionsToConfig($field);
         }
 
         // Return unmodified field if no processors applied
