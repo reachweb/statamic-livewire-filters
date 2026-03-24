@@ -22,6 +22,10 @@ class HandleEntriesCountTest extends TestCase
 
             public $modifier = 'multiselect';
 
+            public $options = null;
+
+            public $statamic_field = [];
+
             public function removeParams(array $params, string $fieldHandle): array
             {
                 return $this->removeCurrentFieldFromParams($params, $fieldHandle);
@@ -70,5 +74,44 @@ class HandleEntriesCountTest extends TestCase
             'multiselect:origin' => 'japan',
             'some_other_scope:color' => 'red',
         ], $this->component->removeParams($params, 'car_type'));
+    }
+
+    #[Test]
+    public function it_returns_statamic_field_counts_when_the_component_uses_blueprint_options()
+    {
+        $this->component->options = null;
+
+        $this->component->statamic_field = [
+            'counts' => [
+                'option1' => 2,
+                'option2' => 1,
+            ],
+        ];
+
+        $this->assertSame([
+            'option1' => 2,
+            'option2' => 1,
+        ], $this->component->counts());
+    }
+
+    #[Test]
+    public function it_returns_updated_statamic_field_counts_when_custom_options_are_used()
+    {
+        $this->component->options = [
+            'custom1' => 'Custom 1',
+            'custom2' => 'Custom 2',
+        ];
+
+        $this->component->statamic_field = [
+            'counts' => [
+                'custom1' => 3,
+                'custom2' => 1,
+            ],
+        ];
+
+        $this->assertSame([
+            'custom1' => 3,
+            'custom2' => 1,
+        ], $this->component->counts());
     }
 }

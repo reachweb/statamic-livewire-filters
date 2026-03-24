@@ -643,11 +643,42 @@ class LfCheckboxFilterTest extends TestCase
             'condition' => 'is',
             'options' => $customOptions,
         ])
+            ->assertViewHas('statamic_field', function ($statamic_field) use ($customOptions) {
+                return $statamic_field['options'] === $customOptions
+                    && $statamic_field['counts'] === ['custom1' => null, 'custom2' => null];
+            })
             ->assertSee('Custom 1')
             ->assertSee('Custom 2')
             ->assertDontSee('Option 1')
             ->assertDontSee('Option 2')
             ->assertDontSee('Option 3');
+    }
+
+    #[Test]
+    public function it_renders_updated_counts_when_custom_options_are_provided()
+    {
+        $customOptions = [
+            'option1' => 'Custom 1',
+            'option2' => 'Custom 2',
+            'option3' => 'Custom 3',
+        ];
+
+        Livewire::test(LfCheckboxFilter::class, [
+            'field' => 'item_options',
+            'blueprint' => 'pages.pages',
+            'condition' => 'is',
+            'options' => $customOptions,
+        ])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
+            })
+            ->assertSee('Custom 1')
+            ->assertSee('Custom 2')
+            ->assertSee('Custom 3')
+            ->assertSeeHtml('<span class="text-lf-muted ml-1">(2)</span>')
+            ->assertSeeHtml('<span class="text-lf-muted ml-1">(1)</span>')
+            ->assertSeeHtml('<span class="text-lf-muted ml-1">(0)</span>');
     }
 
     #[Test]
