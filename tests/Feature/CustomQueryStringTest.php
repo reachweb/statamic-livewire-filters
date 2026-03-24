@@ -221,6 +221,92 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function it_resolves_current_path_from_non_livewire_requests_without_dropping_query_parameters()
+    {
+        $request = Request::create('/horizontal?utm_source=google&utm_medium=cpc&utm_campaign=campaign_name&utm_content=content_id', 'GET');
+        $this->app->instance('request', $request);
+
+        $component = new class extends LivewireCollection
+        {
+            public function resolveCurrentPathForTest(): string
+            {
+                return $this->resolveCurrentPath();
+            }
+        };
+
+        $currentPath = $component->resolveCurrentPathForTest();
+
+        $this->assertSame('horizontal', strtok($currentPath, '?'));
+
+        parse_str((string) parse_url('http://localhost/'.$currentPath, PHP_URL_QUERY), $query);
+
+        $this->assertEquals([
+            'utm_source' => 'google',
+            'utm_medium' => 'cpc',
+            'utm_campaign' => 'campaign_name',
+            'utm_content' => 'content_id',
+        ], $query);
+    }
+
+    #[Test]
+    public function it_preserves_existing_query_parameters_when_building_custom_urls()
+    {
+        $component = $this->makeUrlHandlerHarness(
+            params: [
+            'from' => 'pages',
+            'item_options:is' => 'option1|option2',
+            ],
+            currentPath: 'horizontal?utm_source=google&utm_medium=cpc&utm_campaign=campaign_name&utm_content=content_id'
+        );
+
+        $component->updateCustomQueryStringUrl();
+
+        $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
+
+        $this->assertNotNull($updateUrl);
+
+        $url = parse_url($updateUrl['params']['newUrl']);
+
+        parse_str($url['query'] ?? '', $query);
+
+        $this->assertEquals('/horizontal/filters/item_options/option1,option2', $url['path'] ?? null);
+        $this->assertEquals([
+            'utm_source' => 'google',
+            'utm_medium' => 'cpc',
+            'utm_campaign' => 'campaign_name',
+            'utm_content' => 'content_id',
+        ], $query);
+    }
+
+    #[Test]
+    public function it_removes_stale_page_query_parameters_when_back_on_page_one()
+    {
+        $component = $this->makeUrlHandlerHarness(
+            params: [
+                'from' => 'pages',
+                'paginate' => 1,
+                'item_options:is' => 'option1',
+            ],
+            currentPath: 'horizontal?page=2&utm_source=google',
+            page: 1
+        );
+
+        $component->updateCustomQueryStringUrl();
+
+        $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
+
+        $this->assertNotNull($updateUrl);
+
+        $url = parse_url($updateUrl['params']['newUrl']);
+
+        parse_str($url['query'] ?? '', $query);
+
+        $this->assertEquals('/horizontal/filters/item_options/option1', $url['path'] ?? null);
+        $this->assertArrayNotHasKey('page', $query);
+        $this->assertSame('google', $query['utm_source'] ?? null);
+    }
+
+    #[Test]
     public function it_parses_filter_params_from_livewire_request_referer()
     {
         $middleware = new HandleFiltersQueryString;
@@ -264,5 +350,46 @@ class CustomQueryStringTest extends TestCase
 
             return response('ok');
         });
+    }
+
+    protected function makeUrlHandlerHarness(array $params, string $currentPath, int $page = 1): object
+    {
+        return new class($params, $currentPath, $page)
+        {
+            use \Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleParams;
+
+            public array $params;
+
+            public string $currentPath;
+
+            public bool|int $paginate = false;
+
+            public array $dispatches = [];
+
+            protected int $page;
+
+            public function __construct(array $params, string $currentPath, int $page)
+            {
+                $this->params = $params;
+                $this->currentPath = $currentPath;
+                $this->paginate = $params['paginate'] ?? false;
+                $this->page = $page;
+            }
+
+            public function getPage(): int
+            {
+                return $this->page;
+            }
+
+            public function dispatch($name, ...$params): static
+            {
+                $this->dispatches[] = [
+                    'name' => $name,
+                    'params' => $params,
+                ];
+
+                return $this;
+            }
+        };
     }
 }
