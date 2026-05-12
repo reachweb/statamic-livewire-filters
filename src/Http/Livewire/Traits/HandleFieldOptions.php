@@ -73,7 +73,7 @@ trait HandleFieldOptions
     {
         $field->setConfig(array_merge(
             $field->config(),
-            ['counts' => array_fill_keys(collect($field->get('options'))->keys()->all(), null)]
+            ['counts' => array_fill_keys(array_keys($field->get('options')), null)]
         ));
 
         return $field;

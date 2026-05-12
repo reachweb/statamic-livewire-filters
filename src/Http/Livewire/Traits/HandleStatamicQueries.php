@@ -22,8 +22,10 @@ trait HandleStatamicQueries
             return $taxonomy->queryTerms()->get()
                 ->unique(fn ($term) => $term->inDefaultLocale()->slug())
                 ->mapWithKeys(function ($term) use ($siteHandle) {
+                    $default = $term->inDefaultLocale();
+
                     return [
-                        $term->inDefaultLocale()->slug() => ($term->in($siteHandle) ?? $term->inDefaultLocale())->title(),
+                        $default->slug() => ($term->in($siteHandle) ?? $default)->title(),
                     ];
                 });
         });
