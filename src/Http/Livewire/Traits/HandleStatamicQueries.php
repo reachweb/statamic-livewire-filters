@@ -21,9 +21,11 @@ trait HandleStatamicQueries
 
             return $taxonomy->queryTerms()->get()
                 ->unique(fn ($term) => $term->inDefaultLocale()->slug())
-                ->flatMap(function ($term) use ($siteHandle) {
+                ->mapWithKeys(function ($term) use ($siteHandle) {
+                    $default = $term->inDefaultLocale();
+
                     return [
-                        $term->inDefaultLocale()->slug() => ($term->in($siteHandle) ?? $term->inDefaultLocale())->title(),
+                        $default->slug() => ($term->in($siteHandle) ?? $default)->title(),
                     ];
                 });
         });
@@ -46,7 +48,7 @@ trait HandleStatamicQueries
                 ->where('site', $siteHandle)
                 ->whereStatus('published')
                 ->get()
-                ->flatMap(function ($entry) use ($useOriginId) {
+                ->mapWithKeys(function ($entry) use ($useOriginId) {
                     if ($useOriginId) {
                         return [
                             $entry->hasOrigin() ? $entry->origin()->id() : $entry->id() => $entry->title,

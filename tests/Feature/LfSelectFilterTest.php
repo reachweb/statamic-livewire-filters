@@ -6,6 +6,7 @@ use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -182,6 +183,74 @@ class LfSelectFilterTest extends TestCase
             ->assertSee('Afghanistan')
             ->assertSee('Albania')
             ->assertSee('Algeria');
+    }
+
+    #[Test]
+    public function it_filters_taxonomy_terms_with_numeric_slugs()
+    {
+        Facades\Taxonomy::make('years')->save();
+        Facades\Term::make()->taxonomy('years')->inDefaultLocale()->slug('100')->data(['title' => 'One Hundred'])->save();
+        Facades\Term::make()->taxonomy('years')->inDefaultLocale()->slug('200')->data(['title' => 'Two Hundred'])->save();
+        Facades\Collection::make('vintages')->taxonomies(['years'])->save();
+
+        Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'years',
+                            'field' => [
+                                'type' => 'terms',
+                                'taxonomies' => ['years'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ])->setHandle('vintages')->setNamespace('collections.vintages')->save();
+
+        EntryFactory::collection('vintages')->slug('item-100')->data(['title' => 'Item One Hundred', 'years' => ['100']])->create();
+        EntryFactory::collection('vintages')->slug('item-200')->data(['title' => 'Item Two Hundred', 'years' => ['200']])->create();
+
+        Livewire::test(LfSelectFilter::class, ['field' => 'years', 'blueprint' => 'vintages.vintages', 'condition' => 'taxonomy'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return array_key_exists('100', $statamic_field['options'])
+                    && array_key_exists('200', $statamic_field['options'])
+                    && $statamic_field['options']['100'] === 'One Hundred'
+                    && $statamic_field['options']['200'] === 'Two Hundred';
+            })
+            ->set('selected', '100')
+            ->assertSet('selected', '100')
+            ->assertHasNoErrors('selected')
+            ->assertDispatched('filter-updated',
+                field: 'years',
+                condition: 'taxonomy',
+                payload: '100',
+            );
+
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'vintages']])
+            ->dispatch('filter-updated',
+                field: 'years',
+                condition: 'taxonomy',
+                payload: '100',
+                modifier: 'any',
+            )
+            ->assertSee('Item One Hundred')
+            ->assertDontSee('Item Two Hundred');
+
+        Livewire::test(LfSelectFilter::class, ['field' => 'years', 'blueprint' => 'vintages.vintages', 'condition' => 'taxonomy'])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts']['100'] === 1
+                    && $statamic_field['counts']['200'] === 1;
+            });
     }
 
     protected function makeEntry($collection, $slug)

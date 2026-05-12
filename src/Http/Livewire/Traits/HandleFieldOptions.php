@@ -14,8 +14,7 @@ trait HandleFieldOptions
     {
         $options = Blink::once($this->fieldOptionsCacheKey('terms', $field->config()['taxonomies'] ?? []), function () use ($field) {
             return collect($field->config()['taxonomies'] ?? [])
-                ->flatMap(fn ($taxonomy) => $this->getTaxonomyTerms($taxonomy))
-                ->all();
+                ->reduce(fn ($carry, $taxonomy) => array_replace($carry, $this->getTaxonomyTerms($taxonomy)->all()), []);
         });
 
         return $this->setFieldOptionsAndCounts($field, $options);
@@ -25,8 +24,7 @@ trait HandleFieldOptions
     {
         $options = Blink::once($this->fieldOptionsCacheKey('entries', $field->config()['collections'] ?? []), function () use ($field) {
             return collect($field->config()['collections'] ?? [])
-                ->flatMap(fn ($collection) => $this->getCollectionEntries($collection))
-                ->all();
+                ->reduce(fn ($carry, $collection) => array_replace($carry, $this->getCollectionEntries($collection)->all()), []);
         });
 
         return $this->setFieldOptionsAndCounts($field, $options);
@@ -65,7 +63,7 @@ trait HandleFieldOptions
         }
         $field->setConfig(array_merge(
             $field->config(),
-            ['options' => $options->flatMap(fn ($option) => [$option['key'] => $option['value'] ?? $option['key']])->all()]
+            ['options' => $options->mapWithKeys(fn ($option) => [$option['key'] => $option['value'] ?? $option['key']])->all()]
         ));
 
         return $field;
@@ -75,7 +73,7 @@ trait HandleFieldOptions
     {
         $field->setConfig(array_merge(
             $field->config(),
-            ['counts' => collect($field->get('options'))->keys()->flatMap(fn ($option) => [$option => null])->all()]
+            ['counts' => array_fill_keys(array_keys($field->get('options')), null)]
         ));
 
         return $field;
@@ -93,7 +91,7 @@ trait HandleFieldOptions
             $field->config(),
             [
                 'options' => $this->options,
-                'counts' => $options->keys()->flatMap(fn ($option) => [$option => null])->all(),
+                'counts' => array_fill_keys($options->keys()->all(), null),
             ]
         ));
 
