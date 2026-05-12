@@ -109,7 +109,7 @@ trait IsSortable
         $this->statamic_field['options'] = $taxonomy->queryTerms()
             ->orderBy($sortBy, $sortDirection)->get()
             ->unique(fn ($term) => $term->inDefaultLocale()->slug())
-            ->flatMap(function ($term) {
+            ->mapWithKeys(function ($term) {
                 return [
                     $term->inDefaultLocale()->slug() => ($term->in(Site::current()->handle()) ?? $term->inDefaultLocale())->title(),
                 ];
