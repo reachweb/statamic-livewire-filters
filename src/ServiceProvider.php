@@ -3,8 +3,8 @@
 namespace Reach\StatamicLivewireFilters;
 
 use Livewire\Livewire;
+use Reach\StatamicLivewireFilters\Console\Commands\UpdateLivewireFilters;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
-use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCount;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
@@ -18,6 +18,10 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfUrlHandler;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
+use Reach\StatamicLivewireFilters\Scopes\Multiselect;
+use Reach\StatamicLivewireFilters\Support\CountQueryPool;
+use Reach\StatamicLivewireFilters\Tags\Head;
+use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
 use Statamic\Providers\AddonServiceProvider;
 
 class ServiceProvider extends AddonServiceProvider
@@ -29,15 +33,16 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $tags = [
-        \Reach\StatamicLivewireFilters\Tags\LivewireCollection::class,
+        Head::class,
+        LivewireCollection::class,
     ];
 
     protected $scopes = [
-        \Reach\StatamicLivewireFilters\Scopes\Multiselect::class,
+        Multiselect::class,
     ];
 
     protected $commands = [
-        \Reach\StatamicLivewireFilters\Console\Commands\UpdateLivewireFilters::class,
+        UpdateLivewireFilters::class,
     ];
 
     protected $publishables = [
