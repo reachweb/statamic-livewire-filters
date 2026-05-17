@@ -5,12 +5,19 @@ namespace Reach\StatamicLivewireFilters\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Reach\StatamicLivewireFilters\Support\Nocache;
 
 class HandleFiltersQueryString
 {
+    /**
+     * Keys we must never overwrite when hydrating the request from the target URL's
+     * query string, since Statamic's nocache controller and Livewire rely on them.
+     */
+    protected const RESERVED_INPUT_KEYS = ['url', 'params', '_token', '_method', 'fingerprint', 'serialized', 'effects'];
+
     public function handle(Request $request, Closure $next): mixed
     {
-        if ($this->isStatamicNocacheRequest($request)) {
+        if (Nocache::matches($request)) {
             $this->hydrateNocacheRequestFromUrl($request);
 
             return $next($request);
@@ -71,13 +78,6 @@ class HandleFiltersQueryString
         return $next($request);
     }
 
-    protected function isStatamicNocacheRequest(Request $request): bool
-    {
-        $actionPrefix = trim((string) config('statamic.routes.action', '!'), '/');
-
-        return $actionPrefix !== '' && $request->is($actionPrefix.'/nocache');
-    }
-
     protected function hydrateNocacheRequestFromUrl(Request $request): void
     {
         $url = $request->input('url');
@@ -120,7 +120,6 @@ class HandleFiltersQueryString
 
         if (! empty($params)) {
             $request->merge(['params' => $params]);
-            $request->query->set('params', $params);
         }
 
         $basePath = '/'.implode('/', array_slice($segments, 0, $filterIndex));
@@ -152,11 +151,17 @@ class HandleFiltersQueryString
             return;
         }
 
-        foreach ($originalQuery as $key => $value) {
+        $safeQuery = array_diff_key($originalQuery, array_flip(self::RESERVED_INPUT_KEYS));
+
+        if ($safeQuery === []) {
+            return;
+        }
+
+        foreach ($safeQuery as $key => $value) {
             $request->query->set($key, $value);
         }
 
-        $request->merge($originalQuery);
+        $request->merge($safeQuery);
     }
 
     protected function shouldSkip(): bool

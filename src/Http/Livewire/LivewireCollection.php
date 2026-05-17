@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Reach\StatamicLivewireFilters\Support\Nocache;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
 
@@ -94,9 +95,7 @@ class LivewireCollection extends Component
 
     protected function resolveStatamicNocacheUrl(): ?string
     {
-        $actionPrefix = trim((string) config('statamic.routes.action', '!'), '/');
-
-        if ($actionPrefix === '' || ! request()->is($actionPrefix.'/nocache')) {
+        if (! Nocache::matches(request())) {
             return null;
         }
 
