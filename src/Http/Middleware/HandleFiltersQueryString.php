@@ -10,6 +10,12 @@ class HandleFiltersQueryString
 {
     public function handle(Request $request, Closure $next): mixed
     {
+        if ($this->isStatamicNocacheRequest($request)) {
+            $this->hydrateNocacheRequestFromUrl($request);
+
+            return $next($request);
+        }
+
         if ($this->shouldSkip()) {
             return $next($request);
         }
@@ -63,6 +69,94 @@ class HandleFiltersQueryString
         }
 
         return $next($request);
+    }
+
+    protected function isStatamicNocacheRequest(Request $request): bool
+    {
+        $actionPrefix = trim((string) config('statamic.routes.action', '!'), '/');
+
+        return $actionPrefix !== '' && $request->is($actionPrefix.'/nocache');
+    }
+
+    protected function hydrateNocacheRequestFromUrl(Request $request): void
+    {
+        $url = $request->input('url');
+
+        if (! is_string($url) || $url === '') {
+            return;
+        }
+
+        $parsed = parse_url($url);
+
+        if (! is_array($parsed)) {
+            return;
+        }
+
+        if (config('statamic-livewire-filters.enable_query_string') === true) {
+            $this->hydrateFromOriginalQueryString($request, $parsed);
+
+            return;
+        }
+
+        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+
+        if (! $prefix) {
+            return;
+        }
+
+        if (! isset($parsed['path'])) {
+            return;
+        }
+
+        $segments = explode('/', ltrim($parsed['path'], '/'));
+        $filterIndex = array_search($prefix, $segments, true);
+
+        if ($filterIndex === false) {
+            return;
+        }
+
+        $filterSegments = array_slice($segments, $filterIndex + 1);
+        $params = $this->parseFilterSegments($filterSegments);
+
+        if (! empty($params)) {
+            $request->merge(['params' => $params]);
+            $request->query->set('params', $params);
+        }
+
+        $basePath = '/'.implode('/', array_slice($segments, 0, $filterIndex));
+
+        $normalized = ($parsed['scheme'] ?? 'http').'://'.($parsed['host'] ?? $request->getHost());
+
+        if (isset($parsed['port'])) {
+            $normalized .= ':'.$parsed['port'];
+        }
+
+        $normalized .= $basePath === '/' ? '' : $basePath;
+
+        if (! empty($parsed['query'])) {
+            $normalized .= '?'.$parsed['query'];
+        }
+
+        $request->merge(['url' => $normalized]);
+    }
+
+    protected function hydrateFromOriginalQueryString(Request $request, array $parsed): void
+    {
+        if (empty($parsed['query'])) {
+            return;
+        }
+
+        parse_str($parsed['query'], $originalQuery);
+
+        if (! is_array($originalQuery) || $originalQuery === []) {
+            return;
+        }
+
+        foreach ($originalQuery as $key => $value) {
+            $request->query->set($key, $value);
+        }
+
+        $request->merge($originalQuery);
     }
 
     protected function shouldSkip(): bool

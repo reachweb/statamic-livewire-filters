@@ -62,6 +62,16 @@ class LivewireCollection extends Component
     protected function resolveCurrentPath(): string
     {
         if (! request()->hasHeader('X-Livewire')) {
+            if ($nocacheUrl = $this->resolveStatamicNocacheUrl()) {
+                $parsed = parse_url($nocacheUrl);
+
+                if (is_array($parsed)) {
+                    $path = $this->stripCustomQueryStringPrefix($parsed['path'] ?? '/');
+
+                    return $this->combinePathAndQuery($path, $parsed['query'] ?? null);
+                }
+            }
+
             return $this->combinePathAndQuery(request()->path(), request()->getQueryString());
         }
 
@@ -80,6 +90,19 @@ class LivewireCollection extends Component
         $path = $this->stripCustomQueryStringPrefix($parsed['path'] ?? '/');
 
         return $this->combinePathAndQuery($path, $parsed['query'] ?? null);
+    }
+
+    protected function resolveStatamicNocacheUrl(): ?string
+    {
+        $actionPrefix = trim((string) config('statamic.routes.action', '!'), '/');
+
+        if ($actionPrefix === '' || ! request()->is($actionPrefix.'/nocache')) {
+            return null;
+        }
+
+        $url = request()->input('url');
+
+        return is_string($url) && $url !== '' ? $url : null;
     }
 
     #[On('filter-updated')]

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleParams;
 use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -249,12 +250,76 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function it_uses_the_target_url_when_resolving_path_inside_a_statamic_nocache_request()
+    {
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/basic?utm_source=newsletter',
+        ]);
+        $this->app->instance('request', $request);
+
+        $component = new class extends LivewireCollection
+        {
+            public function resolveCurrentPathForTest(): string
+            {
+                return $this->resolveCurrentPath();
+            }
+        };
+
+        $currentPath = $component->resolveCurrentPathForTest();
+
+        $this->assertSame('basic', strtok($currentPath, '?'));
+
+        parse_str((string) parse_url('http://localhost/'.$currentPath, PHP_URL_QUERY), $query);
+
+        $this->assertEquals(['utm_source' => 'newsletter'], $query);
+    }
+
+    #[Test]
+    public function it_strips_filter_segments_from_the_url_input_on_statamic_nocache_requests()
+    {
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/basic/filters/item_options/option1,option2?utm_source=newsletter',
+        ]);
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertSame(
+            'http://localhost/basic?utm_source=newsletter',
+            $request->input('url')
+        );
+
+        $this->assertEquals(
+            ['item_options:is' => 'option1|option2'],
+            $request->input('params')
+        );
+    }
+
+    #[Test]
+    public function it_leaves_the_nocache_url_input_alone_when_it_has_no_filter_segments()
+    {
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/basic?utm_source=newsletter',
+        ]);
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertSame(
+            'http://localhost/basic?utm_source=newsletter',
+            $request->input('url')
+        );
+    }
+
+    #[Test]
     public function it_preserves_existing_query_parameters_when_building_custom_urls()
     {
         $component = $this->makeUrlHandlerHarness(
             params: [
-            'from' => 'pages',
-            'item_options:is' => 'option1|option2',
+                'from' => 'pages',
+                'item_options:is' => 'option1|option2',
             ],
             currentPath: 'horizontal?utm_source=google&utm_medium=cpc&utm_campaign=campaign_name&utm_content=content_id'
         );
@@ -383,7 +448,7 @@ class CustomQueryStringTest extends TestCase
     {
         return new class($params, $currentPath, $page)
         {
-            use \Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleParams;
+            use HandleParams;
 
             public array $params;
 
