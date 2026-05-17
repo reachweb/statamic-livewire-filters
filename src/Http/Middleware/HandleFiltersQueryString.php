@@ -5,11 +5,24 @@ namespace Reach\StatamicLivewireFilters\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Reach\StatamicLivewireFilters\Support\Nocache;
 
 class HandleFiltersQueryString
 {
+    /**
+     * Keys we must never overwrite when hydrating the request from the target URL's
+     * query string, since Statamic's nocache controller and Livewire rely on them.
+     */
+    protected const RESERVED_INPUT_KEYS = ['url', 'params', '_token', '_method', 'fingerprint', 'serialized', 'effects'];
+
     public function handle(Request $request, Closure $next): mixed
     {
+        if (Nocache::matches($request)) {
+            $this->hydrateNocacheRequestFromUrl($request);
+
+            return $next($request);
+        }
+
         if ($this->shouldSkip()) {
             return $next($request);
         }
@@ -63,6 +76,92 @@ class HandleFiltersQueryString
         }
 
         return $next($request);
+    }
+
+    protected function hydrateNocacheRequestFromUrl(Request $request): void
+    {
+        $url = $request->input('url');
+
+        if (! is_string($url) || $url === '') {
+            return;
+        }
+
+        $parsed = parse_url($url);
+
+        if (! is_array($parsed)) {
+            return;
+        }
+
+        if (config('statamic-livewire-filters.enable_query_string') === true) {
+            $this->hydrateFromOriginalQueryString($request, $parsed);
+
+            return;
+        }
+
+        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+
+        if (! $prefix) {
+            return;
+        }
+
+        if (! isset($parsed['path'])) {
+            return;
+        }
+
+        $segments = explode('/', ltrim($parsed['path'], '/'));
+        $filterIndex = array_search($prefix, $segments, true);
+
+        if ($filterIndex === false) {
+            return;
+        }
+
+        $filterSegments = array_slice($segments, $filterIndex + 1);
+        $params = $this->parseFilterSegments($filterSegments);
+
+        if (! empty($params)) {
+            $request->merge(['params' => $params]);
+        }
+
+        $basePath = '/'.implode('/', array_slice($segments, 0, $filterIndex));
+
+        $normalized = ($parsed['scheme'] ?? 'http').'://'.($parsed['host'] ?? $request->getHost());
+
+        if (isset($parsed['port'])) {
+            $normalized .= ':'.$parsed['port'];
+        }
+
+        $normalized .= $basePath === '/' ? '' : $basePath;
+
+        if (! empty($parsed['query'])) {
+            $normalized .= '?'.$parsed['query'];
+        }
+
+        $request->merge(['url' => $normalized]);
+    }
+
+    protected function hydrateFromOriginalQueryString(Request $request, array $parsed): void
+    {
+        if (empty($parsed['query'])) {
+            return;
+        }
+
+        parse_str($parsed['query'], $originalQuery);
+
+        if (! is_array($originalQuery) || $originalQuery === []) {
+            return;
+        }
+
+        $safeQuery = array_diff_key($originalQuery, array_flip(self::RESERVED_INPUT_KEYS));
+
+        if ($safeQuery === []) {
+            return;
+        }
+
+        foreach ($safeQuery as $key => $value) {
+            $request->query->set($key, $value);
+        }
+
+        $request->merge($safeQuery);
     }
 
     protected function shouldSkip(): bool

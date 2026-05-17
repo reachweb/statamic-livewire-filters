@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Reach\StatamicLivewireFilters\Support\Nocache;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
 
@@ -62,6 +63,16 @@ class LivewireCollection extends Component
     protected function resolveCurrentPath(): string
     {
         if (! request()->hasHeader('X-Livewire')) {
+            if ($nocacheUrl = $this->resolveStatamicNocacheUrl()) {
+                $parsed = parse_url($nocacheUrl);
+
+                if (is_array($parsed)) {
+                    $path = $this->stripCustomQueryStringPrefix($parsed['path'] ?? '/');
+
+                    return $this->combinePathAndQuery($path, $parsed['query'] ?? null);
+                }
+            }
+
             return $this->combinePathAndQuery(request()->path(), request()->getQueryString());
         }
 
@@ -80,6 +91,17 @@ class LivewireCollection extends Component
         $path = $this->stripCustomQueryStringPrefix($parsed['path'] ?? '/');
 
         return $this->combinePathAndQuery($path, $parsed['query'] ?? null);
+    }
+
+    protected function resolveStatamicNocacheUrl(): ?string
+    {
+        if (! Nocache::matches(request())) {
+            return null;
+        }
+
+        $url = request()->input('url');
+
+        return is_string($url) && $url !== '' ? $url : null;
     }
 
     #[On('filter-updated')]
