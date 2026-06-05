@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 use Reach\StatamicLivewireFilters\Support\Nocache;
 
 class HandleFiltersQueryString
@@ -12,8 +13,10 @@ class HandleFiltersQueryString
     /**
      * Keys we must never overwrite when hydrating the request from the target URL's
      * query string, since Statamic's nocache controller and Livewire rely on them.
+     * Note that `params` is intentionally not reserved: it is the query key Livewire
+     * uses to restore filter state when `enable_query_string` is on.
      */
-    protected const RESERVED_INPUT_KEYS = ['url', 'params', '_token', '_method', 'fingerprint', 'serialized', 'effects'];
+    protected const RESERVED_INPUT_KEYS = ['url', '_token', '_method', 'fingerprint', 'serialized', 'effects'];
 
     public function handle(Request $request, Closure $next): mixed
     {
@@ -42,10 +45,10 @@ class HandleFiltersQueryString
         } else {
             $path = $request->path();
         }
-        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+        $prefix = CustomQueryString::prefix();
 
         $segments = explode('/', $path);
-        $filterIndex = array_search($prefix, $segments);
+        $filterIndex = array_search($prefix, $segments, true);
 
         if ($filterIndex !== false) {
             // Extract and parse filter segments
@@ -92,15 +95,15 @@ class HandleFiltersQueryString
             return;
         }
 
-        if (config('statamic-livewire-filters.enable_query_string') === true) {
+        if (CustomQueryString::livewireQueryStringEnabled()) {
             $this->hydrateFromOriginalQueryString($request, $parsed);
 
             return;
         }
 
-        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+        $prefix = CustomQueryString::prefix();
 
-        if (! $prefix) {
+        if ($prefix === false) {
             return;
         }
 
@@ -130,7 +133,7 @@ class HandleFiltersQueryString
             $normalized .= ':'.$parsed['port'];
         }
 
-        $normalized .= $basePath === '/' ? '' : $basePath;
+        $normalized .= $basePath === '/' ? '/' : $basePath;
 
         if (! empty($parsed['query'])) {
             $normalized .= '?'.$parsed['query'];
@@ -166,7 +169,7 @@ class HandleFiltersQueryString
 
     protected function shouldSkip(): bool
     {
-        return config('statamic-livewire-filters.custom_query_string') === false || config('statamic-livewire-filters.enable_query_string') === true;
+        return ! CustomQueryString::enabled();
     }
 
     protected function shouldProcessRequest(Request $request): bool

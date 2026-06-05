@@ -227,13 +227,7 @@ class CustomQueryStringTest extends TestCase
         $request = Request::create('/horizontal?utm_source=google&utm_medium=cpc&utm_campaign=campaign_name&utm_content=content_id', 'GET');
         $this->app->instance('request', $request);
 
-        $component = new class extends LivewireCollection
-        {
-            public function resolveCurrentPathForTest(): string
-            {
-                return $this->resolveCurrentPath();
-            }
-        };
+        $component = $this->makeCurrentPathHarness();
 
         $currentPath = $component->resolveCurrentPathForTest();
 
@@ -257,13 +251,7 @@ class CustomQueryStringTest extends TestCase
         ]);
         $this->app->instance('request', $request);
 
-        $component = new class extends LivewireCollection
-        {
-            public function resolveCurrentPathForTest(): string
-            {
-                return $this->resolveCurrentPath();
-            }
-        };
+        $component = $this->makeCurrentPathHarness();
 
         $currentPath = $component->resolveCurrentPathForTest();
 
@@ -311,6 +299,163 @@ class CustomQueryStringTest extends TestCase
             'http://localhost/basic?utm_source=newsletter',
             $request->input('url')
         );
+    }
+
+    #[Test]
+    public function it_rehydrates_livewire_query_string_params_on_statamic_nocache_requests()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/basic?params[item_options:is]=option1&utm_source=newsletter',
+        ]);
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertEquals(
+            ['item_options:is' => 'option1'],
+            $request->query('params')
+        );
+
+        $this->assertSame('newsletter', $request->query('utm_source'));
+
+        $this->assertSame(
+            'http://localhost/basic?params[item_options:is]=option1&utm_source=newsletter',
+            $request->input('url')
+        );
+    }
+
+    #[Test]
+    public function it_never_overwrites_reserved_inputs_when_rehydrating_the_query_string()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/basic?url=http://evil.test&_token=fake&params[item_options:is]=option1',
+        ]);
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertSame(
+            'http://localhost/basic?url=http://evil.test&_token=fake&params[item_options:is]=option1',
+            $request->input('url')
+        );
+
+        $this->assertFalse($request->query->has('url'));
+        $this->assertFalse($request->query->has('_token'));
+
+        $this->assertEquals(
+            ['item_options:is' => 'option1'],
+            $request->query('params')
+        );
+    }
+
+    #[Test]
+    public function it_keeps_the_root_slash_when_stripping_filter_segments_on_nocache_requests()
+    {
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/filters/item_options/option1,option2',
+        ]);
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertSame('http://localhost/', $request->input('url'));
+
+        $this->assertEquals(
+            ['item_options:is' => 'option1|option2'],
+            $request->input('params')
+        );
+    }
+
+    #[Test]
+    public function it_keeps_the_root_slash_and_query_when_stripping_filter_segments_on_nocache_requests()
+    {
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/filters/item_options/option1?utm_source=newsletter',
+        ]);
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertSame('http://localhost/?utm_source=newsletter', $request->input('url'));
+    }
+
+    #[Test]
+    public function it_ignores_nocache_requests_when_no_query_string_mode_is_active()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', false);
+
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/!/nocache', 'POST', [
+            'url' => 'http://localhost/basic/filters/item_options/option1',
+        ]);
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertSame(
+            'http://localhost/basic/filters/item_options/option1',
+            $request->input('url')
+        );
+
+        $this->assertNull($request->input('params'));
+    }
+
+    #[Test]
+    public function it_skips_processing_when_the_custom_query_string_is_not_a_string()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', true);
+
+        $middleware = new HandleFiltersQueryString;
+
+        $request = Request::create('/blog/filters/item_options/option1', 'GET');
+
+        $middleware->handle($request, fn ($r) => $r);
+
+        $this->assertSame('blog/filters/item_options/option1', $request->path());
+        $this->assertNull($request->input('params'));
+    }
+
+    #[Test]
+    public function it_does_not_dispatch_update_url_when_the_livewire_query_string_is_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $component = $this->makeUrlHandlerHarness(
+            params: [
+                'from' => 'pages',
+                'item_options:is' => 'option1',
+            ],
+            currentPath: 'horizontal'
+        );
+
+        $component->updateCustomQueryStringUrl();
+
+        $this->assertEmpty(
+            collect($component->dispatches)->where('name', 'update-url')
+        );
+    }
+
+    #[Test]
+    public function it_does_not_strip_the_custom_prefix_from_paths_when_the_livewire_query_string_is_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $request = Request::create('/livewire/update', 'POST');
+        $request->headers->set('X-Livewire', 'true');
+        $request->headers->set('Referer', 'http://localhost/blog/filters/something');
+        $this->app->instance('request', $request);
+
+        $component = $this->makeCurrentPathHarness();
+
+        $this->assertSame('blog/filters/something', $component->resolveCurrentPathForTest());
     }
 
     #[Test]
@@ -442,6 +587,17 @@ class CustomQueryStringTest extends TestCase
 
             return response('ok');
         });
+    }
+
+    protected function makeCurrentPathHarness(): object
+    {
+        return new class extends LivewireCollection
+        {
+            public function resolveCurrentPathForTest(): string
+            {
+                return $this->resolveCurrentPath();
+            }
+        };
     }
 
     protected function makeUrlHandlerHarness(array $params, string $currentPath, int $page = 1): object

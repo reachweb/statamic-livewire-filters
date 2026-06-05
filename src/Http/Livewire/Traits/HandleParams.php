@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 
 trait HandleParams
 {
@@ -28,11 +29,7 @@ trait HandleParams
 
     protected function handleCustomQueryStringParams(): array|bool
     {
-        if (
-            config('statamic-livewire-filters.custom_query_string') !== false &&
-            config('statamic-livewire-filters.enable_query_string') === false &&
-            request()->has('params')
-        ) {
+        if (CustomQueryString::enabled() && request()->has('params')) {
             // Get and validate params
             $params = request()->validate([
                 'params' => 'array',
@@ -253,13 +250,13 @@ trait HandleParams
     #[Renderless, On('preset-params')]
     public function updateCustomQueryStringUrl(): void
     {
-        if (config('statamic-livewire-filters.custom_query_string') === false) {
+        $prefix = CustomQueryString::prefix();
+
+        if ($prefix === false) {
             return;
         }
 
         $aliases = $this->getConfigAliases();
-
-        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
 
         // Only include params that have aliases configured
         $segments = collect($this->params)
@@ -338,10 +335,10 @@ trait HandleParams
 
     protected function stripCustomQueryStringPrefix(string $path): string
     {
-        $prefix = config('statamic-livewire-filters.custom_query_string', 'filters');
+        $prefix = CustomQueryString::prefix();
         $segments = array_values(array_filter(explode('/', trim($path, '/')), fn ($segment) => $segment !== ''));
 
-        if (! $prefix) {
+        if ($prefix === false) {
             return implode('/', $segments);
         }
 

@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 use Reach\StatamicLivewireFilters\Support\Nocache;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
@@ -145,7 +146,7 @@ class LivewireCollection extends Component
 
     protected function queryString()
     {
-        if (config('statamic-livewire-filters.enable_query_string')) {
+        if (CustomQueryString::livewireQueryStringEnabled()) {
             return [
                 'params' => ['except' => []],
             ];
@@ -154,7 +155,7 @@ class LivewireCollection extends Component
         // When using custom query string, disable Livewire's pagination URL handling
         // to prevent a double pushState (which causes an extra render).
         // We handle pagination URL ourselves in updateCustomQueryStringUrl().
-        if (config('statamic-livewire-filters.custom_query_string') !== false) {
+        if (CustomQueryString::enabled()) {
             return [
                 'paginators.page' => ['except' => '', 'history' => false],
             ];
