@@ -20,6 +20,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCo
 use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Reach\StatamicLivewireFilters\Scopes\Multiselect;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
+use Reach\StatamicLivewireFilters\Support\RestoreNocacheMemoPath;
 use Reach\StatamicLivewireFilters\Tags\Head;
 use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
 use Statamic\Providers\AddonServiceProvider;
@@ -71,6 +72,8 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-tags', LfTags::class);
         Livewire::component('lf-url-handler', LfUrlHandler::class);
         Livewire::component('lf-count', LfCount::class);
+
+        RestoreNocacheMemoPath::register();
 
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'statamic-livewire-filters');
 

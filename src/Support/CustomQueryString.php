@@ -31,4 +31,27 @@ class CustomQueryString
     {
         return static::prefix() !== false;
     }
+
+    /**
+     * Strip the custom query string prefix and everything after it,
+     * leaving just the base page path (no leading slash).
+     */
+    public static function stripPrefix(string $path): string
+    {
+        $segments = array_values(array_filter(explode('/', trim($path, '/')), fn ($segment) => $segment !== ''));
+
+        $prefix = static::prefix();
+
+        if ($prefix === false) {
+            return implode('/', $segments);
+        }
+
+        $prefixIndex = array_search($prefix, $segments, true);
+
+        if ($prefixIndex === false) {
+            return implode('/', $segments);
+        }
+
+        return implode('/', array_slice($segments, 0, $prefixIndex));
+    }
 }
