@@ -160,6 +160,30 @@ class NocacheMemoPathTest extends TestCase
         $this->assertSame('amsterdam/clothes', Nocache::originalPath($request));
     }
 
+    #[Test]
+    public function it_strips_the_app_base_path_from_the_original_page_path_for_subdirectory_installs()
+    {
+        // Statamic served from a subdirectory: the nocache "url" (window.location.href)
+        // includes the base path, but request()->path() and the Livewire memo do not.
+        $request = Request::create(
+            'http://localhost/subdir/!/nocache',
+            'POST',
+            ['url' => 'http://localhost/subdir/amsterdam/clothes'],
+            [],
+            [],
+            [
+                'SCRIPT_NAME' => '/subdir/index.php',
+                'SCRIPT_FILENAME' => '/var/www/subdir/index.php',
+            ],
+        );
+
+        // Sanity check: the request is genuinely served from a subdirectory.
+        $this->assertSame('/subdir', $request->getBaseUrl());
+
+        // Must be base-relative, otherwise url()->to() doubles the base path on the next update.
+        $this->assertSame('amsterdam/clothes', Nocache::originalPath($request));
+    }
+
     protected function fakeCollectionView(): void
     {
         $this->withFakeViews();

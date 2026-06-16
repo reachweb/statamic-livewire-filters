@@ -31,6 +31,14 @@ class Nocache
             return null;
         }
 
+        // Mirror request()->path(): the memo path is relative to the app base path,
+        // so strip the base URL for subdirectory deployments before normalizing.
+        $baseUrl = $request->getBaseUrl();
+
+        if ($baseUrl !== '' && str_starts_with($path, $baseUrl)) {
+            $path = substr($path, strlen($baseUrl));
+        }
+
         $path = trim(CustomQueryString::stripPrefix($path), '/');
 
         return $path === '' ? '/' : $path;
