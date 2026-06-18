@@ -21,6 +21,7 @@ trait HandleParams
         $this->extractView($paramsCollection);
         $this->extractLazyPlaceholder($paramsCollection);
         $this->extractPagination($paramsCollection);
+        $this->extractInfiniteScroll($paramsCollection);
         $this->extractAllowedFilters($paramsCollection);
 
         $this->params = $paramsCollection->all();
@@ -95,6 +96,26 @@ trait HandleParams
     {
         if ($paramsCollection->has('paginate')) {
             $this->paginate = $paramsCollection->pull('paginate');
+        }
+
+        // Resolve the legacy `paginate="true"` form: the page size comes from `limit`.
+        // Without a limit Statamic treats paginate=true as no pagination, so match that
+        // (mirrors allowLegacyStylePaginationLimiting) rather than handing a bare boolean
+        // to the paginator, which would crash withPagination() on a plain collection.
+        if ($this->paginate === true) {
+            $this->paginate = $paramsCollection->has('limit') ? (int) $paramsCollection->pull('limit') : false;
+        }
+    }
+
+    protected function paginationPageName(): string
+    {
+        return $this->params['page_name'] ?? 'page';
+    }
+
+    protected function extractInfiniteScroll($paramsCollection)
+    {
+        if ($paramsCollection->has('infinite_scroll')) {
+            $this->infiniteScroll = filter_var($paramsCollection->pull('infinite_scroll'), FILTER_VALIDATE_BOOLEAN);
         }
     }
 
@@ -301,12 +322,14 @@ trait HandleParams
             parse_str($existingQueryString, $queryParams);
         }
 
-        // Only manage the page query param when this component owns pagination.
+        // Manage the page param under the configured page_name when we own pagination.
         if ($this->paginate && method_exists($this, 'getPage')) {
-            if ($this->getPage() > 1) {
-                $queryParams['page'] = $this->getPage();
+            $pageName = $this->paginationPageName();
+            $currentPage = $this->getPage($pageName);
+            if ($currentPage > 1) {
+                $queryParams[$pageName] = $currentPage;
             } else {
-                unset($queryParams['page']);
+                unset($queryParams[$pageName]);
             }
         }
 

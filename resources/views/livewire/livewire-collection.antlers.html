@@ -1,13 +1,29 @@
 <div>
-    <div>
+    <div aria-live="polite" wire:loading.attr="aria-busy" wire:target="loadMore">
         {{ entries }}
         <div wire:key="{{ id }}">
             {{ title }}
         </div>
         {{ /entries }}
     </div>
-   
-    <div class="mt-8 flex justify-center">
-        {{ links }}
-    </div>
+
+    {{ if infinite_scroll }}
+        {{ if has_more_pages }}
+        <div class="mt-8 flex justify-center">
+            <button
+                type="button"
+                wire:click="loadMore"
+                wire:target="loadMore"
+                wire:loading.attr="disabled"
+            >
+                <span wire:loading.remove wire:target="loadMore">{{ trans key="statamic-livewire-filters::ui.load_more" }}</span>
+                <span wire:loading wire:target="loadMore" role="status">{{ trans key="statamic-livewire-filters::ui.loading" }}</span>
+            </button>
+        </div>
+        {{ /if }}
+    {{ else }}
+        <div class="mt-8 flex justify-center">
+            {{ links }}
+        </div>
+    {{ /if }}
 </div>

@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -39,6 +40,15 @@ class LivewireCollection extends Component
     public $paginate;
 
     #[Locked]
+    public $infiniteScroll = false;
+
+    #[Locked]
+    public $initialPaginate = null;
+
+    #[Locked]
+    public $hasMorePages = false;
+
+    #[Locked]
     public $view = 'livewire-collection';
 
     #[Locked]
@@ -56,6 +66,16 @@ class LivewireCollection extends Component
         } else {
             $this->setParameters(array_merge($params, $this->params));
         }
+        $this->initialPaginate = (int) $this->paginate;
+
+        if ($this->infiniteScroll && $this->initialPaginate < 1) {
+            $this->infiniteScroll = false;
+        }
+
+        if ($this->infiniteScroll) {
+            $this->resetPage($this->paginationPageName());
+        }
+
         $this->dispatchParamsUpdated();
 
         $this->runHooks('init');
@@ -152,12 +172,11 @@ class LivewireCollection extends Component
             ];
         }
 
-        // When using custom query string, disable Livewire's pagination URL handling
-        // to prevent a double pushState (which causes an extra render).
-        // We handle pagination URL ourselves in updateCustomQueryStringUrl().
+        // Suppress Livewire's URL handling for the configured paginator; we manage the
+        // URL ourselves in updateCustomQueryStringUrl().
         if (CustomQueryString::enabled()) {
             return [
-                'paginators.page' => ['except' => '', 'history' => false],
+                'paginators.'.$this->paginationPageName() => ['except' => '', 'history' => false],
             ];
         }
 
@@ -171,14 +190,23 @@ class LivewireCollection extends Component
 
     protected function resetPagination()
     {
+        if ($this->infiniteScroll) {
+            $this->paginate = $this->initialPaginate;
+        }
         if ($this->paginate) {
-            $this->resetPage();
+            $this->resetPage($this->paginationPageName());
         }
     }
 
     public function clearAll()
     {
         $this->dispatch('clear-all-filters');
+    }
+
+    #[On('clear-all-filters')]
+    public function resetPaginationOnClearAll(): void
+    {
+        $this->resetPagination();
     }
 
     public function entries()
@@ -190,7 +218,7 @@ class LivewireCollection extends Component
         // Update the URL if using custom query string
         $this->updateCustomQueryStringUrl();
 
-        if ($this->paginate) {
+        if ($this->paginate && $entries instanceof LengthAwarePaginator) {
             return $this->withPagination('entries', $entries);
         }
 
