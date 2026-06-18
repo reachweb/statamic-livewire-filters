@@ -974,4 +974,62 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('hasMorePages', true)
             ->assertSet('entriesCount', 3);
     }
+
+    #[Test]
+    public function allowed_filters_keeps_the_custom_page_name_in_the_statamic_query()
+    {
+        $component = Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'page_name' => 'results',
+            'allowed_filters' => 'taxonomy:colors:any',
+        ]])->instance();
+
+        // allowed_filters must not strip page_name, otherwise Statamic paginates under
+        // 'page' while the addon resets/writes 'results'.
+        $method = new \ReflectionMethod($component, 'generateParams');
+        $method->setAccessible(true);
+
+        $this->assertSame('results', $method->invoke($component)->get('page_name'));
+    }
+
+    #[Test]
+    public function allowed_filters_resets_the_real_custom_paginator_when_filtering()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'page_name' => 'results',
+            'allowed_filters' => 'taxonomy:colors:any',
+        ];
+
+        // Deep-linked to results=2, Statamic must honour the custom paginator (proving
+        // the name survived allowed_filters), and applying a filter must reset it.
+        Livewire::withQueryParams(['results' => 2])
+            ->test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('paginators.results', 2)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                modifier: 'any',
+            )
+            ->assertSet('paginators.results', 1);
+    }
+
+    #[Test]
+    public function paginate_true_without_a_limit_renders_unpaginated_instead_of_crashing()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => true,
+        ];
+
+        // Legacy paginate="true" with no limit means "no pagination" to Statamic, which
+        // returns a plain collection — the component must not call paginator methods on it.
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('paginate', false)
+            ->assertSet('entriesCount', 3)
+            ->assertSet('infiniteScroll', false);
+    }
 }

@@ -98,10 +98,12 @@ trait HandleParams
             $this->paginate = $paramsCollection->pull('paginate');
         }
 
-        // Normalize the legacy `paginate="true" limit="12"` form so growing the page
-        // size never sends both `paginate` and `limit` to the Entries tag (which throws).
-        if ($this->paginate === true && $paramsCollection->has('limit')) {
-            $this->paginate = (int) $paramsCollection->pull('limit');
+        // Resolve the legacy `paginate="true"` form: the page size comes from `limit`.
+        // Without a limit Statamic treats paginate=true as no pagination, so match that
+        // (mirrors allowLegacyStylePaginationLimiting) rather than handing a bare boolean
+        // to the paginator, which would crash withPagination() on a plain collection.
+        if ($this->paginate === true) {
+            $this->paginate = $paramsCollection->has('limit') ? (int) $paramsCollection->pull('limit') : false;
         }
     }
 

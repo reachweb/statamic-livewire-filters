@@ -23,7 +23,9 @@ trait GenerateParams
     protected function removeParamsNotInAllowedFiltersCollection()
     {
         return collect($this->params)->filter(function ($value, $key) {
-            if ($key === 'sort') {
+            // page_name is collection config, not a filter — it must always reach the
+            // Entries tag so Statamic paginates under the same name the addon resets.
+            if ($key === 'sort' || $key === 'page_name') {
                 return true;
             }
             if ($key === 'query_scope') {

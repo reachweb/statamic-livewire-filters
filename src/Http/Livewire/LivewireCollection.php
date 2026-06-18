@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -217,7 +218,7 @@ class LivewireCollection extends Component
         // Update the URL if using custom query string
         $this->updateCustomQueryStringUrl();
 
-        if ($this->paginate) {
+        if ($this->paginate && $entries instanceof LengthAwarePaginator) {
             return $this->withPagination('entries', $entries);
         }
 
