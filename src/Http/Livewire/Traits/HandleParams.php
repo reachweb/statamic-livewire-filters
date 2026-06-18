@@ -21,6 +21,7 @@ trait HandleParams
         $this->extractView($paramsCollection);
         $this->extractLazyPlaceholder($paramsCollection);
         $this->extractPagination($paramsCollection);
+        $this->extractInfiniteScroll($paramsCollection);
         $this->extractAllowedFilters($paramsCollection);
 
         $this->params = $paramsCollection->all();
@@ -95,6 +96,13 @@ trait HandleParams
     {
         if ($paramsCollection->has('paginate')) {
             $this->paginate = $paramsCollection->pull('paginate');
+        }
+    }
+
+    protected function extractInfiniteScroll($paramsCollection)
+    {
+        if ($paramsCollection->has('infinite_scroll')) {
+            $this->infiniteScroll = filter_var($paramsCollection->pull('infinite_scroll'), FILTER_VALIDATE_BOOLEAN);
         }
     }
 

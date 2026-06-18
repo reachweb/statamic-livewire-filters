@@ -39,6 +39,15 @@ class LivewireCollection extends Component
     public $paginate;
 
     #[Locked]
+    public $infiniteScroll = false;
+
+    #[Locked]
+    public $initialPaginate = null;
+
+    #[Locked]
+    public $hasMorePages = false;
+
+    #[Locked]
     public $view = 'livewire-collection';
 
     #[Locked]
@@ -56,6 +65,7 @@ class LivewireCollection extends Component
         } else {
             $this->setParameters(array_merge($params, $this->params));
         }
+        $this->initialPaginate = (int) $this->paginate;
         $this->dispatchParamsUpdated();
 
         $this->runHooks('init');
@@ -171,6 +181,9 @@ class LivewireCollection extends Component
 
     protected function resetPagination()
     {
+        if ($this->infiniteScroll) {
+            $this->paginate = $this->initialPaginate;
+        }
         if ($this->paginate) {
             $this->resetPage();
         }

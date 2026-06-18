@@ -575,4 +575,43 @@ class LivewireCollectionComponentTest extends TestCase
             $this->assertStringContainsString('custom-view', $e->getMessage());
         }
     }
+
+    #[Test]
+    public function infinite_scroll_grows_the_page_size_and_exposes_has_more_pages()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('infiniteScroll', true)
+            ->assertSet('initialPaginate', 2)
+            ->assertSet('hasMorePages', true)
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->assertSet('hasMorePages', false);
+    }
+
+    #[Test]
+    public function infinite_scroll_resets_to_the_initial_page_size_when_filtering()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                modifier: 'any',
+            )
+            ->assertSet('paginate', 2);
+    }
 }
