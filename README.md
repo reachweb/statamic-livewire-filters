@@ -35,6 +35,30 @@ Main features:
 - Multiple view options for each component, offering flexibility in presentation.
 - No JavaScript required, except for Flatpickr for the Date filter, simplifying integration.
 
+## Infinite scroll
+
+Paginated collections can switch from numbered pages to a "load more" flow by adding `infinite_scroll="true"` to the tag:
+
+```antlers
+{{ livewire-collection:cars view="cars" paginate="12" infinite_scroll="true" }}
+```
+
+Each `loadMore` call grows the page size by the initial `paginate` value, and the page size resets automatically whenever a filter or sort changes. The bundled view handles this for you. In a custom view, use the `has_more_pages` variable and the `loadMore` action instead of the `{{ links }}` tag:
+
+```antlers
+{{ entries }}
+    <div wire:key="{{ id }}">{{ title }}</div>
+{{ /entries }}
+
+{{ if has_more_pages }}
+    <button wire:click="loadMore" wire:target="loadMore" wire:loading.attr="disabled">
+        Load more
+    </button>
+{{ /if }}
+```
+
+> Note: the loaded-more state lives in the Livewire component, not the URL, so a full page reload resets the list to the first page.
+
 ## License 
 
 When you are ready to deploy to production you need to buy a license at the Statamic Marketplace.

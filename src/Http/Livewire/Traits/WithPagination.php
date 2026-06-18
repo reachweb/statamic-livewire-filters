@@ -12,6 +12,7 @@ trait WithPagination
             $key => $paginator->items(),
             'links' => $paginator->render(),
             'pagination_total' => $paginator->total(),
+            'infinite_scroll' => $this->infiniteScroll,
         ];
 
         if ($this->infiniteScroll) {
@@ -23,7 +24,7 @@ trait WithPagination
 
     public function loadMore(): void
     {
-        if (! $this->infiniteScroll) {
+        if (! $this->infiniteScroll || ! $this->hasMorePages) {
             return;
         }
 

@@ -8,6 +8,8 @@ return [
     'clear_all' => 'Clear all',
     'default' => 'Default',
     'entries' => '{0} entries|{1} entry|[2,*] entries',
+    'load_more' => 'Load more',
+    'loading' => 'Loading…',
     'to' => 'to',
     'value' => 'Value',
     'please_select' => 'Please select',

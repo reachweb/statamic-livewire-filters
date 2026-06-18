@@ -66,6 +66,15 @@ class LivewireCollection extends Component
             $this->setParameters(array_merge($params, $this->params));
         }
         $this->initialPaginate = (int) $this->paginate;
+
+        if ($this->infiniteScroll && $this->initialPaginate < 1) {
+            $this->infiniteScroll = false;
+        }
+
+        if ($this->infiniteScroll) {
+            $this->resetPage();
+        }
+
         $this->dispatchParamsUpdated();
 
         $this->runHooks('init');
@@ -192,6 +201,12 @@ class LivewireCollection extends Component
     public function clearAll()
     {
         $this->dispatch('clear-all-filters');
+    }
+
+    #[On('clear-all-filters')]
+    public function resetPaginationOnClearAll(): void
+    {
+        $this->resetPagination();
     }
 
     public function entries()

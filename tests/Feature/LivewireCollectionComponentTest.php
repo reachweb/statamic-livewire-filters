@@ -614,4 +614,325 @@ class LivewireCollectionComponentTest extends TestCase
             )
             ->assertSet('paginate', 2);
     }
+
+    #[Test]
+    public function infinite_scroll_resets_to_the_initial_page_size_when_sorting()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->dispatch('sort-updated', sort: 'title:desc')
+            ->assertSet('paginate', 2);
+    }
+
+    #[Test]
+    public function infinite_scroll_resets_to_the_initial_page_size_when_clearing_a_filter()
+    {
+        EntryFactory::collection('clothes')->slug('red-2')->data(['title' => 'Red 2', 'colors' => ['red']])->create();
+        EntryFactory::collection('clothes')->slug('red-3')->data(['title' => 'Red 3', 'colors' => ['red']])->create();
+        EntryFactory::collection('clothes')->slug('red-4')->data(['title' => 'Red 4', 'colors' => ['red']])->create();
+
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                modifier: 'any',
+            )
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->dispatch('clear-filter',
+                field: 'colors',
+                condition: 'taxonomy',
+                modifier: 'any',
+            )
+            ->assertSet('paginate', 2);
+    }
+
+    #[Test]
+    public function infinite_scroll_does_not_grow_the_page_size_past_the_total()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        // 3 entries exist. The first loadMore grows 2 -> 4 (covering all 3, no
+        // more pages). A second loadMore must be a no-op since nothing remains.
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->assertSet('hasMorePages', false)
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->assertSet('hasMorePages', false);
+    }
+
+    #[Test]
+    public function infinite_scroll_keeps_the_total_count_correct_as_the_page_size_grows()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        $component = Livewire::test(LivewireCollectionComponent::class, ['params' => $params]);
+
+        $this->assertEquals(3, $component->get('entriesCount'));
+
+        $component->call('loadMore');
+
+        $this->assertEquals(3, $component->get('entriesCount'));
+    }
+
+    #[Test]
+    public function infinite_scroll_is_disabled_when_no_numeric_page_size_is_set()
+    {
+        $params = [
+            'from' => 'clothes',
+            'infinite_scroll' => true,
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('infiniteScroll', false);
+    }
+
+    #[Test]
+    public function default_view_renders_a_load_more_button_in_infinite_scroll_mode()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        $html = Livewire::test(LivewireCollectionComponent::class, ['params' => $params])->html();
+
+        $this->assertStringContainsString('wire:click="loadMore"', $html);
+        $this->assertStringNotContainsString('Pagination Navigation', $html);
+    }
+
+    #[Test]
+    public function default_view_renders_numbered_pagination_when_not_in_infinite_scroll_mode()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+        ];
+
+        $html = Livewire::test(LivewireCollectionComponent::class, ['params' => $params])->html();
+
+        $this->assertStringContainsString('Pagination Navigation', $html);
+        $this->assertStringNotContainsString('wire:click="loadMore"', $html);
+    }
+
+    #[Test]
+    public function infinite_scroll_forces_page_one_on_mount_when_deep_linked_to_a_later_page()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        // Landing on ?page=2 must not offset an infinite-scroll list: mount forces
+        // page 1, so the earliest entries stay reachable and there are more to load.
+        Livewire::withQueryParams(['page' => 2])
+            ->test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('paginators.page', 1)
+            ->assertSet('hasMorePages', true)
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function infinite_scroll_never_writes_a_page_param_with_a_custom_query_string()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+        Config::set('statamic-livewire-filters.custom_query_string_aliases', [
+            'taxonomy:colors:any' => 'color',
+        ]);
+
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        // Growing the page size keeps the component on page 1, so the custom
+        // query string URL must never gain a ?page= segment.
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->assertSet('paginators.page', 1)
+            ->dispatch('preset-params', [])
+            ->assertDispatched('update-url', fn ($name, $payload) => ! str_contains($payload['newUrl'], 'page='));
+    }
+
+    #[Test]
+    public function infinite_scroll_resets_the_page_size_on_clear_all_even_without_active_filters()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        // A grown page size with no active filters must still reset when the
+        // clear-all event fires (the per-filter clear cascade never runs here).
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->dispatch('clear-all-filters')
+            ->assertSet('paginate', 2);
+    }
+
+    #[Test]
+    public function infinite_scroll_can_be_enabled_with_the_string_true_value()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => 'true',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('infiniteScroll', true);
+    }
+
+    #[Test]
+    public function infinite_scroll_is_disabled_with_the_string_false_value()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => 'false',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('infiniteScroll', false);
+    }
+
+    #[Test]
+    public function load_more_is_a_no_op_and_view_renders_when_infinite_scroll_is_disabled_at_mount()
+    {
+        $params = [
+            'from' => 'clothes',
+            'infinite_scroll' => true,
+        ];
+
+        $component = Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('infiniteScroll', false)
+            ->call('loadMore')
+            ->assertSet('infiniteScroll', false)
+            ->assertSet('paginate', null);
+
+        // The non-paginated render branch must not error and must not show a button.
+        $this->assertStringNotContainsString('wire:click="loadMore"', $component->html());
+    }
+
+    #[Test]
+    public function infinite_scroll_grows_across_multiple_load_more_calls()
+    {
+        foreach (range(1, 6) as $i) {
+            EntryFactory::collection('clothes')->slug("extra-{$i}")->data(['title' => "Extra {$i}"])->create();
+        }
+
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        // 9 entries, page size 2 -> grows 2,4,6,8,10 across four loadMore calls.
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('hasMorePages', true)
+            ->call('loadMore')->assertSet('paginate', 4)->assertSet('hasMorePages', true)
+            ->call('loadMore')->assertSet('paginate', 6)->assertSet('hasMorePages', true)
+            ->call('loadMore')->assertSet('paginate', 8)->assertSet('hasMorePages', true)
+            ->call('loadMore')->assertSet('paginate', 10)->assertSet('hasMorePages', false)
+            ->call('loadMore')->assertSet('paginate', 10)->assertSet('hasMorePages', false)
+            ->assertSet('paginators.page', 1);
+    }
+
+    #[Test]
+    public function infinite_scroll_keeps_the_count_correct_when_a_filter_is_active()
+    {
+        EntryFactory::collection('clothes')->slug('red-2')->data(['title' => 'Red 2', 'colors' => ['red']])->create();
+        EntryFactory::collection('clothes')->slug('red-3')->data(['title' => 'Red 3', 'colors' => ['red']])->create();
+        EntryFactory::collection('clothes')->slug('red-4')->data(['title' => 'Red 4', 'colors' => ['red']])->create();
+
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        // 6 clothes entries total, 4 of them red. With a red filter applied the
+        // displayed total must be the filtered total (4), not the collection total.
+        $component = Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                modifier: 'any',
+            );
+
+        $this->assertEquals(4, $component->get('entriesCount'));
+        $component->assertSet('hasMorePages', true);
+
+        $component->call('loadMore')->assertSet('paginate', 4);
+
+        $this->assertEquals(4, $component->get('entriesCount'));
+        $component->assertSet('hasMorePages', false);
+    }
+
+    #[Test]
+    public function has_more_pages_is_not_exposed_when_not_in_infinite_scroll_mode()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+        ];
+
+        $component = Livewire::test(LivewireCollectionComponent::class, ['params' => $params]);
+
+        // The view data carries infinite_scroll => false and omits has_more_pages.
+        $this->assertSame(false, $component->viewData('infinite_scroll'));
+    }
+
+    #[Test]
+    public function default_view_in_infinite_mode_uses_translatable_strings_and_aria_attributes()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        $html = Livewire::test(LivewireCollectionComponent::class, ['params' => $params])->html();
+
+        // Translation keys resolve to their values rather than being emitted raw.
+        $this->assertStringContainsString('Load more', $html);
+        $this->assertStringContainsString('Loading', $html);
+        $this->assertStringNotContainsString('statamic-livewire-filters::ui', $html);
+
+        // Accessibility hooks for the dynamically injected entries and loading state.
+        $this->assertStringContainsString('aria-live="polite"', $html);
+        $this->assertStringContainsString('aria-busy', $html);
+        $this->assertStringContainsString('role="status"', $html);
+    }
 }
