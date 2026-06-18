@@ -97,6 +97,17 @@ trait HandleParams
         if ($paramsCollection->has('paginate')) {
             $this->paginate = $paramsCollection->pull('paginate');
         }
+
+        // Normalize the legacy `paginate="true" limit="12"` form so growing the page
+        // size never sends both `paginate` and `limit` to the Entries tag (which throws).
+        if ($this->paginate === true && $paramsCollection->has('limit')) {
+            $this->paginate = (int) $paramsCollection->pull('limit');
+        }
+    }
+
+    protected function paginationPageName(): string
+    {
+        return $this->params['page_name'] ?? 'page';
     }
 
     protected function extractInfiniteScroll($paramsCollection)
@@ -309,12 +320,14 @@ trait HandleParams
             parse_str($existingQueryString, $queryParams);
         }
 
-        // Only manage the page query param when this component owns pagination.
+        // Manage the page param under the configured page_name when we own pagination.
         if ($this->paginate && method_exists($this, 'getPage')) {
-            if ($this->getPage() > 1) {
-                $queryParams['page'] = $this->getPage();
+            $pageName = $this->paginationPageName();
+            $currentPage = $this->getPage($pageName);
+            if ($currentPage > 1) {
+                $queryParams[$pageName] = $currentPage;
             } else {
-                unset($queryParams['page']);
+                unset($queryParams[$pageName]);
             }
         }
 

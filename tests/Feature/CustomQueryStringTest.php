@@ -222,6 +222,45 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function it_writes_the_configured_page_name_in_url_when_on_page_greater_than_one()
+    {
+        $params = [
+            'from' => 'pages',
+            'paginate' => 1,
+            'page_name' => 'results',
+            'item_options:is' => 'option1',
+        ];
+
+        // The URL must use the custom page_name, not a dead `page` param.
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->set('paginators.results', 2)
+            ->dispatch('preset-params', ['item_options:is' => 'option1'])
+            ->assertDispatched('update-url', fn ($name, $payload) => str_contains($payload['newUrl'], 'results=2')
+                && ! str_contains($payload['newUrl'], 'page=2'));
+    }
+
+    #[Test]
+    public function it_suppresses_livewire_pagination_url_handling_for_the_configured_page_name()
+    {
+        $params = [
+            'from' => 'pages',
+            'paginate' => 1,
+            'page_name' => 'results',
+        ];
+
+        // queryString() must target the live paginator slot, not paginators.page.
+        $component = Livewire::test(LivewireCollection::class, ['params' => $params])->instance();
+
+        $method = new \ReflectionMethod($component, 'queryString');
+        $method->setAccessible(true);
+        $queryString = $method->invoke($component);
+
+        $this->assertArrayHasKey('paginators.results', $queryString);
+        $this->assertArrayNotHasKey('paginators.page', $queryString);
+        $this->assertFalse($queryString['paginators.results']['history']);
+    }
+
+    #[Test]
     public function it_resolves_current_path_from_non_livewire_requests_without_dropping_query_parameters()
     {
         $request = Request::create('/horizontal?utm_source=google&utm_medium=cpc&utm_campaign=campaign_name&utm_content=content_id', 'GET');

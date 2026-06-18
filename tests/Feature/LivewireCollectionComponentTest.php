@@ -935,4 +935,43 @@ class LivewireCollectionComponentTest extends TestCase
         $this->assertStringContainsString('aria-busy', $html);
         $this->assertStringContainsString('role="status"', $html);
     }
+
+    #[Test]
+    public function infinite_scroll_supports_the_legacy_boolean_paginate_with_limit()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => true,
+            'limit' => 2,
+            'infinite_scroll' => true,
+        ];
+
+        // Legacy `paginate="true" limit="2"` must resolve to page size 2 and grow
+        // without throwing on the `paginate`+`limit` collision.
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('initialPaginate', 2)
+            ->assertSet('hasMorePages', true)
+            ->call('loadMore')
+            ->assertSet('paginate', 4)
+            ->assertSet('hasMorePages', false);
+    }
+
+    #[Test]
+    public function infinite_scroll_forces_page_one_on_mount_with_a_custom_page_name()
+    {
+        $params = [
+            'from' => 'clothes',
+            'paginate' => 2,
+            'page_name' => 'results',
+            'infinite_scroll' => true,
+        ];
+
+        // A custom paginator name must also reset to page 1, so ?results=2 doesn't
+        // drop the earliest entries.
+        Livewire::withQueryParams(['results' => 2])
+            ->test(LivewireCollectionComponent::class, ['params' => $params])
+            ->assertSet('paginators.results', 1)
+            ->assertSet('hasMorePages', true)
+            ->assertSet('entriesCount', 3);
+    }
 }

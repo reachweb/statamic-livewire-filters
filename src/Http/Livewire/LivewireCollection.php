@@ -72,7 +72,7 @@ class LivewireCollection extends Component
         }
 
         if ($this->infiniteScroll) {
-            $this->resetPage();
+            $this->resetPage($this->paginationPageName());
         }
 
         $this->dispatchParamsUpdated();
@@ -171,12 +171,11 @@ class LivewireCollection extends Component
             ];
         }
 
-        // When using custom query string, disable Livewire's pagination URL handling
-        // to prevent a double pushState (which causes an extra render).
-        // We handle pagination URL ourselves in updateCustomQueryStringUrl().
+        // Suppress Livewire's URL handling for the configured paginator; we manage the
+        // URL ourselves in updateCustomQueryStringUrl().
         if (CustomQueryString::enabled()) {
             return [
-                'paginators.page' => ['except' => '', 'history' => false],
+                'paginators.'.$this->paginationPageName() => ['except' => '', 'history' => false],
             ];
         }
 
@@ -194,7 +193,7 @@ class LivewireCollection extends Component
             $this->paginate = $this->initialPaginate;
         }
         if ($this->paginate) {
-            $this->resetPage();
+            $this->resetPage($this->paginationPageName());
         }
     }
 
