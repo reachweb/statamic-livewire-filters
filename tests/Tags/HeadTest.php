@@ -3,19 +3,19 @@
 namespace Reach\StatamicLivewireFilters\Tests\Tags;
 
 use Illuminate\Support\Facades\Config;
-use Reach\StatamicLivewireFilters\Tags\Head;
+use Reach\StatamicLivewireFilters\Tags\LivewireFilters;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades\Antlers;
 
 class HeadTest extends TestCase
 {
-    private Head $headTag;
+    private LivewireFilters $headTag;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->headTag = (new Head)
+        $this->headTag = (new LivewireFilters)
             ->setParser(Antlers::parser())
             ->setContext([]);
     }
