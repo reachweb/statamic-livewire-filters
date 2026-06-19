@@ -44,6 +44,10 @@ class LoadMoreTest extends TestCase
         $this->assertStringContainsString('wire:click="loadMore"', $html);
         $this->assertStringContainsString('x-intersect', $html);
         $this->assertStringContainsString('$wire.loadMore()', $html);
+        // Guard is reset on both success and failure, and visibility is re-checked
+        // afterwards so a short appended page keeps loading instead of stalling.
+        $this->assertStringContainsString('.finally(', $html);
+        $this->assertStringContainsString('isConnected', $html);
     }
 
     public function test_it_allows_overriding_the_button_label_and_class()

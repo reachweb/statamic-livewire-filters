@@ -2,8 +2,20 @@
     <button
         type="button"
         {{ if auto }}
-        x-data="{ loadingMore: false }"
-        x-intersect.margin.200px="if (! loadingMore) { loadingMore = true; $wire.loadMore().then(() => loadingMore = false) }"
+        x-data="{
+            loadingMore: false,
+            load() {
+                if (this.loadingMore) { return }
+                this.loadingMore = true
+                this.$wire.loadMore().finally(() => {
+                    this.loadingMore = false
+                    this.$nextTick(() => {
+                        if (this.$el.isConnected && this.$el.getBoundingClientRect().top <= window.innerHeight + 200) { this.load() }
+                    })
+                })
+            }
+        }"
+        x-intersect.margin.200px="load()"
         {{ /if }}
         wire:click="loadMore"
         wire:target="loadMore"
