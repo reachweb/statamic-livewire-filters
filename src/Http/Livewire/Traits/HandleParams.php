@@ -358,20 +358,7 @@ trait HandleParams
 
     protected function stripCustomQueryStringPrefix(string $path): string
     {
-        $prefix = CustomQueryString::prefix();
-        $segments = array_values(array_filter(explode('/', trim($path, '/')), fn ($segment) => $segment !== ''));
-
-        if ($prefix === false) {
-            return implode('/', $segments);
-        }
-
-        $prefixIndex = array_search($prefix, $segments, true);
-
-        if ($prefixIndex === false) {
-            return implode('/', $segments);
-        }
-
-        return implode('/', array_slice($segments, 0, $prefixIndex));
+        return CustomQueryString::stripPrefix($path);
     }
 
     protected function combinePathAndQuery(string $path, ?string $queryString = null): string
