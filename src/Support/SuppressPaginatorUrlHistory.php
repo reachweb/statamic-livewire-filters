@@ -7,9 +7,8 @@ use Livewire\Mechanisms\HandleComponents\ComponentContext;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 
 /**
- * In custom query string mode the addon owns the URL, so Livewire's paginator
- * must not push its own history entry too. This flips its `url` effect to
- * `replace`, leaving the addon as the sole writer of a history entry.
+ * The addon owns browser history in custom query string mode. Livewire may
+ * still replace the current URL, but it must not create a second entry.
  */
 class SuppressPaginatorUrlHistory
 {

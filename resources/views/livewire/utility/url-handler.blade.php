@@ -2,6 +2,8 @@
     @script
     <script>
         document.addEventListener('livewire:initialized', () => {
+            const historyStateKey = 'statamicLivewireFilters';
+
             const normalizeUrl = (value) => {
                 const url = new URL(value, window.location.origin);
                 const normalizedParams = Array.from(url.searchParams.entries())
@@ -21,6 +23,11 @@
                 });
             };
 
+            const markedHistoryState = () => ({
+                ...(history.state ?? {}),
+                [historyStateKey]: true,
+            });
+
             Livewire.on('update-url', ({ newUrl }) => {
                 const currentUrl = new URL(window.location.href);
                 const nextUrl = new URL(newUrl, window.location.origin);
@@ -29,7 +36,17 @@
                     return;
                 }
 
-                history.pushState(null, '', nextUrl);
+                // Mark both sides of the transition and retain any Livewire state.
+                history.replaceState(markedHistoryState(), '', currentUrl);
+                history.pushState(markedHistoryState(), '', nextUrl);
+            });
+
+            window.addEventListener('popstate', (event) => {
+                if (! event.state?.[historyStateKey]) {
+                    return;
+                }
+
+                window.location.reload();
             });
         });
     </script>
