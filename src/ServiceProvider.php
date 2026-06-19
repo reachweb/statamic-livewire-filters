@@ -21,6 +21,7 @@ use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Reach\StatamicLivewireFilters\Scopes\Multiselect;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Support\RestoreNocacheMemoPath;
+use Reach\StatamicLivewireFilters\Support\SuppressPaginatorUrlHistory;
 use Reach\StatamicLivewireFilters\Tags\Head;
 use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
 use Statamic\Providers\AddonServiceProvider;
@@ -74,6 +75,11 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-count', LfCount::class);
 
         RestoreNocacheMemoPath::register();
+
+        // Booted so our dehydrate listener runs after Livewire's url effect is set.
+        $this->app->booted(static function (): void {
+            SuppressPaginatorUrlHistory::register();
+        });
 
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'statamic-livewire-filters');
 

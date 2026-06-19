@@ -14,6 +14,9 @@ class LfUrlHandlerTest extends TestCase
 
         $this->assertStringContainsString('const normalizeUrl = (value) => {', $html);
         $this->assertStringContainsString('if (normalizeUrl(currentUrl) === normalizeUrl(nextUrl)) {', $html);
-        $this->assertStringContainsString("history.pushState(null, '', nextUrl);", $html);
+        $this->assertStringContainsString("history.replaceState(markedHistoryState(), '', currentUrl);", $html);
+        $this->assertStringContainsString("history.pushState(markedHistoryState(), '', nextUrl);", $html);
+        $this->assertStringContainsString("window.addEventListener('popstate', (event) => {", $html);
+        $this->assertStringContainsString('window.location.reload();', $html);
     }
 }
