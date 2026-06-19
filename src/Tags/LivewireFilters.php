@@ -4,7 +4,7 @@ namespace Reach\StatamicLivewireFilters\Tags;
 
 use Statamic\Tags\Tags;
 
-class Head extends Tags
+class LivewireFilters extends Tags
 {
     protected static $handle = 'livewire-filters';
 
@@ -36,5 +36,18 @@ class Head extends Tags
     })();
 </script>
 HTML;
+    }
+
+    public function loadMore(): string
+    {
+        if (! $this->context->get('has_more_pages')) {
+            return '';
+        }
+
+        return view('statamic-livewire-filters::livewire.ui.load-more', [
+            'auto' => $this->params->bool('auto', false),
+            'text' => $this->params->get('text'),
+            'class' => $this->params->get('class'),
+        ])->render();
     }
 }

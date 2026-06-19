@@ -37,25 +37,24 @@ Main features:
 
 ## Infinite scroll
 
-Paginated collections can switch from numbered pages to a "load more" flow by adding `infinite_scroll="true"` to the tag:
+Paginated collections can switch from numbered page links to an incremental "load more" flow by adding `infinite_scroll="true"` to the tag:
 
 ```antlers
 {{ livewire-collection:cars view="cars" paginate="12" infinite_scroll="true" }}
 ```
 
-Each `loadMore` call grows the page size by the initial `paginate` value, and the page size resets automatically whenever a filter or sort changes. The bundled view handles this for you. In a custom view, use the `has_more_pages` variable and the `loadMore` action instead of the `{{ links }}` tag:
+Then render the trigger in your view with the `{{ livewire-filters:load_more }}` tag — the counterpart to `{{ links }}`:
 
 ```antlers
-{{ entries }}
-    <div wire:key="{{ id }}">{{ title }}</div>
-{{ /entries }}
-
-{{ if has_more_pages }}
-    <button wire:click="loadMore" wire:target="loadMore" wire:loading.attr="disabled">
-        Load more
-    </button>
-{{ /if }}
+{{ livewire-filters:load_more }}              {{# manual "Load more" button #}}
+{{ livewire-filters:load_more auto="true" }}  {{# auto-loads on scroll (infinite scroll) #}}
 ```
+
+`auto="true"` wires up Alpine's `x-intersect` (bundled with Livewire — no build step) so the next page loads as the trigger scrolls into view. Without it, the visitor clicks to load more. Either way it renders a real `<button>`, so it keeps working without JavaScript.
+
+Each load grows the page size by the initial `paginate` value, and the size resets automatically whenever a filter or sort changes. The tag hides itself once there are no more pages. The bundled view already includes it; you only add it yourself in custom views.
+
+Optional parameters: `text` (override the label) and `class` (button classes). Publish `vendor/statamic-livewire-filters/livewire/ui/load-more.antlers.html` to fully restyle it.
 
 > Note: the loaded-more state lives in the Livewire component, not the URL, so a full page reload resets the list to the first page.
 

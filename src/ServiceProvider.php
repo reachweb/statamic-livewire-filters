@@ -22,8 +22,8 @@ use Reach\StatamicLivewireFilters\Scopes\Multiselect;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Support\RestoreNocacheMemoPath;
 use Reach\StatamicLivewireFilters\Support\SuppressPaginatorUrlHistory;
-use Reach\StatamicLivewireFilters\Tags\Head;
 use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
+use Reach\StatamicLivewireFilters\Tags\LivewireFilters;
 use Statamic\Providers\AddonServiceProvider;
 
 class ServiceProvider extends AddonServiceProvider
@@ -35,8 +35,8 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $tags = [
-        Head::class,
         LivewireCollection::class,
+        LivewireFilters::class,
     ];
 
     protected $scopes = [

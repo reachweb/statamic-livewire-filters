@@ -1,0 +1,16 @@
+<div class="mt-8 flex justify-center">
+    <button
+        type="button"
+        {{ if auto }}
+        x-data="{ loadingMore: false }"
+        x-intersect.margin.200px="if (! loadingMore) { loadingMore = true; $wire.loadMore().then(() => loadingMore = false) }"
+        {{ /if }}
+        wire:click="loadMore"
+        wire:target="loadMore"
+        wire:loading.attr="disabled"
+        {{ if class }}class="{{ class }}"{{ /if }}
+    >
+        <span wire:loading.remove wire:target="loadMore">{{ if text }}{{ text }}{{ else }}{{ trans key="statamic-livewire-filters::ui.load_more" }}{{ /if }}</span>
+        <span wire:loading wire:target="loadMore" role="status">{{ trans key="statamic-livewire-filters::ui.loading" }}</span>
+    </button>
+</div>
