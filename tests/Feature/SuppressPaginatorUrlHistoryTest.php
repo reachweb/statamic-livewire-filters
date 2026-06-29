@@ -38,25 +38,47 @@ class SuppressPaginatorUrlHistoryTest extends TestCase
     }
 
     #[Test]
-    public function it_downgrades_the_livewire_paginator_url_to_replace_in_custom_query_string_mode()
+    public function it_removes_the_livewire_paginator_url_effect_in_custom_query_string_mode()
     {
         Config::set('statamic-livewire-filters.custom_query_string', 'filters');
 
         $effect = $this->urlEffect(['from' => 'pages', 'paginate' => 1], 'paginators.page');
 
-        $this->assertNotNull($effect);
-        $this->assertSame('replace', $effect['use']);
+        $this->assertNull($effect);
     }
 
     #[Test]
-    public function it_downgrades_the_livewire_paginator_url_to_replace_for_a_custom_page_name()
+    public function it_removes_the_livewire_paginator_url_effect_for_a_custom_page_name()
     {
         Config::set('statamic-livewire-filters.custom_query_string', 'filters');
 
         $effect = $this->urlEffect(['from' => 'pages', 'paginate' => 1, 'page_name' => 'results'], 'paginators.results');
 
-        $this->assertNotNull($effect);
-        $this->assertSame('replace', $effect['use']);
+        $this->assertNull($effect);
+    }
+
+    #[Test]
+    public function it_keeps_the_livewire_paginator_url_effect_removed_after_an_update()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+
+        $component = Livewire::test(LivewireCollection::class, [
+            'params' => ['from' => 'pages', 'paginate' => 1],
+        ])->set('paginators.page', 2);
+
+        $this->assertArrayNotHasKey('paginators.page', $component->effects['url'] ?? []);
+    }
+
+    #[Test]
+    public function it_still_hydrates_the_paginator_from_a_custom_mode_deep_link()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+
+        Livewire::withQueryParams(['page' => 2])
+            ->test(LivewireCollection::class, [
+                'params' => ['from' => 'pages', 'paginate' => 1],
+            ])
+            ->assertSet('paginators.page', 2);
     }
 
     #[Test]

@@ -13,7 +13,10 @@ class LfUrlHandlerTest extends TestCase
         $html = file_get_contents(__DIR__.'/../../resources/views/livewire/utility/url-handler.blade.php');
 
         $this->assertStringContainsString('const normalizeUrl = (value) => {', $html);
+        $this->assertStringContainsString("Livewire.on('update-url', ({ newUrl, replace = false }) => {", $html);
         $this->assertStringContainsString('if (normalizeUrl(currentUrl) === normalizeUrl(nextUrl)) {', $html);
+        $this->assertStringContainsString('if (replace) {', $html);
+        $this->assertStringContainsString("history.replaceState(markedHistoryState(), '', nextUrl);", $html);
         $this->assertStringContainsString("history.replaceState(markedHistoryState(), '', currentUrl);", $html);
         $this->assertStringContainsString("history.pushState(markedHistoryState(), '', nextUrl);", $html);
         $this->assertStringContainsString("window.addEventListener('popstate', (event) => {", $html);

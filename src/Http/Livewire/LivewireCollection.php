@@ -172,14 +172,6 @@ class LivewireCollection extends Component
             ];
         }
 
-        // Suppress Livewire's URL handling for the configured paginator; we manage the
-        // URL ourselves in updateCustomQueryStringUrl().
-        if (CustomQueryString::enabled()) {
-            return [
-                'paginators.'.$this->paginationPageName() => ['except' => '', 'history' => false],
-            ];
-        }
-
         return [];
     }
 

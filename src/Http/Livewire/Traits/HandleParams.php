@@ -325,6 +325,18 @@ trait HandleParams
         // Manage the page param under the configured page_name when we own pagination.
         if ($this->paginate && method_exists($this, 'getPage')) {
             $pageName = $this->paginationPageName();
+
+            // Remove paginator property paths leaked by older releases. PHP normalizes
+            // dots in query-string keys to underscores when parse_str() is used.
+            unset($queryParams['paginators_'.$pageName]);
+            if (isset($queryParams['paginators']) && is_array($queryParams['paginators'])) {
+                unset($queryParams['paginators'][$pageName]);
+
+                if ($queryParams['paginators'] === []) {
+                    unset($queryParams['paginators']);
+                }
+            }
+
             $currentPage = $this->getPage($pageName);
             if ($currentPage > 1) {
                 $queryParams[$pageName] = $currentPage;
@@ -338,7 +350,11 @@ trait HandleParams
             $newUrl .= '?'.http_build_query($queryParams);
         }
 
-        $this->dispatch('update-url', newUrl: $newUrl);
+        $this->dispatch(
+            'update-url',
+            newUrl: $newUrl,
+            replace: ! request()->hasHeader('X-Livewire'),
+        );
     }
 
     protected function getConfigAliases(): array

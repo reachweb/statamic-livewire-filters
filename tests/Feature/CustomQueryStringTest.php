@@ -240,7 +240,7 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
-    public function it_suppresses_livewire_pagination_url_handling_for_the_configured_page_name()
+    public function it_does_not_register_a_second_paginator_query_string_writer()
     {
         $params = [
             'from' => 'pages',
@@ -248,16 +248,14 @@ class CustomQueryStringTest extends TestCase
             'page_name' => 'results',
         ];
 
-        // queryString() must target the live paginator slot, not paginators.page.
         $component = Livewire::test(LivewireCollection::class, ['params' => $params])->instance();
 
         $method = new \ReflectionMethod($component, 'queryString');
         $method->setAccessible(true);
         $queryString = $method->invoke($component);
 
-        $this->assertArrayHasKey('paginators.results', $queryString);
+        $this->assertArrayNotHasKey('paginators.results', $queryString);
         $this->assertArrayNotHasKey('paginators.page', $queryString);
-        $this->assertFalse($queryString['paginators.results']['history']);
     }
 
     #[Test]
@@ -553,6 +551,78 @@ class CustomQueryStringTest extends TestCase
         $this->assertEquals('/horizontal/filters/item_options/option1', $url['path'] ?? null);
         $this->assertArrayNotHasKey('page', $query);
         $this->assertSame('google', $query['utm_source'] ?? null);
+    }
+
+    #[Test]
+    public function it_removes_legacy_paginator_property_paths_from_custom_urls()
+    {
+        $component = $this->makeUrlHandlerHarness(
+            params: [
+                'from' => 'pages',
+                'paginate' => 1,
+                'page_name' => 'results',
+            ],
+            currentPath: 'horizontal?paginators.results=1&paginators[results]=1&utm_source=google',
+            page: 1
+        );
+
+        $component->updateCustomQueryStringUrl();
+
+        $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
+
+        $this->assertNotNull($updateUrl);
+
+        $url = parse_url($updateUrl['params']['newUrl']);
+
+        parse_str($url['query'] ?? '', $query);
+
+        $this->assertArrayNotHasKey('paginators_results', $query);
+        $this->assertArrayNotHasKey('paginators', $query);
+        $this->assertArrayNotHasKey('results', $query);
+        $this->assertSame('google', $query['utm_source'] ?? null);
+    }
+
+    #[Test]
+    public function it_replaces_history_when_canonicalizing_an_initial_request()
+    {
+        $component = $this->makeUrlHandlerHarness(
+            params: [
+                'from' => 'pages',
+                'paginate' => 1,
+            ],
+            currentPath: 'horizontal?paginators.page=1',
+        );
+
+        $component->updateCustomQueryStringUrl();
+
+        $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
+
+        $this->assertNotNull($updateUrl);
+        $this->assertTrue($updateUrl['params']['replace']);
+    }
+
+    #[Test]
+    public function it_pushes_history_for_a_livewire_request()
+    {
+        $request = Request::create('/livewire/update', 'POST');
+        $request->headers->set('X-Livewire', 'true');
+        $this->app->instance('request', $request);
+
+        $component = $this->makeUrlHandlerHarness(
+            params: [
+                'from' => 'pages',
+                'paginate' => 1,
+            ],
+            currentPath: 'horizontal',
+            page: 2,
+        );
+
+        $component->updateCustomQueryStringUrl();
+
+        $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
+
+        $this->assertNotNull($updateUrl);
+        $this->assertFalse($updateUrl['params']['replace']);
     }
 
     #[Test]

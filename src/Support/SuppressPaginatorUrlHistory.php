@@ -7,8 +7,9 @@ use Livewire\Mechanisms\HandleComponents\ComponentContext;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 
 /**
- * The addon owns browser history in custom query string mode. Livewire may
- * still replace the current URL, but it must not create a second entry.
+ * The addon is the sole URL and history writer in custom query string mode.
+ * Livewire may still hydrate the paginator from the query string, but its
+ * client-side URL effect must not mutate the current history entry first.
  */
 class SuppressPaginatorUrlHistory
 {
@@ -27,10 +28,14 @@ class SuppressPaginatorUrlHistory
             return;
         }
 
-        foreach ($context->effects['url'] as $slot => $detail) {
-            if (is_array($detail) && isset($detail['use']) && str_starts_with((string) $slot, 'paginators.')) {
-                $context->effects['url'][$slot]['use'] = 'replace';
+        foreach (array_keys($context->effects['url']) as $slot) {
+            if (str_starts_with((string) $slot, 'paginators.')) {
+                unset($context->effects['url'][$slot]);
             }
+        }
+
+        if ($context->effects['url'] === []) {
+            unset($context->effects['url']);
         }
     }
 }

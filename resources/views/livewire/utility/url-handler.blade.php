@@ -28,11 +28,19 @@
                 [historyStateKey]: true,
             });
 
-            Livewire.on('update-url', ({ newUrl }) => {
+            Livewire.on('update-url', ({ newUrl, replace = false }) => {
                 const currentUrl = new URL(window.location.href);
                 const nextUrl = new URL(newUrl, window.location.origin);
 
                 if (normalizeUrl(currentUrl) === normalizeUrl(nextUrl)) {
+                    return;
+                }
+
+                // Canonicalize initial page loads in place. This also heals history
+                // entries containing paginator property paths from older releases.
+                if (replace) {
+                    history.replaceState(markedHistoryState(), '', nextUrl);
+
                     return;
                 }
 
