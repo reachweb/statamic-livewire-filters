@@ -279,6 +279,21 @@ class LfToggleFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_restores_an_active_toggle_when_preset_value_is_not_a_string()
+    {
+        Livewire::test(LfToggleFilter::class, [
+            'field' => 'price',
+            'blueprint' => 'cars.car',
+            'condition' => 'gte',
+            'preset_value' => 50000,
+            'label' => 'Premium Cars',
+        ])
+            ->assertSet('selected', false)
+            ->dispatch('preset-params', ['price:gte' => '50000'])
+            ->assertSet('selected', true);
+    }
+
+    #[Test]
     public function it_handles_preset_parameters_for_taxonomy_condition()
     {
         Livewire::test(LfToggleFilter::class, [

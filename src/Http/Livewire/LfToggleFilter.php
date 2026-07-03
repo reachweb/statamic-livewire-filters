@@ -70,7 +70,7 @@ class LfToggleFilter extends Component
             // For regular conditions, check if the param exists and matches the preset value
             if (array_key_exists($paramKey, $params)) {
                 // Check if the value in params matches our preset value
-                $this->selected = $params[$paramKey] === $this->preset_value;
+                $this->selected = $params[$paramKey] == $this->preset_value;
             }
         }
     }

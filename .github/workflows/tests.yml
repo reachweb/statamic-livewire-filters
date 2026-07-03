@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   php-tests:
     runs-on: ${{ matrix.os }}
@@ -38,40 +41,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v1
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v41
-        with:
-          files: |
-            config
-            resources/lang
-            resources/views
-            src
-            tests
-            composer.json
-            phpunit.xml.dist
-            .github/workflows/tests.yml
-            **.php
-
-      - name: Determine whether tests should run
-        id: should-run-tests
-        if: steps.changed-files.outputs.any_modified == 'true' || github.event_name == 'schedule'
-        run: echo "result=true" >> $GITHUB_OUTPUT
-
-      - name: Update apt sources
-        if: steps.should-run-tests.outputs.result == 'true'
-        run: |
-          sudo apt-get check || sudo apt --fix-broken install -y
-          sudo apt-get update
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@cf4cade2721090509697bbedc2ee0eef765b62bc # v2.34.1
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
           coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.statamic }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.statamic }}-
 
       - name: Install dependencies
         run: |

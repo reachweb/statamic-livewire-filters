@@ -33,7 +33,7 @@ class LfRangeFilter extends Component
     public function dispatchEvent()
     {
         // Clear the filter if we are back to default
-        if ($this->selected === ($this->default ?? $this->min)) {
+        if ($this->selected == ($this->default ?? $this->min)) {
             $this->clearFilters();
 
             return;
