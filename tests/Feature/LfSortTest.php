@@ -1,5 +1,6 @@
 <?php
 
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
@@ -70,5 +71,14 @@ class LfSortTest extends TestCase
             ->assertDispatched('sort-updated',
                 sort: 'title|asc'
             );
+    }
+
+    #[Test]
+    public function it_forbids_client_tampering_with_the_collection_property()
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test(LfSort::class, ['blueprint' => 'pages.pages', 'fields' => 'title|item_options'])
+            ->set('collection', 'other');
     }
 }

@@ -153,6 +153,8 @@ class LfRadioFilterTest extends TestCase
     #[Test]
     public function it_calculates_the_count_for_each_entry()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', '')
             ->dispatch('params-updated', ['item_options:is' => 'option1'])

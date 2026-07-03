@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
@@ -188,6 +189,8 @@ class LfSelectFilterTest extends TestCase
     #[Test]
     public function it_filters_taxonomy_terms_with_numeric_slugs()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         Facades\Taxonomy::make('years')->save();
         Facades\Term::make()->taxonomy('years')->inDefaultLocale()->slug('100')->data(['title' => 'One Hundred'])->save();
         Facades\Term::make()->taxonomy('years')->inDefaultLocale()->slug('200')->data(['title' => 'Two Hundred'])->save();

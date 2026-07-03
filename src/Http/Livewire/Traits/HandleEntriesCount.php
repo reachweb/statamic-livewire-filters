@@ -26,13 +26,24 @@ trait HandleEntriesCount
     #[On('params-updated')]
     public function updateCounts($params)
     {
-        $fieldHandle = $this->statamic_field['handle'];
+        if (! config('statamic-livewire-filters.enable_filter_values_count')) {
+            return;
+        }
+
+        $fieldHandle = $this->resolveCountFieldHandle();
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
 
         $this->dispatch('counts-updated', $this->counts());
+    }
+
+    protected function resolveCountFieldHandle(): string
+    {
+        $blueprint = $this->getStatamicBlueprint();
+
+        return $this->getStatamicField($blueprint)->handle();
     }
 
     protected function removeCurrentFieldFromParams($params, $fieldHandle)

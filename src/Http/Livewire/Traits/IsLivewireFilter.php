@@ -2,22 +2,29 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Livewire\Attributes\Locked;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 
 trait IsLivewireFilter
 {
     use HandleFieldOptions, HandleStatamicQueries;
 
+    #[Locked]
     public $field;
 
+    #[Locked]
     public $statamic_field;
 
+    #[Locked]
     public $blueprint;
 
+    #[Locked]
     public $collection;
 
+    #[Locked]
     public $condition;
 
+    #[Locked]
     public $modifier = 'any';
 
     public function mountIsLivewireFilter($blueprint)

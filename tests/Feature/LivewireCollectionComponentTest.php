@@ -222,6 +222,73 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_strips_injected_status_params_so_drafts_stay_hidden()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt')
+            ->set('params', ['status:is' => 'any'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function it_strips_an_injected_from_param_so_other_collections_stay_hidden()
+    {
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc')
+            ->set('params', ['from' => 'secrets'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc');
+    }
+
+    #[Test]
+    public function it_strips_an_injected_limit_param_by_default()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['limit' => 1])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function it_strips_an_injected_paginate_param_by_default()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['paginate' => 1])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function allowed_filters_re_permits_a_blocked_query_param()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'allowed_filters' => 'limit',
+        ]])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['limit' => 1])
+            ->assertSet('entriesCount', 1);
+    }
+
+    #[Test]
+    public function normal_filter_params_are_not_affected_by_the_blocked_params_list()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->set('params', ['title:is' => 'Red Shirt'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Black Shirt')
+            ->assertSet('entriesCount', 1);
+    }
+
+    #[Test]
     public function check_that_filter_gets_ignored_if_not_in_allowed_filters()
     {
         $params = [

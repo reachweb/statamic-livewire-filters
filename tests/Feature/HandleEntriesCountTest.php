@@ -2,17 +2,64 @@
 
 namespace Tests\Feature;
 
+use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleEntriesCount;
+use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
+use Statamic\Facades;
 
 class HandleEntriesCountTest extends TestCase
 {
+    use PreventSavingStacheItemsToDisk;
+
     private $component;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $collection = Facades\Collection::make('pages')->save();
+        $blueprint = Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        [
+                            'handle' => 'title',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Title',
+                            ],
+                        ],
+                        [
+                            'handle' => 'item_options',
+                            'field' => [
+                                'type' => 'checkboxes',
+                                'display' => 'Checkbox',
+                                'listable' => 'hidden',
+                                'options' => [
+                                    [
+                                        'key' => 'option1',
+                                        'value' => 'Option 1',
+                                    ],
+                                    [
+                                        'key' => 'option2',
+                                        'value' => 'Option 2',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        $blueprint->setHandle('pages')->setNamespace('collections.'.$collection->handle())->save();
+
+        EntryFactory::id('a')->collection($collection)->slug('a')->make()->set('title', 'Entry A')->set('item_options', 'option1')->save();
+        EntryFactory::id('b')->collection($collection)->slug('b')->make()->set('title', 'Entry B')->set('item_options', 'option2')->save();
 
         $this->component = new class
         {
@@ -113,5 +160,31 @@ class HandleEntriesCountTest extends TestCase
             'custom1' => 3,
             'custom2' => 1,
         ], $this->component->counts());
+    }
+
+    #[Test]
+    public function it_ignores_a_params_updated_dispatch_when_the_counts_feature_is_disabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', [])
+            ->assertNotDispatched('counts-updated')
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
+            });
+    }
+
+    #[Test]
+    public function it_computes_counts_for_the_blueprint_field_when_the_feature_is_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', [])
+            ->assertDispatched('counts-updated')
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+            });
     }
 }

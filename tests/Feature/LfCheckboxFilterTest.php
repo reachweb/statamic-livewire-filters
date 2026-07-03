@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
@@ -301,6 +302,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_calculates_the_count_for_each_entry()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
             ->dispatch('params-updated', ['item_options:is' => 'option1'])
@@ -313,6 +316,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_calculates_the_count_for_dictionary_field()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         // Create entries with country values
         $this->makeEntry($this->collection, 'entry1')->set('title', 'Entry 1')->set('country', 'USA')->save();
         $this->makeEntry($this->collection, 'entry2')->set('title', 'Entry 2')->set('country', 'USA')->save();
@@ -358,6 +363,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_calculates_counts_correctly_when_other_filters_are_applied()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         // This test ensures counts are recalculated when params are updated
         // Using simple option values that we already know work
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
@@ -375,6 +382,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_calculates_the_count_for_entries_field()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         // Create some posts that reference instruments
         $postsCollection = Facades\Collection::findByHandle('posts');
 
@@ -657,6 +666,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_renders_updated_counts_when_custom_options_are_provided()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         $customOptions = [
             'option1' => 'Custom 1',
             'option2' => 'Custom 2',
@@ -882,6 +893,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_calculates_the_count_for_taxonomy_terms()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         $clothesCollection = Facades\Collection::findByHandle('clothes');
 
         $this->makeEntry($clothesCollection, 'shirt1')->set('title', 'Red Shirt')->set('colors', ['red'])->save();
@@ -900,6 +913,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_calculates_the_count_for_multi_value_entries_field()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         $postsCollection = Facades\Collection::findByHandle('posts');
 
         $this->makeEntry($postsCollection, 'post1')->set('title', 'Post 1')->set('related_instruments', ['guitar', 'drums'])->save();
@@ -918,6 +933,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_calculates_the_count_for_toggle_field()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         $toggleBlueprint = Facades\Blueprint::make()->setContents([
             'sections' => [
                 'main' => [
@@ -969,6 +986,8 @@ class LfCheckboxFilterTest extends TestCase
     #[Test]
     public function it_returns_zero_counts_when_no_entries_match()
     {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->dispatch('params-updated', ['title:is' => 'nonexistent-title-that-matches-nothing'])
             ->assertViewHas('statamic_field', function ($statamic_field) {
@@ -1012,6 +1031,15 @@ class LfCheckboxFilterTest extends TestCase
 
         Livewire::test(LivewireCollection::class, ['params' => array_merge(['from' => 'pages'], $params)])
             ->assertDispatched('params-updated');
+    }
+
+    #[Test]
+    public function it_forbids_client_tampering_with_the_field_property()
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('field', 'status');
     }
 
     protected function makeEntry($collection, $slug)
