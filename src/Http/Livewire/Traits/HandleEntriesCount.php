@@ -4,7 +4,6 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Statamic\Entries\EntryCollection;
 
@@ -24,14 +23,16 @@ trait HandleEntriesCount
         return [];
     }
 
+    /**
+     * Blocked params are not stripped here: tag-authored scoping must reach the
+     * count query; a forged event can only skew the forger's own counts.
+     */
     #[On('params-updated')]
     public function updateCounts($params)
     {
         if (! config('statamic-livewire-filters.enable_filter_values_count')) {
             return;
         }
-
-        $params = BlockedQueryParams::strip($params);
 
         $fieldHandle = $this->resolveCountFieldHandle();
 

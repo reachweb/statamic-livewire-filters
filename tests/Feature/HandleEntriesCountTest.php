@@ -189,7 +189,7 @@ class HandleEntriesCountTest extends TestCase
     }
 
     #[Test]
-    public function it_strips_injected_visibility_params_from_the_counts_query()
+    public function it_applies_visibility_params_to_the_counts_query_so_counts_match_the_entries_query()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
 
@@ -197,14 +197,18 @@ class HandleEntriesCountTest extends TestCase
             ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
-            ->dispatch('params-updated', ['status:is' => 'any'])
+            ->dispatch('params-updated', [])
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+            })
+            ->dispatch('params-updated', ['status:is' => 'any'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1];
             });
     }
 
     #[Test]
-    public function it_strips_an_injected_from_param_from_the_counts_query()
+    public function it_keeps_the_counts_query_pinned_to_the_locked_collection_when_collection_params_are_injected()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
 
@@ -214,6 +218,10 @@ class HandleEntriesCountTest extends TestCase
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->dispatch('params-updated', ['from' => 'secrets'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+            })
+            ->dispatch('params-updated', ['collection' => 'secrets', 'in' => 'secrets'])
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             });
