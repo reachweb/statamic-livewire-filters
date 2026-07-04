@@ -235,6 +235,21 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_strips_colon_prefixed_status_params_so_drafts_stay_hidden()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt')
+            ->set('params', [':status:is' => 'any'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt')
+            ->set('params', [':from' => 'clothes', ':limit' => '1'])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
     public function it_strips_an_injected_from_param_so_other_collections_stay_hidden()
     {
         Facades\Collection::make('secrets')->save();

@@ -14,6 +14,10 @@ class BlockedQueryParams
      * `field:condition` filter params pass through. Keys present in $allowed are
      * exempt so a tag's `allowed_filters` can explicitly re-permit one.
      *
+     * A leading colon is stripped before matching because Statamic's Parameters::make()
+     * treats `:key` as a dynamic binding and normalizes it to `key`; without this a
+     * `:status:is` key would slip past the blocklist and re-enable `status:is`.
+     *
      * @param  array<string, mixed>  $params
      * @param  Collection<int, string>|null  $allowed
      * @return array<string, mixed>
@@ -29,7 +33,11 @@ class BlockedQueryParams
         $allowed ??= collect();
 
         return collect($params)
-            ->reject(fn ($value, $key) => ! $allowed->contains($key) && $blocked->contains(Str::before($key, ':')))
+            ->reject(function ($value, $key) use ($allowed, $blocked) {
+                $key = ltrim($key, ':');
+
+                return ! $allowed->contains($key) && $blocked->contains(Str::before($key, ':'));
+            })
             ->all();
     }
 }
