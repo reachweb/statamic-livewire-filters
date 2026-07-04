@@ -267,6 +267,21 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_strips_injected_since_and_until_params_on_dated_collections()
+    {
+        Facades\Collection::make('events')->dated(true)->save();
+        EntryFactory::collection('events')->slug('past-event')->date('2020-01-01')->data(['title' => 'Past Event'])->create();
+        EntryFactory::collection('events')->slug('older-event')->date('2021-01-01')->data(['title' => 'Older Event'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'events']])
+            ->assertSet('entriesCount', 2)
+            ->set('params', ['until' => '2000-01-01'])
+            ->assertSet('entriesCount', 2)
+            ->set('params', ['since' => '2099-01-01'])
+            ->assertSet('entriesCount', 2);
+    }
+
+    #[Test]
     public function it_keeps_control_params_set_directly_on_the_tag()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'limit' => 1]])

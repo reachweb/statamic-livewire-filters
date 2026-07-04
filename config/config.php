@@ -26,6 +26,8 @@ return [
         'published',
         'show_future',
         'show_past',
+        'since',
+        'until',
         // Collection / site scope
         'from',
         'in',
