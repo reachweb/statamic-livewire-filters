@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Statamic\Entries\EntryCollection;
 
@@ -29,6 +30,8 @@ trait HandleEntriesCount
         if (! config('statamic-livewire-filters.enable_filter_values_count')) {
             return;
         }
+
+        $params = BlockedQueryParams::strip($params);
 
         $fieldHandle = $this->resolveCountFieldHandle();
 

@@ -187,4 +187,35 @@ class HandleEntriesCountTest extends TestCase
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             });
     }
+
+    #[Test]
+    public function it_strips_injected_visibility_params_from_the_counts_query()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        EntryFactory::id('draft')->collection('pages')->slug('draft')->make()
+            ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['status:is' => 'any'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+            });
+    }
+
+    #[Test]
+    public function it_strips_an_injected_from_param_from_the_counts_query()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::id('s1')->collection('secrets')->slug('s1')->make()->set('item_options', 'option1')->save();
+        EntryFactory::id('s2')->collection('secrets')->slug('s2')->make()->set('item_options', 'option1')->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['from' => 'secrets'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+            });
+    }
 }

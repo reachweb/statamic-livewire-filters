@@ -10,8 +10,16 @@ return [
     // Query-control parameters that are never accepted from client-supplied filter state,
     // because they change entry visibility, collection/site scope or query cost and are not
     // legitimate filter values. Keys are matched against the segment before the first colon, so
-    // `status` blocks both a bare `status` param and condition-style params like `status:is`. Add
-    // the exact param key to `allowed_filters` on the tag to explicitly re-permit one.
+    // `status` blocks both a bare `status` param and condition-style params like `status:is`.
+    // Params you set directly on the tag are trusted and always kept; this list only strips
+    // keys that arrive through client-tamperable filter state, on both the entries and the
+    // faceted-count query. Add the exact param key to `allowed_filters` on the tag to re-permit one.
+    //
+    // Note: `query_scope` is intentionally absent. Statamic treats `query_scope` and `filter`
+    // as equivalent scope-invocation keys, but the addon builds `query_scope` itself for its
+    // scope filters, so it cannot be denylisted without breaking that feature. Blocking `filter`
+    // stops the native alias; to lock scope invocation down entirely, set `allowed_filters` with
+    // explicit `query_scope:<scope>` entries (the only fully client-proof option today).
     'blocked_query_params' => [
         // Visibility
         'status',

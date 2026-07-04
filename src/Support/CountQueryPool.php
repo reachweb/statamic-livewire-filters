@@ -19,7 +19,7 @@ class CountQueryPool
         }
 
         $params = Parameters::make(
-            array_merge(['from' => $collection], $baseParams),
+            array_merge($baseParams, ['from' => $collection]),
             Context::make([])
         );
 

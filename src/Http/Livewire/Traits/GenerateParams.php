@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Illuminate\Support\Str;
+use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Statamic\Tags\Context;
 use Statamic\Tags\Parameters;
 
@@ -25,21 +26,23 @@ trait GenerateParams
 
     protected function removeBlockedQueryParams(array $params): array
     {
-        $blocked = collect(config('statamic-livewire-filters.blocked_query_params', []));
-
-        if ($blocked->isEmpty()) {
-            return $params;
-        }
-
         $allowed = ($this->allowedFilters && $this->allowedFilters->isNotEmpty())
             ? $this->allowedFilters
-            : collect();
+            : null;
 
-        // Match on the segment before the first colon so both bare control keys
-        // (`limit`) and condition-style visibility params (`status:is`) are caught,
-        // while `field:condition` filter params on real fields pass through.
-        return collect($params)
-            ->reject(fn ($value, $key) => ! $allowed->contains($key) && $blocked->contains(Str::before($key, ':')))
+        return array_merge(
+            BlockedQueryParams::strip($params, $allowed),
+            $this->trustedQueryParams,
+        );
+    }
+
+    protected function captureTrustedQueryParams(array $tagParams): void
+    {
+        $blocked = collect(config('statamic-livewire-filters.blocked_query_params', []));
+
+        $this->trustedQueryParams = collect($tagParams)
+            ->only(array_keys($this->params))
+            ->reject(fn ($value, $key) => ! $blocked->contains(Str::before($key, ':')))
             ->all();
     }
 

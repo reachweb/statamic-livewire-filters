@@ -34,6 +34,9 @@ class LivewireCollection extends Component
     public $allowedFilters;
 
     #[Locked]
+    public array $trustedQueryParams = [];
+
+    #[Locked]
     public $currentPath;
 
     #[Locked]
@@ -66,6 +69,7 @@ class LivewireCollection extends Component
         } else {
             $this->setParameters(array_merge($params, $this->params));
         }
+        $this->captureTrustedQueryParams($params);
         $this->initialPaginate = (int) $this->paginate;
 
         if ($this->infiniteScroll && $this->initialPaginate < 1) {

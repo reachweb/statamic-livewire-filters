@@ -267,6 +267,15 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_keeps_control_params_set_directly_on_the_tag()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'limit' => 1]])
+            ->assertSet('entriesCount', 1)
+            ->set('params', ['limit' => 5])
+            ->assertSet('entriesCount', 1);
+    }
+
+    #[Test]
     public function allowed_filters_re_permits_a_blocked_query_param()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => [
