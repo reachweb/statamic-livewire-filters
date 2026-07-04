@@ -303,6 +303,21 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function an_allowed_query_param_overrides_the_value_set_on_the_tag()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'limit' => 3,
+            'allowed_filters' => 'limit',
+        ]])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['limit' => 1])
+            ->assertSet('entriesCount', 1)
+            ->set('params', [])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
     public function normal_filter_params_are_not_affected_by_the_blocked_params_list()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])

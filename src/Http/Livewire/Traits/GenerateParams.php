@@ -31,8 +31,8 @@ trait GenerateParams
             : null;
 
         return array_merge(
-            BlockedQueryParams::strip($params, $allowed),
             $this->trustedQueryParams,
+            BlockedQueryParams::strip($params, $allowed),
         );
     }
 
