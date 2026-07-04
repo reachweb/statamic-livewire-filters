@@ -9,19 +9,30 @@ use Statamic\Tags\Parameters;
 
 trait GenerateParams
 {
+    /**
+     * The locked `from` and `paginate` are merged last so no param surviving the
+     * allowed/blocked filtering can re-point the query at another collection.
+     */
     protected function generateParams()
+    {
+        return Parameters::make(array_merge(
+            $this->effectiveQueryParams(),
+            ['from' => $this->collections, 'paginate' => $this->paginate]),
+            Context::make([])
+        );
+    }
+
+    /**
+     * Filter state after the allowed/blocked hardening — what both the entries
+     * query and the counts dispatch must use.
+     */
+    protected function effectiveQueryParams(): array
     {
         $params = ($this->allowedFilters && $this->allowedFilters->isNotEmpty())
             ? $this->removeParamsNotInAllowedFiltersCollection()
             : $this->params;
 
-        $params = $this->removeBlockedQueryParams($params);
-
-        return Parameters::make(array_merge(
-            ['from' => $this->collections],
-            ['paginate' => $this->paginate], $params),
-            Context::make([])
-        );
+        return $this->removeBlockedQueryParams($params);
     }
 
     protected function removeBlockedQueryParams(array $params): array

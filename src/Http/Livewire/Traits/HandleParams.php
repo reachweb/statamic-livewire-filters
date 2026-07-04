@@ -417,7 +417,7 @@ trait HandleParams
     protected function dispatchParamsUpdated(): void
     {
         if (config('statamic-livewire-filters.enable_filter_values_count')) {
-            $this->dispatch('params-updated', $this->params);
+            $this->dispatch('params-updated', $this->effectiveQueryParams());
         }
 
         // Dispatching to the tags component

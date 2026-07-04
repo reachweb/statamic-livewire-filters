@@ -318,6 +318,39 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function allowed_filters_cannot_re_permit_collection_switching()
+    {
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'allowed_filters' => 'from',
+        ]])
+            ->assertSee('Red Shirt')
+            ->set('params', ['from' => 'secrets'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc');
+    }
+
+    #[Test]
+    public function it_dispatches_normalized_params_for_the_counts_path()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'status:is' => 'any']])
+            ->set('params', ['status:is' => 'published', 'site' => 'fr'])
+            ->dispatch('filter-updated', field: 'title', condition: 'is', payload: 'Red Shirt', modifier: 'any')
+            ->assertDispatched('params-updated', function ($name, $payload) {
+                $params = $payload[0] ?? [];
+
+                return ($params['title:is'] ?? null) === 'Red Shirt'
+                    && ($params['status:is'] ?? null) === 'any'
+                    && ! array_key_exists('site', $params);
+            });
+    }
+
+    #[Test]
     public function it_ignores_tag_only_control_params_hydrated_from_the_query_string()
     {
         Config::set('statamic-livewire-filters.enable_query_string', true);
