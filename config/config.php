@@ -28,6 +28,9 @@ return [
         'show_past',
         'since',
         'until',
+        'redirect',
+        'redirects',
+        'links',
         // Collection / site scope
         'from',
         'in',

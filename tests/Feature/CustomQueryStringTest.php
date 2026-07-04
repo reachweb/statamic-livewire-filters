@@ -117,6 +117,26 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function it_ignores_tag_only_control_params_in_the_url_params()
+    {
+        $this->withStandardFakeViews();
+
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection:pages }}');
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::id('hidden-doc')->collection('secrets')->slug('hidden-doc')->make()->set('title', 'Hidden Doc')->save();
+        $this->makeEntry($this->collection, 'draft')->set('title', 'Draft Page')->published(false)->save();
+
+        $response = $this->get('/?params[from]=secrets&params[allowed_filters]=status:is&params[status:is]=any');
+
+        $response->assertSee('I Love Guitars')
+            ->assertDontSee('Hidden Doc')
+            ->assertDontSee('Draft Page');
+    }
+
+    #[Test]
     public function it_decodes_url_encoded_values_on_page_load()
     {
         $this->withStandardFakeViews();

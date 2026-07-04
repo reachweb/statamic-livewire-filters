@@ -64,10 +64,10 @@ class LivewireCollection extends Component
     {
         $this->currentPath = $this->resolveCurrentPath();
         $this->allowedFilters = false;
-        if (is_null($this->params)) {
-            $this->setParameters($params);
+        if (is_array($this->params)) {
+            $this->setParameters(array_merge($params, $this->rejectTagOnlyParams($this->params)));
         } else {
-            $this->setParameters(array_merge($params, $this->params));
+            $this->setParameters($params);
         }
         $this->captureTrustedQueryParams($params);
         $this->initialPaginate = (int) $this->paginate;

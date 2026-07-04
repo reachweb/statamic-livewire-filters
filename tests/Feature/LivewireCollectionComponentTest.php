@@ -318,6 +318,42 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_ignores_tag_only_control_params_hydrated_from_the_query_string()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        Livewire::withQueryParams(['params' => [
+            'from' => 'secrets',
+            'allowed_filters' => 'status:is',
+            'status:is' => 'any',
+        ]])
+            ->test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc')
+            ->assertDontSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function it_strips_injected_redirect_params_so_redirect_entries_stay_hidden()
+    {
+        EntryFactory::collection('clothes')->slug('link-shirt')->data(['title' => 'Link Shirt', 'redirect' => 'https://example.com'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Link Shirt')
+            ->set('params', ['redirects' => 'true'])
+            ->assertDontSee('Link Shirt')
+            ->set('params', ['links' => 'true'])
+            ->assertDontSee('Link Shirt')
+            ->set('params', ['redirect:exists' => 'true'])
+            ->assertDontSee('Link Shirt');
+    }
+
+    #[Test]
     public function normal_filter_params_are_not_affected_by_the_blocked_params_list()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])

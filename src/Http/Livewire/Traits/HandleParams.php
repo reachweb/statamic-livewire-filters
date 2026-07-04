@@ -13,7 +13,7 @@ trait HandleParams
     public function setParameters($params)
     {
         if ($customUrlParams = $this->handleCustomQueryStringParams()) {
-            $params = $this->mergeParameters($params, $customUrlParams);
+            $params = $this->mergeParameters($params, $this->rejectTagOnlyParams($customUrlParams));
         }
         $paramsCollection = collect($params);
 
@@ -239,6 +239,18 @@ trait HandleParams
         }
 
         return isset($this->params[$paramKey]);
+    }
+
+    /**
+     * Keys that setParameters() extracts into locked component properties may only
+     * come from the tag — URL-hydrated state is client input and must not reach them.
+     */
+    protected function rejectTagOnlyParams(array $params): array
+    {
+        return array_diff_key($params, array_flip([
+            'from', 'in', 'folder', 'use', 'collection',
+            'view', 'lazy-placeholder', 'paginate', 'infinite_scroll', 'allowed_filters',
+        ]));
     }
 
     protected function mergeParameters($params, $urlParams): array
