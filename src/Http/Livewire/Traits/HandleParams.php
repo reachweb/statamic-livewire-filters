@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
+use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 
 trait HandleParams
@@ -13,7 +14,7 @@ trait HandleParams
     public function setParameters($params)
     {
         if ($customUrlParams = $this->handleCustomQueryStringParams()) {
-            $params = $this->mergeParameters($params, $this->rejectTagOnlyParams($customUrlParams));
+            $params = $this->mergeParameters($params, $this->sanitizeClientParams($customUrlParams, $params));
         }
         $paramsCollection = collect($params);
 
@@ -239,6 +240,26 @@ trait HandleParams
         }
 
         return isset($this->params[$paramKey]);
+    }
+
+    /**
+     * Fully sanitize client-supplied URL params before they reach mount-time
+     * extractions or public component state: drop tag-only control keys, then drop
+     * blocked query params (honoring the tag's own allowed_filters). Without this a
+     * URL `limit` would be pulled into locked $paginate by the legacy pagination path,
+     * and blocked keys would linger in $this->params as phantom active-filter state.
+     *
+     * @param  array<string, mixed>  $clientParams
+     * @param  array<string, mixed>  $tagParams
+     * @return array<string, mixed>
+     */
+    protected function sanitizeClientParams(array $clientParams, array $tagParams): array
+    {
+        $allowed = isset($tagParams['allowed_filters']) && is_string($tagParams['allowed_filters'])
+            ? collect(explode('|', $tagParams['allowed_filters']))
+            : null;
+
+        return BlockedQueryParams::strip($this->rejectTagOnlyParams($clientParams), $allowed);
     }
 
     /**

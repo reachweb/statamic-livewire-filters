@@ -306,6 +306,46 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_ignores_a_url_limit_in_legacy_pagination()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['limit' => '0']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'paginate' => true,
+                'limit' => 2,
+            ]])
+            ->assertSet('paginate', 2);
+    }
+
+    #[Test]
+    public function it_honors_a_url_limit_in_legacy_pagination_when_limit_is_allowed()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['limit' => '1']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'paginate' => true,
+                'limit' => 2,
+                'allowed_filters' => 'limit',
+            ]])
+            ->assertSet('paginate', 1);
+    }
+
+    #[Test]
+    public function it_excludes_hydrated_blocked_params_from_public_filter_state()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['status:is' => 'any', 'title:is' => 'Red Shirt']])
+            ->test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('params', ['title:is' => 'Red Shirt'])
+            ->assertSet('activeFilters', 1);
+    }
+
+    #[Test]
     public function allowed_filters_re_permits_a_blocked_query_param()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => [
