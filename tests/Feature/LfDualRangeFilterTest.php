@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
@@ -373,6 +374,22 @@ class LfDualRangeFilterTest extends TestCase
             ->assertDispatched('dual-range-preset-values', min: 5, max: 10)
             ->assertSet('selectedMin', 5)
             ->assertSet('selectedMax', 10);
+    }
+
+    #[Test]
+    public function it_forbids_client_tampering_with_the_condition_property()
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 2,
+        ])
+            ->set('condition', 'is');
     }
 
     protected function makeEntry($collection, $slug)

@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -12,10 +13,13 @@ class LfSort extends Component
 
     public $view = 'lf-sort';
 
+    #[Locked]
     public $collection;
 
+    #[Locked]
     public $blueprint;
 
+    #[Locked]
     public $fields;
 
     public $selected = '';

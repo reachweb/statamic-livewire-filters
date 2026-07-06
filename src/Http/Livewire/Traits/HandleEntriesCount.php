@@ -23,16 +23,37 @@ trait HandleEntriesCount
         return [];
     }
 
+    /**
+     * Blocked params are intentionally NOT stripped here (deliberate trade-off).
+     * This path exposes only aggregate counts of this field's own option values —
+     * CountEntries plucks the single field, never entry data — so a forged
+     * `params-updated` event can at most skew the forger's own count numbers, a
+     * low-severity aggregate effect we accept in exchange for letting tag-authored
+     * control params (status, site, ...) scope the counts the same way they scope
+     * the entries query. Collection switching stays blocked regardless:
+     * CountQueryPool forces the component's locked collection to win the `from` merge.
+     */
     #[On('params-updated')]
     public function updateCounts($params)
     {
-        $fieldHandle = $this->statamic_field['handle'];
+        if (! config('statamic-livewire-filters.enable_filter_values_count')) {
+            return;
+        }
+
+        $fieldHandle = $this->resolveCountFieldHandle();
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
 
         $this->dispatch('counts-updated', $this->counts());
+    }
+
+    protected function resolveCountFieldHandle(): string
+    {
+        $blueprint = $this->getStatamicBlueprint();
+
+        return $this->getStatamicField($blueprint)->handle();
     }
 
     protected function removeCurrentFieldFromParams($params, $fieldHandle)

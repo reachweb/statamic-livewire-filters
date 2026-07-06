@@ -6,6 +6,7 @@ use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
+use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
@@ -219,6 +220,303 @@ class LivewireCollectionComponentTest extends TestCase
             )
             ->assertDontSee('Yellow Shirt')
             ->assertDontSee('Black Shirt');
+    }
+
+    #[Test]
+    public function it_strips_injected_status_params_so_drafts_stay_hidden()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt')
+            ->set('params', ['status:is' => 'any'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function it_strips_colon_prefixed_status_params_so_drafts_stay_hidden()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt')
+            ->set('params', [':status:is' => 'any'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt')
+            ->set('params', [':from' => 'clothes', ':limit' => '1'])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function it_strips_an_injected_from_param_so_other_collections_stay_hidden()
+    {
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc')
+            ->set('params', ['from' => 'secrets'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc');
+    }
+
+    #[Test]
+    public function it_strips_an_injected_limit_param_by_default()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['limit' => 1])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function it_strips_an_injected_paginate_param_by_default()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['paginate' => 1])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function it_strips_injected_since_and_until_params_on_dated_collections()
+    {
+        Facades\Collection::make('events')->dated(true)->save();
+        EntryFactory::collection('events')->slug('past-event')->date('2020-01-01')->data(['title' => 'Past Event'])->create();
+        EntryFactory::collection('events')->slug('older-event')->date('2021-01-01')->data(['title' => 'Older Event'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'events']])
+            ->assertSet('entriesCount', 2)
+            ->set('params', ['until' => '2000-01-01'])
+            ->assertSet('entriesCount', 2)
+            ->set('params', ['since' => '2099-01-01'])
+            ->assertSet('entriesCount', 2);
+    }
+
+    #[Test]
+    public function it_keeps_control_params_set_directly_on_the_tag()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'limit' => 1]])
+            ->assertSet('entriesCount', 1)
+            ->set('params', ['limit' => 5])
+            ->assertSet('entriesCount', 1);
+    }
+
+    #[Test]
+    public function it_ignores_a_url_limit_in_legacy_pagination()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['limit' => '0']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'paginate' => true,
+                'limit' => 2,
+            ]])
+            ->assertSet('paginate', 2);
+    }
+
+    #[Test]
+    public function it_honors_a_url_limit_in_legacy_pagination_when_limit_is_allowed()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['limit' => '1']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'paginate' => true,
+                'limit' => 2,
+                'allowed_filters' => 'limit',
+            ]])
+            ->assertSet('paginate', 1);
+    }
+
+    #[Test]
+    public function it_excludes_hydrated_blocked_params_from_public_filter_state()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['status:is' => 'any', 'title:is' => 'Red Shirt']])
+            ->test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('params', ['title:is' => 'Red Shirt'])
+            ->assertSet('activeFilters', 1);
+    }
+
+    #[Test]
+    public function allowed_filters_re_permits_a_blocked_query_param()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'allowed_filters' => 'limit',
+        ]])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['limit' => 1])
+            ->assertSet('entriesCount', 1);
+    }
+
+    #[Test]
+    public function an_allowed_query_param_overrides_the_value_set_on_the_tag()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'limit' => 3,
+            'allowed_filters' => 'limit',
+        ]])
+            ->assertSet('entriesCount', 3)
+            ->set('params', ['limit' => 1])
+            ->assertSet('entriesCount', 1)
+            ->set('params', [])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function allowed_filters_cannot_re_permit_collection_switching()
+    {
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'allowed_filters' => 'from',
+        ]])
+            ->assertSee('Red Shirt')
+            ->set('params', ['from' => 'secrets'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc');
+    }
+
+    #[Test]
+    public function set_parameters_is_not_a_client_callable_action()
+    {
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+
+        // setParameters() writes the locked collections/allowedFilters properties
+        // from a trusted argument, so it must stay off the Livewire action surface:
+        // a client calling it directly could repoint the query at another collection
+        // or re-permit a blocked visibility param. Making it protected removes it
+        // from the callable-method list, so Livewire rejects the call.
+        $this->expectException(MethodNotFoundException::class);
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->call('setParameters', ['from' => 'secrets']);
+    }
+
+    #[Test]
+    public function it_dispatches_normalized_params_for_the_counts_path()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'status:is' => 'any']])
+            ->set('params', ['status:is' => 'published', 'site' => 'fr'])
+            ->dispatch('filter-updated', field: 'title', condition: 'is', payload: 'Red Shirt', modifier: 'any')
+            ->assertDispatched('params-updated', function ($name, $payload) {
+                $params = $payload[0] ?? [];
+
+                return ($params['title:is'] ?? null) === 'Red Shirt'
+                    && ($params['status:is'] ?? null) === 'any'
+                    && ! array_key_exists('site', $params);
+            });
+    }
+
+    #[Test]
+    public function it_ignores_tag_only_control_params_hydrated_from_the_query_string()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        Livewire::withQueryParams(['params' => [
+            'from' => 'secrets',
+            'allowed_filters' => 'status:is',
+            'status:is' => 'any',
+        ]])
+            ->test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Hidden Doc')
+            ->assertDontSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function it_strips_injected_redirect_params_so_redirect_entries_stay_hidden()
+    {
+        EntryFactory::collection('clothes')->slug('link-shirt')->data(['title' => 'Link Shirt', 'redirect' => 'https://example.com'])->create();
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Link Shirt')
+            ->set('params', ['redirects' => 'true'])
+            ->assertDontSee('Link Shirt')
+            ->set('params', ['links' => 'true'])
+            ->assertDontSee('Link Shirt')
+            ->set('params', ['redirect:exists' => 'true'])
+            ->assertDontSee('Link Shirt');
+    }
+
+    #[Test]
+    public function normal_filter_params_are_not_affected_by_the_blocked_params_list()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->set('params', ['title:is' => 'Red Shirt'])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Black Shirt')
+            ->assertSet('entriesCount', 1);
+    }
+
+    #[Test]
+    public function an_init_hook_can_add_a_blocked_query_param()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            $this->params['status:is'] = 'any';
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertSee('Draft Shirt')
+            ->set('params', [])
+            ->assertSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function an_init_hook_can_override_a_blocked_param_set_on_the_tag()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            $this->params['status:is'] = 'published';
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'status:is' => 'any']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function an_init_hook_can_remove_a_blocked_param_set_on_the_tag()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            unset($this->params['status:is']);
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'status:is' => 'any']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt');
     }
 
     #[Test]

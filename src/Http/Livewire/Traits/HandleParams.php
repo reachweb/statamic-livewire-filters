@@ -6,14 +6,24 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
+use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 
 trait HandleParams
 {
-    public function setParameters($params)
+    /**
+     * Protected, not public: Livewire exposes every public method as a
+     * client-callable action, and this method's $params argument is trusted
+     * (it feeds locked properties like $collections and $allowedFilters via the
+     * extract* helpers). It is only ever called from mount() with params the
+     * caller has already run through sanitizeClientParams(); a public method
+     * here would let a client call setParameters(['from' => 'secrets']) to
+     * repoint the query or re-permit a blocked visibility param.
+     */
+    protected function setParameters($params)
     {
         if ($customUrlParams = $this->handleCustomQueryStringParams()) {
-            $params = $this->mergeParameters($params, $customUrlParams);
+            $params = $this->mergeParameters($params, $this->sanitizeClientParams($customUrlParams, $params));
         }
         $paramsCollection = collect($params);
 
@@ -241,6 +251,38 @@ trait HandleParams
         return isset($this->params[$paramKey]);
     }
 
+    /**
+     * Fully sanitize client-supplied URL params before they reach mount-time
+     * extractions or public component state: drop tag-only control keys, then drop
+     * blocked query params (honoring the tag's own allowed_filters). Without this a
+     * URL `limit` would be pulled into locked $paginate by the legacy pagination path,
+     * and blocked keys would linger in $this->params as phantom active-filter state.
+     *
+     * @param  array<string, mixed>  $clientParams
+     * @param  array<string, mixed>  $tagParams
+     * @return array<string, mixed>
+     */
+    protected function sanitizeClientParams(array $clientParams, array $tagParams): array
+    {
+        $allowed = isset($tagParams['allowed_filters']) && is_string($tagParams['allowed_filters'])
+            ? collect(explode('|', $tagParams['allowed_filters']))
+            : null;
+
+        return BlockedQueryParams::strip($this->rejectTagOnlyParams($clientParams), $allowed);
+    }
+
+    /**
+     * Keys that setParameters() extracts into locked component properties may only
+     * come from the tag — URL-hydrated state is client input and must not reach them.
+     */
+    protected function rejectTagOnlyParams(array $params): array
+    {
+        return array_diff_key($params, array_flip([
+            'from', 'in', 'folder', 'use', 'collection',
+            'view', 'lazy-placeholder', 'paginate', 'infinite_scroll', 'allowed_filters',
+        ]));
+    }
+
     protected function mergeParameters($params, $urlParams): array
     {
         if (isset($params['query_scope']) && isset($urlParams['query_scope'])) {
@@ -405,7 +447,7 @@ trait HandleParams
     protected function dispatchParamsUpdated(): void
     {
         if (config('statamic-livewire-filters.enable_filter_values_count')) {
-            $this->dispatch('params-updated', $this->params);
+            $this->dispatch('params-updated', $this->effectiveQueryParams());
         }
 
         // Dispatching to the tags component
