@@ -11,7 +11,16 @@ use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 
 trait HandleParams
 {
-    public function setParameters($params)
+    /**
+     * Protected, not public: Livewire exposes every public method as a
+     * client-callable action, and this method's $params argument is trusted
+     * (it feeds locked properties like $collections and $allowedFilters via the
+     * extract* helpers). It is only ever called from mount() with params the
+     * caller has already run through sanitizeClientParams(); a public method
+     * here would let a client call setParameters(['from' => 'secrets']) to
+     * repoint the query or re-permit a blocked visibility param.
+     */
+    protected function setParameters($params)
     {
         if ($customUrlParams = $this->handleCustomQueryStringParams()) {
             $params = $this->mergeParameters($params, $this->sanitizeClientParams($customUrlParams, $params));

@@ -6,6 +6,7 @@ use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
+use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
@@ -386,6 +387,23 @@ class LivewireCollectionComponentTest extends TestCase
             ->set('params', ['from' => 'secrets'])
             ->assertSee('Red Shirt')
             ->assertDontSee('Hidden Doc');
+    }
+
+    #[Test]
+    public function set_parameters_is_not_a_client_callable_action()
+    {
+        Facades\Collection::make('secrets')->save();
+        EntryFactory::collection('secrets')->slug('hidden-doc')->data(['title' => 'Hidden Doc'])->create();
+
+        // setParameters() writes the locked collections/allowedFilters properties
+        // from a trusted argument, so it must stay off the Livewire action surface:
+        // a client calling it directly could repoint the query at another collection
+        // or re-permit a blocked visibility param. Making it protected removes it
+        // from the callable-method list, so Livewire rejects the call.
+        $this->expectException(MethodNotFoundException::class);
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->call('setParameters', ['from' => 'secrets']);
     }
 
     #[Test]

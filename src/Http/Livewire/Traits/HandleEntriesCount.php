@@ -24,8 +24,14 @@ trait HandleEntriesCount
     }
 
     /**
-     * Blocked params are not stripped here: tag-authored scoping must reach the
-     * count query; a forged event can only skew the forger's own counts.
+     * Blocked params are intentionally NOT stripped here (deliberate trade-off).
+     * This path exposes only aggregate counts of this field's own option values —
+     * CountEntries plucks the single field, never entry data — so a forged
+     * `params-updated` event can at most skew the forger's own count numbers, a
+     * low-severity aggregate effect we accept in exchange for letting tag-authored
+     * control params (status, site, ...) scope the counts the same way they scope
+     * the entries query. Collection switching stays blocked regardless:
+     * CountQueryPool forces the component's locked collection to win the `from` merge.
      */
     #[On('params-updated')]
     public function updateCounts($params)
