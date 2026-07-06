@@ -12,8 +12,11 @@ return [
     // legitimate filter values. Keys are matched against the segment before the first colon, so
     // `status` blocks both a bare `status` param and condition-style params like `status:is`.
     // Params you set directly on the tag are trusted and always kept; this list only strips
-    // keys that arrive through client-tamperable filter state, on both the entries and the
-    // faceted-count query. Add the exact param key to `allowed_filters` on the tag to re-permit one.
+    // keys that arrive through client-tamperable filter state on the entries query. The
+    // faceted-count query intentionally does NOT strip them (see HandleEntriesCount): that path
+    // returns only aggregate counts of a field's own option values, an accepted trade-off that
+    // lets tag-authored control params scope the counts the same way they scope the entries.
+    // Add the exact param key to `allowed_filters` on the tag to re-permit one on the entries query.
     //
     // Note: `query_scope` is intentionally absent. Statamic treats `query_scope` and `filter`
     // as equivalent scope-invocation keys, but the addon builds `query_scope` itself for its
