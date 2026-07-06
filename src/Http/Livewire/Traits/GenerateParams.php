@@ -57,6 +57,28 @@ trait GenerateParams
             ->all();
     }
 
+    /**
+     * Init hooks run after the tag-param capture above and are registered in
+     * application code, so blocked-key params they add or change are as trusted
+     * as the tag's own. Without this capture, effectiveQueryParams() would strip
+     * a hook's constraint or restore the tag value the hook overrode. Keys the
+     * hook removed are dropped from the trusted set so they are not restored.
+     */
+    protected function captureHookAuthoredQueryParams(array $paramsBeforeHooks): void
+    {
+        $blocked = collect(config('statamic-livewire-filters.blocked_query_params', []));
+
+        $hookAuthored = collect($this->params)
+            ->filter(fn ($value, $key) => $blocked->contains(Str::before($key, ':'))
+                && (! array_key_exists($key, $paramsBeforeHooks) || $paramsBeforeHooks[$key] !== $value))
+            ->all();
+
+        $this->trustedQueryParams = collect($this->trustedQueryParams)
+            ->filter(fn ($value, $key) => array_key_exists($key, $this->params))
+            ->merge($hookAuthored)
+            ->all();
+    }
+
     protected function removeParamsNotInAllowedFiltersCollection()
     {
         return collect($this->params)->filter(function ($value, $key) {

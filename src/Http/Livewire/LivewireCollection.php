@@ -82,7 +82,11 @@ class LivewireCollection extends Component
 
         $this->dispatchParamsUpdated();
 
+        $paramsBeforeHooks = $this->params;
+
         $this->runHooks('init');
+
+        $this->captureHookAuthoredQueryParams($paramsBeforeHooks);
     }
 
     protected function resolveCurrentPath(): string

@@ -470,6 +470,56 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function an_init_hook_can_add_a_blocked_query_param()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            $this->params['status:is'] = 'any';
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSee('Red Shirt')
+            ->assertSee('Draft Shirt')
+            ->set('params', [])
+            ->assertSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function an_init_hook_can_override_a_blocked_param_set_on_the_tag()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            $this->params['status:is'] = 'published';
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'status:is' => 'any']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt');
+    }
+
+    #[Test]
+    public function an_init_hook_can_remove_a_blocked_param_set_on_the_tag()
+    {
+        EntryFactory::collection('clothes')->slug('draft-shirt')->data(['title' => 'Draft Shirt'])->published(false)->create();
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            unset($this->params['status:is']);
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'status:is' => 'any']])
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Draft Shirt');
+    }
+
+    #[Test]
     public function check_that_filter_gets_ignored_if_not_in_allowed_filters()
     {
         $params = [
