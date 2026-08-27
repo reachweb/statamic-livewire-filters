@@ -83,8 +83,6 @@ class LivewireCollection extends Component
             $this->resetPage($this->paginationPageName());
         }
 
-        $this->dispatchParamsUpdated();
-
         $paramsBeforeHooks = $this->params;
 
         $this->runHooks('init');
@@ -92,6 +90,10 @@ class LivewireCollection extends Component
         $this->captureHookAuthoredQueryParams($paramsBeforeHooks);
 
         $this->captureClearAllExemptParams($params, $paramsBeforeHooks);
+
+        // Dispatched after the init hooks and trust captures so the initial
+        // counts/bounds/tags payloads match what the entries query will use.
+        $this->dispatchParamsUpdated();
     }
 
     protected function resolveCurrentPath(): string

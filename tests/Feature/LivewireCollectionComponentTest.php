@@ -520,6 +520,26 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function the_initial_params_updated_dispatch_carries_hook_authored_params()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            $this->params['status:is'] = 'any';
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertDispatched('params-updated', function ($event, $params) {
+                return ($params[0]['status:is'] ?? null) === 'any';
+            })
+            ->assertDispatched('tags-updated', function ($event, $params) {
+                return ($params[0]['status:is'] ?? null) === 'any';
+            });
+    }
+
+    #[Test]
     public function check_that_filter_gets_ignored_if_not_in_allowed_filters()
     {
         $params = [
