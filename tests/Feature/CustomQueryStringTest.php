@@ -179,6 +179,54 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function removing_params_directly_produces_the_same_urls_as_the_filter_relay()
+    {
+        $params = [
+            'from' => 'pages',
+        ];
+
+        $urlAfterRelayClear = null;
+
+        Livewire::test(LivewireCollection::class, ['params' => $params])
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'contains',
+                payload: 'I Love',
+                modifier: 'any',
+            )
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: 'option1',
+                modifier: 'any',
+            )
+            ->dispatch('clear-filter',
+                field: 'item_options',
+                condition: 'is',
+                modifier: 'any',
+            )
+            ->assertDispatched('update-url', function ($name, $payload) use (&$urlAfterRelayClear) {
+                $urlAfterRelayClear = $payload['newUrl'];
+
+                return true;
+            })
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: 'option1',
+                modifier: 'any',
+            )
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option1',
+                'condition' => 'is',
+            ])
+            ->assertDispatched('update-url', fn ($name, $payload) => $payload['newUrl'] === $urlAfterRelayClear)
+            ->dispatch('clear-all-filters')
+            ->assertDispatched('update-url', fn ($name, $payload) => ! str_contains($payload['newUrl'], 'filters/'));
+    }
+
+    #[Test]
     public function it_includes_page_parameter_in_url_when_on_page_greater_than_one()
     {
         $params = [
