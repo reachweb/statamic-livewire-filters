@@ -735,12 +735,13 @@ trait HandleParams
      * (e.g. a real clear plus redundant relays from other filters). skipRender()
      * is component-wide for the request, so a no-op must never suppress the render
      * of a real change handled in the same request — regardless of call order.
+     * The store reset clears a skip already set by an earlier no-op call (the flag
+     * guards later ones) and, unlike forceRender(), exists on Livewire 3 too.
      */
     protected function markCollectionStateChanged(): void
     {
         $this->collectionStateChangedThisRequest = true;
 
-        $this->forceRender();
         \Livewire\store($this)->set('skipRender', false);
     }
 
