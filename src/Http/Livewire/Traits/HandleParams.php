@@ -649,8 +649,13 @@ trait HandleParams
      * URL. Only the first two are exempt from the immediate clear-all sweep: they
      * are site-author constraints that today survive clear-all whenever no filter
      * component manages them. URL-hydrated params are user filter state and clear
-     * immediately. Hook-authored means added or changed by the hooks, mirroring
-     * captureHookAuthoredQueryParams().
+     * immediately. A tag key therefore only counts as tag-authored while the
+     * merged mount value still matches the tag's own — a URL override with a
+     * different value is user state and loses the exemption. The match is by
+     * value, not source, and deliberately loose: the addon echoes tag-authored
+     * params into the URL, so on the next load they hydrate back as strings and
+     * must keep their exemption. Hook-authored means added or changed by the
+     * hooks, mirroring captureHookAuthoredQueryParams().
      *
      * @param  array<string, mixed>  $tagParams
      * @param  array<string, mixed>  $paramsBeforeHooks
@@ -658,8 +663,10 @@ trait HandleParams
     protected function captureClearAllExemptParams(array $tagParams, array $paramsBeforeHooks): void
     {
         $tagKeys = collect($tagParams)
-            ->keys()
-            ->filter(fn ($key) => is_string($key) && str_contains($key, ':'));
+            ->filter(fn ($value, $key) => is_string($key) && str_contains($key, ':')
+                && array_key_exists($key, $paramsBeforeHooks)
+                && $paramsBeforeHooks[$key] == $value)
+            ->keys();
 
         $hookAuthoredKeys = collect($this->params)
             ->filter(fn ($value, $key) => is_string($key) && str_contains($key, ':')

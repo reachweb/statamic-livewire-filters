@@ -1013,6 +1013,40 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function clear_all_immediately_clears_a_tag_param_overridden_by_the_url()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        // The URL replaced the tag's value, so the merged param is user filter
+        // state, not a tag constraint — it must not inherit the tag exemption.
+        Livewire::withQueryParams(['params' => ['item_options:is' => 'option2']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'item_options:is' => 'option1',
+            ]])
+            ->assertSet('params', ['item_options:is' => 'option2'])
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', []);
+    }
+
+    #[Test]
+    public function clear_all_keeps_a_tag_param_the_url_echoes_back_unchanged()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        // The addon writes tag-authored params into the URL, so on the next page
+        // load the same value hydrates back. That must not cost the key its
+        // exemption, or clear-all would delete a fixed tag constraint.
+        Livewire::withQueryParams(['params' => ['item_options:is' => 'option1']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'item_options:is' => 'option1',
+            ]])
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', ['item_options:is' => 'option1']);
+    }
+
+    #[Test]
     public function clear_all_with_nothing_to_clear_skips_the_rerender()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
