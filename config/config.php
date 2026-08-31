@@ -65,6 +65,11 @@ return [
     // The addon will calculate the number of entries for each filter value (can be slow for a large number of entries)
     'enable_filter_values_count' => false,
 
+    // Dynamically update the min/max bounds of range filters (lf-range, lf-dual-range) to match
+    // the entries remaining after the other active filters (runs the same pooled query as the
+    // filter values count feature — can be slow for a large number of entries)
+    'enable_dynamic_range_bounds' => false,
+
     // Enable custom query string (ignored when enable_query_string is true)
     'custom_query_string' => false,
 

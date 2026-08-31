@@ -8,7 +8,7 @@ use Livewire\Component;
 
 class LfRangeFilter extends Component
 {
-    use Traits\IsLivewireFilter;
+    use Traits\HandleFieldBounds, Traits\IsLivewireFilter;
 
     public $view = 'lf-range';
 
@@ -32,8 +32,8 @@ class LfRangeFilter extends Component
 
     public function dispatchEvent()
     {
-        // Clear the filter if we are back to default
-        if ($this->selected == ($this->default ?? $this->min)) {
+        // Clear the filter if we are back to default (clamped into the displayed bounds)
+        if ($this->isAtClearValue()) {
             $this->clearFilters();
 
             return;
@@ -78,6 +78,38 @@ class LfRangeFilter extends Component
 
         $this->selected = $this->default ?? $this->min;
         $this->dispatchEvent();
+    }
+
+    protected function isAtClearValue(): bool
+    {
+        $default = $this->default ?? $this->min;
+
+        if ($this->selected == $default) {
+            return true;
+        }
+
+        return $this->dynamicMin !== null
+            && $this->selected == max($this->dynamicMin, min($default, $this->dynamicMax));
+    }
+
+    protected function minimumBoundsSpan(): int|float
+    {
+        return 0;
+    }
+
+    protected function clampedSelectionPayload($min, $max): array
+    {
+        return ['selected' => max($min, min($this->selected, $max))];
+    }
+
+    protected function pinSelectionToBounds($min, $max): void
+    {
+        $this->selected = max($min, min($this->default ?? $this->min, $max));
+    }
+
+    protected function selectionEventPayload(): array
+    {
+        return ['selected' => $this->selected];
     }
 
     public function render()

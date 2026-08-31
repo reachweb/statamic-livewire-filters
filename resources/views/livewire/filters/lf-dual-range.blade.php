@@ -53,6 +53,18 @@
                 $wire.on('dual-range-preset-values', (presetValues) => {
                     slider.noUiSlider.set([presetValues.min, presetValues.max], false);
                 });
+
+                // Handle dynamic bounds updates
+                $wire.on('range-bounds-updated', (bounds) => {
+                    slider.noUiSlider.updateOptions({
+                        range: {
+                            'min': bounds.min,
+                            'max': bounds.max
+                        }
+                    }, false);
+                    slider.noUiSlider.set([bounds.selectedMin, bounds.selectedMax], false);
+                    bounds.disabled ? slider.noUiSlider.disable() : slider.noUiSlider.enable();
+                });
             }
         }"
 

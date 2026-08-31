@@ -10,7 +10,7 @@ use Livewire\Component;
 
 class LfDualRangeFilter extends Component
 {
-    use Traits\IsLivewireFilter;
+    use Traits\HandleFieldBounds, Traits\IsLivewireFilter;
 
     #[Locked]
     public $view = 'lf-dual-range';
@@ -48,8 +48,8 @@ class LfDualRangeFilter extends Component
         $min = $this->selectedMin;
         $max = $this->selectedMax;
 
-        // If we are back to the default values clear the filter
-        if ($min == $this->min && $max == $this->max) {
+        // A selection spanning the displayed bounds filters nothing — clear the filter
+        if ($this->selectionSpansDisplayedBounds($min, $max)) {
             $this->clearFilters();
 
             return;
@@ -143,6 +143,44 @@ class LfDualRangeFilter extends Component
             min: $this->selectedMin,
             max: $this->selectedMax,
         );
+    }
+
+    protected function selectionSpansDisplayedBounds($min, $max): bool
+    {
+        if ($min == $this->min && $max == $this->max) {
+            return true;
+        }
+
+        return $this->dynamicMin !== null
+            && $min == $this->dynamicMin
+            && $max == $this->dynamicMax;
+    }
+
+    protected function minimumBoundsSpan(): int|float
+    {
+        return $this->minRange;
+    }
+
+    protected function clampedSelectionPayload($min, $max): array
+    {
+        return [
+            'selectedMin' => max($min, min($this->selectedMin, $max)),
+            'selectedMax' => max($min, min($this->selectedMax, $max)),
+        ];
+    }
+
+    protected function pinSelectionToBounds($min, $max): void
+    {
+        $this->selectedMin = $min;
+        $this->selectedMax = $max;
+    }
+
+    protected function selectionEventPayload(): array
+    {
+        return [
+            'selectedMin' => $this->selectedMin,
+            'selectedMax' => $this->selectedMax,
+        ];
     }
 
     public function render()

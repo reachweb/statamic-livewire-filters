@@ -763,7 +763,8 @@ trait HandleParams
     {
         $this->markCollectionStateChanged();
 
-        if (config('statamic-livewire-filters.enable_filter_values_count')) {
+        if (config('statamic-livewire-filters.enable_filter_values_count')
+            || config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
             $this->dispatch('params-updated', $this->effectiveQueryParams());
         }
 

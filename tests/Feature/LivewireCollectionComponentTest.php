@@ -1113,6 +1113,36 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_dispatches_the_params_updated_event_when_only_dynamic_range_bounds_is_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $params = [
+            'from' => 'clothes',
+        ];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['yellow'],
+                modifier: 'any',
+            )
+            ->assertDispatched('params-updated');
+    }
+
+    #[Test]
+    public function it_dispatches_params_updated_on_mount_when_dynamic_range_bounds_is_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'music']])
+            ->assertDispatched('params-updated');
+    }
+
+    #[Test]
     public function it_sets_lazy_placeholder_from_parameter()
     {
         $params = [
