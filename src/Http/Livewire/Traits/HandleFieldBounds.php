@@ -57,16 +57,35 @@ trait HandleFieldBounds
         } else {
             $min = max($absoluteMin, $this->roundDownToStep($min));
             $max = min($absoluteMax, $this->roundUpToStep($max));
+
+            // When every match lies outside the configured interval the two clamps
+            // above cross over (absolutes 10–20 with data topping out at 5 yield
+            // 10–5), so treat the empty intersection like the no-matches case.
+            if ($min > $max) {
+                [$min, $max] = [$absoluteMin, $absoluteMax];
+            }
         }
 
+        $isActive = $this->fieldHasActiveParams($params);
         $minimumSpan = $this->minimumBoundsSpan();
-        $span = $max - $min;
-        $disabled = $span <= 0 || $span < $minimumSpan;
 
-        // The dual-range slider is created with `margin: minRange` and must never
-        // receive a range narrower than that, so widen disabled spans server-side.
-        if ($disabled && $minimumSpan > 0) {
-            [$min, $max] = $this->widenBoundsToMinimumSpan($min, $max, $minimumSpan);
+        if ($isActive) {
+            // An active range must stay adjustable: bounds are widened to contain
+            // the applied selection so the display never contradicts the server
+            // query, the noUiSlider margin always fits, and the control is never
+            // disabled — otherwise a collapse caused by another filter could
+            // strand the user on zero results with a dead slider.
+            [$min, $max] = $this->widenBoundsToContainSelection($min, $max, $absoluteMin, $absoluteMax, $params);
+            $disabled = false;
+        } else {
+            $span = $max - $min;
+            $disabled = $span <= 0 || $span < $minimumSpan;
+
+            // The dual-range slider is created with `margin: minRange` and must never
+            // receive a range narrower than that, so widen disabled spans server-side.
+            if ($disabled && $minimumSpan > 0) {
+                [$min, $max] = $this->widenBoundsToMinimumSpan($min, $max, $minimumSpan);
+            }
         }
 
         $this->dynamicMin = $min;
@@ -74,10 +93,11 @@ trait HandleFieldBounds
         $this->boundsDisabled = $disabled;
 
         // An active selection is never mutated — only its display is clamped into
-        // the new bounds, so the handles spring back once the bounds re-expand.
-        // An inactive selection follows the bounds so the handles never suggest
-        // a filter that isn't there. Neither path dispatches filter-updated.
-        if ($this->fieldHasActiveParams($params, $fieldHandle)) {
+        // the new bounds (an identity once the bounds contain it), so the handles
+        // spring back once the bounds re-expand. An inactive selection follows the
+        // bounds so the handles never suggest a filter that isn't there. Neither
+        // path dispatches filter-updated.
+        if ($isActive) {
             $selectionPayload = $this->clampedSelectionPayload($min, $max);
         } else {
             $this->pinSelectionToBounds($min, $max);
@@ -91,11 +111,75 @@ trait HandleFieldBounds
         ));
     }
 
-    protected function fieldHasActiveParams($params, string $fieldHandle): bool
+    /**
+     * Matches this filter's own generated param keys exactly — a bare
+     * `{fieldHandle}:` prefix would also match another filter's scoped param
+     * when a query scope shares the field's name (`price:category`).
+     */
+    protected function fieldHasActiveParams($params): bool
     {
-        return collect($params)->keys()->contains(
-            fn ($key) => str_starts_with((string) $key, $fieldHandle.':')
-        );
+        return collect($this->currentFilterParamKeys())
+            ->contains(fn ($key) => array_key_exists($key, (array) $params));
+    }
+
+    protected function currentFilterParamKeys(): array
+    {
+        $paramKey = $this->getParamKey();
+
+        return is_array($paramKey) ? array_values($paramKey) : [$paramKey];
+    }
+
+    /**
+     * The union of the faceted bounds and the applied selection, capped at the
+     * configured absolutes. When even that leaves no room to move the handles,
+     * the full configured range is restored so the filter can still be changed
+     * or cleared.
+     */
+    protected function widenBoundsToContainSelection($min, $max, $absoluteMin, $absoluteMax, $params): array
+    {
+        $selection = $this->activeSelectionBounds($params);
+
+        if ($selection === null) {
+            return [$min, $max];
+        }
+
+        $min = $this->normalizeBound(max($absoluteMin, min($min, $selection[0])));
+        $max = $this->normalizeBound(min($absoluteMax, max($max, $selection[1])));
+
+        if (($max - $min) < max($this->minimumBoundsSpan(), $this->step ?: 1)) {
+            return [$absoluteMin, $absoluteMax];
+        }
+
+        return [$min, $max];
+    }
+
+    /**
+     * The applied selection in slider units, read from the params themselves
+     * (the source of truth) rather than component state, which a forged or
+     * out-of-sync event would not reflect.
+     */
+    protected function activeSelectionBounds($params): ?array
+    {
+        $values = collect($this->currentFilterParamKeys())
+            ->map(fn ($key) => $params[$key] ?? null)
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => $this->boundValueFromParam($value))
+            ->filter(fn ($value) => $value !== null);
+
+        return $values->isEmpty() ? null : [$values->min(), $values->max()];
+    }
+
+    protected function boundValueFromParam($value): int|float|null
+    {
+        if (($this->statamic_field['type'] ?? null) === 'date') {
+            try {
+                return Carbon::parse($value)->year;
+            } catch (\Throwable $exception) {
+                return null;
+            }
+        }
+
+        return is_numeric($value) ? $value + 0 : null;
     }
 
     protected function computeFieldBounds(array $baseParams, string $fieldHandle): array

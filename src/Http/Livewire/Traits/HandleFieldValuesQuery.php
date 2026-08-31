@@ -24,17 +24,16 @@ trait HandleFieldValuesQuery
     {
         $baseParams = [];
 
-        foreach ($params as $key => $value) {
-            // Check if this is a dual_range field (has min/max keys)
-            if ($this->condition === 'dual_range') {
-                // Skip both min and max keys for the current field
-                if (str_starts_with($key, $fieldHandle.':')) {
-                    continue;
-                }
-            }
+        // A query-scope param is keyed {scope}:{field}, so a scope sharing this
+        // field's name makes the `{fieldHandle}:` prefix ambiguous (`price:gte`
+        // vs `price:category`). The collision is resolved conservatively by
+        // keeping every ambiguous key: that can only narrow the faceted result,
+        // never silently ignore another filter's constraint.
+        $fieldHandleCollidesWithScope = in_array($fieldHandle, $this->activeScopeNames($params), true);
 
-            // Skip standard field parameters
-            if (str_starts_with($key, $fieldHandle.':')) {
+        foreach ($params as $key => $value) {
+            // Skip this field's own parameters (any condition, including the dual-range pair)
+            if (! $fieldHandleCollidesWithScope && str_starts_with($key, $fieldHandle.':')) {
                 continue;
             }
 
@@ -75,5 +74,17 @@ trait HandleFieldValuesQuery
     protected function getCountFieldValues(array $baseParams, string $fieldHandle)
     {
         return app(CountQueryPool::class)->getFieldValues($this->collection, $baseParams, $fieldHandle);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function activeScopeNames($params): array
+    {
+        if (! isset($params['query_scope']) || ! is_string($params['query_scope'])) {
+            return [];
+        }
+
+        return explode('|', $params['query_scope']);
     }
 }

@@ -187,7 +187,7 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
-    public function it_clamps_but_preserves_an_active_selection_when_bounds_change()
+    public function it_widens_bounds_to_contain_an_active_selection()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
 
@@ -202,11 +202,11 @@ class HandleFieldBoundsTest extends TestCase
             ->assertSet('selectedMin', 5)
             ->assertSet('selectedMax', 10)
             ->assertNotDispatched('filter-updated')
-            ->assertDispatched('range-bounds-updated', min: 4, max: 6, selectedMin: 5, selectedMax: 6, disabled: false);
+            ->assertDispatched('range-bounds-updated', min: 4, max: 10, selectedMin: 5, selectedMax: 10, disabled: false);
     }
 
     #[Test]
-    public function it_restores_the_displayed_selection_when_bounds_re_expand()
+    public function it_keeps_the_displayed_selection_stable_as_other_filters_change()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
 
@@ -214,7 +214,7 @@ class HandleFieldBoundsTest extends TestCase
             ->set('selectedMin', 5)
             ->set('selectedMax', 8)
             ->dispatch('params-updated', ['category:is' => 'catamaran', 'cabins:gte' => 5, 'cabins:lte' => 8])
-            ->assertDispatched('range-bounds-updated', min: 4, max: 6, selectedMin: 5, selectedMax: 6, disabled: false)
+            ->assertDispatched('range-bounds-updated', min: 4, max: 8, selectedMin: 5, selectedMax: 8, disabled: false)
             ->dispatch('params-updated', ['cabins:gte' => 5, 'cabins:lte' => 8])
             ->assertSet('selectedMin', 5)
             ->assertSet('selectedMax', 8)
@@ -223,7 +223,7 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
-    public function it_restores_the_single_range_display_when_bounds_re_expand()
+    public function it_keeps_the_single_range_display_stable_as_other_filters_change()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
 
@@ -231,11 +231,65 @@ class HandleFieldBoundsTest extends TestCase
             ->set('selected', 8)
             ->dispatch('params-updated', ['category:is' => 'catamaran', 'cabins:gte' => 8])
             ->assertSet('selected', 8)
-            ->assertDispatched('range-bounds-updated', min: 4, max: 6, selected: 6, disabled: false)
+            ->assertDispatched('range-bounds-updated', min: 4, max: 8, selected: 8, disabled: false)
             ->dispatch('params-updated', ['cabins:gte' => 8])
             ->assertSet('selected', 8)
             ->assertNotDispatched('filter-updated')
             ->assertDispatched('range-bounds-updated', min: 4, max: 8, selected: 8, disabled: false);
+    }
+
+    #[Test]
+    public function it_keeps_an_active_dual_range_enabled_when_bounds_collapse()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+            ->set('selectedMin', 5)
+            ->set('selectedMax', 7)
+            ->dispatch('params-updated', ['category:is' => 'monohull', 'cabins:gte' => 5, 'cabins:lte' => 7])
+            ->assertSet('boundsDisabled', false)
+            ->assertDispatched('range-bounds-updated', min: 5, max: 8, selectedMin: 5, selectedMax: 7, disabled: false);
+    }
+
+    #[Test]
+    public function it_keeps_an_active_single_range_enabled_when_bounds_collapse_to_its_value()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+            ->set('selected', 8)
+            ->dispatch('params-updated', ['category:is' => 'monohull', 'cabins:gte' => 8])
+            ->assertSet('boundsDisabled', false)
+            ->assertDispatched('range-bounds-updated', min: 1, max: 10, selected: 8, disabled: false);
+    }
+
+    #[Test]
+    public function it_falls_back_to_absolute_bounds_when_matches_lie_outside_them()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $this->makeEntry($this->collection, 'yacht-tiny')->set('title', 'Tiny Yacht')->set('cabins', 1)->set('category', 'tiny')->save();
+
+        Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+            ->dispatch('params-updated', ['category:is' => 'tiny'])
+            ->assertSet('dynamicMin', 2)
+            ->assertSet('dynamicMax', 10)
+            ->assertSet('boundsDisabled', false)
+            ->assertDispatched('range-bounds-updated', min: 2, max: 10, disabled: false);
+    }
+
+    #[Test]
+    public function it_falls_back_to_absolute_bounds_when_single_range_matches_exceed_them()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $this->makeEntry($this->collection, 'yacht-huge')->set('title', 'Huge Yacht')->set('cabins', 15)->set('category', 'huge')->save();
+
+        Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+            ->dispatch('params-updated', ['category:is' => 'huge'])
+            ->assertSet('dynamicMin', 1)
+            ->assertSet('dynamicMax', 10)
+            ->assertSet('boundsDisabled', false);
     }
 
     #[Test]
@@ -357,6 +411,41 @@ class HandleFieldBoundsTest extends TestCase
         $this->assertSame([2, 4], $component->widen(2, 2, 2));
     }
 
+    #[Test]
+    public function it_keeps_scoped_params_whose_scope_name_matches_the_field_handle()
+    {
+        $component = $this->makeBoundsStub();
+
+        $params = [
+            'query_scope' => 'cabins',
+            'cabins:category' => 'catamaran',
+            'cabins:gte' => 5,
+            'other:is' => 'x',
+        ];
+
+        $this->assertSame($params, $component->baseParams($params, 'cabins'));
+    }
+
+    #[Test]
+    public function it_still_strips_own_field_params_when_no_scope_collides()
+    {
+        $component = $this->makeBoundsStub();
+
+        $params = [
+            'query_scope' => 'multiselect',
+            'multiselect:brand' => 'x',
+            'cabins:gte' => 5,
+            'cabins:lte' => 7,
+            'category:is' => 'catamaran',
+        ];
+
+        $this->assertSame([
+            'query_scope' => 'multiselect',
+            'multiselect:brand' => 'x',
+            'category:is' => 'catamaran',
+        ], $component->baseParams($params, 'cabins'));
+    }
+
     protected function makeBoundsStub()
     {
         return new class
@@ -407,6 +496,11 @@ class HandleFieldBoundsTest extends TestCase
             public function widen($min, $max, $minimumSpan)
             {
                 return $this->widenBoundsToMinimumSpan($min, $max, $minimumSpan);
+            }
+
+            public function baseParams($params, $fieldHandle)
+            {
+                return $this->removeCurrentFieldFromParams($params, $fieldHandle);
             }
         };
     }
