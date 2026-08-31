@@ -28,12 +28,8 @@ trait HandleFieldBounds
     abstract protected function selectionEventPayload(): array;
 
     /**
-     * Blocked params are intentionally NOT stripped here (deliberate trade-off,
-     * mirroring HandleEntriesCount::updateCounts()). This path exposes only the
-     * aggregate min/max of this field's own values — a forged `params-updated`
-     * event can at most skew the forger's own displayed slider bounds, never
-     * entry data. Collection switching stays blocked regardless: CountQueryPool
-     * forces the component's locked collection to win the `from` merge.
+     * Blocked params are deliberately not stripped — a forged event can only
+     * skew the forger's own displayed bounds (see HandleEntriesCount::updateCounts()).
      */
     #[On('params-updated')]
     public function updateBounds($params): void
@@ -48,7 +44,7 @@ trait HandleFieldBounds
 
         [$min, $max] = $this->computeFieldBounds($baseParams, $fieldHandle);
 
-        // Tag-supplied bounds arrive as strings; normalize so the browser event carries numbers
+        // Tag-supplied bounds arrive as strings
         $absoluteMin = $this->normalizeBound($this->min);
         $absoluteMax = $this->normalizeBound($this->max);
 
@@ -58,9 +54,7 @@ trait HandleFieldBounds
             $min = max($absoluteMin, $this->roundDownToStep($min));
             $max = min($absoluteMax, $this->roundUpToStep($max));
 
-            // When every match lies outside the configured interval the two clamps
-            // above cross over (absolutes 10–20 with data topping out at 5 yield
-            // 10–5), so treat the empty intersection like the no-matches case.
+            // An empty intersection inverts the clamps — fall back like no-matches
             if ($min > $max) {
                 [$min, $max] = [$absoluteMin, $absoluteMax];
             }
@@ -70,19 +64,14 @@ trait HandleFieldBounds
         $minimumSpan = $this->minimumBoundsSpan();
 
         if ($isActive) {
-            // An active range must stay adjustable: bounds are widened to contain
-            // the applied selection so the display never contradicts the server
-            // query, the noUiSlider margin always fits, and the control is never
-            // disabled — otherwise a collapse caused by another filter could
-            // strand the user on zero results with a dead slider.
+            // An active range must stay adjustable: contain the selection, never disable
             [$min, $max] = $this->widenBoundsToContainSelection($min, $max, $absoluteMin, $absoluteMax, $params);
             $disabled = false;
         } else {
             $span = $max - $min;
             $disabled = $span <= 0 || $span < $minimumSpan;
 
-            // The dual-range slider is created with `margin: minRange` and must never
-            // receive a range narrower than that, so widen disabled spans server-side.
+            // noUiSlider rejects ranges narrower than its margin; widen server-side
             if ($disabled && $minimumSpan > 0) {
                 [$min, $max] = $this->widenBoundsToMinimumSpan($min, $max, $minimumSpan);
             }
@@ -92,11 +81,8 @@ trait HandleFieldBounds
         $this->dynamicMax = $max;
         $this->boundsDisabled = $disabled;
 
-        // An active selection is never mutated — only its display is clamped into
-        // the new bounds (an identity once the bounds contain it), so the handles
-        // spring back once the bounds re-expand. An inactive selection follows the
-        // bounds so the handles never suggest a filter that isn't there. Neither
-        // path dispatches filter-updated.
+        // Active selections are never mutated, inactive ones follow the bounds;
+        // neither path dispatches filter-updated
         if ($isActive) {
             $selectionPayload = $this->clampedSelectionPayload($min, $max);
         } else {
@@ -112,9 +98,7 @@ trait HandleFieldBounds
     }
 
     /**
-     * Matches this filter's own generated param keys exactly — a bare
-     * `{fieldHandle}:` prefix would also match another filter's scoped param
-     * when a query scope shares the field's name (`price:category`).
+     * Exact own-key matching — a prefix would also match a scope named like the field.
      */
     protected function fieldHasActiveParams($params): bool
     {
@@ -130,10 +114,8 @@ trait HandleFieldBounds
     }
 
     /**
-     * The union of the faceted bounds and the applied selection, capped at the
-     * configured absolutes. When even that leaves no room to move the handles,
-     * the full configured range is restored so the filter can still be changed
-     * or cleared.
+     * Union of the faceted bounds and the applied selection, or the absolutes
+     * when even that leaves no room to move the handles.
      */
     protected function widenBoundsToContainSelection($min, $max, $absoluteMin, $absoluteMax, $params): array
     {
@@ -154,9 +136,8 @@ trait HandleFieldBounds
     }
 
     /**
-     * The applied selection in slider units, read from the params themselves
-     * (the source of truth) rather than component state, which a forged or
-     * out-of-sync event would not reflect.
+     * The applied selection in slider units, read from the params rather than
+     * component state.
      */
     protected function activeSelectionBounds($params): ?array
     {
@@ -204,8 +185,7 @@ trait HandleFieldBounds
     }
 
     /**
-     * Rounding is anchored at the absolute $min so bounds land on the same grid
-     * noUiSlider snaps its handles to.
+     * Anchored at the absolute min so bounds land on noUiSlider's snap grid.
      */
     protected function roundDownToStep($value): int|float
     {

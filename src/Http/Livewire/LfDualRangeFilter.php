@@ -48,7 +48,7 @@ class LfDualRangeFilter extends Component
         $min = $this->selectedMin;
         $max = $this->selectedMax;
 
-        // A selection spanning the displayed bounds filters nothing — clear the filter
+        // A selection spanning the displayed bounds filters nothing
         if ($this->selectionSpansDisplayedBounds($min, $max)) {
             $this->clearFilters();
 
