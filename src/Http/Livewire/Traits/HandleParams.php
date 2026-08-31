@@ -11,6 +11,9 @@ use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 
 trait HandleParams
 {
+    /** Request-scoped (never persisted): whether this request already applied a real state change. */
+    protected bool $collectionStateChangedThisRequest = false;
+
     /**
      * Protected, not public: Livewire exposes every public method as a
      * client-callable action, and this method's $params argument is trusted
@@ -187,6 +190,8 @@ trait HandleParams
     public function clearFilter($field, $condition, $modifier): void
     {
         if (! $this->fieldExistsInParams($field, $condition, $modifier)) {
+            $this->skipRenderIfCollectionStateUnchanged();
+
             return;
         }
 
@@ -196,31 +201,10 @@ trait HandleParams
         }
 
         if ($condition === 'query_scope') {
-            $queryScopeKey = 'query_scope';
-
-            // First unset the field's data
             $paramKey = $this->generateParamKey($field, 'query_scope', $modifier);
             unset($this->params[$paramKey]);
 
-            $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
-            $existingParams = collect($this->params)->filter(function ($value, $key) use ($modifier) {
-                return Str::startsWith($key, $modifier.':');
-            });
-
-            // If there no more fields using this scope, let's remove it
-            if ($existingParams->isEmpty()) {
-                $existingScopes = $existingScopes->filter(function ($scope) use ($modifier) {
-                    return $scope !== $modifier;
-                });
-
-                // If there are no more scopes, let's remove the whole query_scope key,
-                // otherwise, let's update the query_scope key with the remaining scopes
-                if ($existingScopes->isEmpty()) {
-                    unset($this->params[$queryScopeKey]);
-                } else {
-                    $this->params[$queryScopeKey] = $existingScopes->implode('|');
-                }
-            }
+            $this->removeScopeFromRegistryIfUnused($modifier);
 
             $this->dispatchParamsUpdated();
 
@@ -239,6 +223,32 @@ trait HandleParams
         $this->dispatchParamsUpdated();
     }
 
+    protected function removeScopeFromRegistryIfUnused(string $modifier): void
+    {
+        if (! isset($this->params['query_scope']) || ! is_string($this->params['query_scope'])) {
+            return;
+        }
+
+        $existingParams = collect($this->params)->filter(function ($value, $key) use ($modifier) {
+            return Str::startsWith($key, $modifier.':');
+        });
+
+        if ($existingParams->isNotEmpty()) {
+            return;
+        }
+
+        $existingScopes = collect(explode('|', $this->params['query_scope']))
+            ->filter(fn ($scope) => $scope !== $modifier);
+
+        // If there are no more scopes, let's remove the whole query_scope key,
+        // otherwise, let's update the query_scope key with the remaining scopes
+        if ($existingScopes->isEmpty()) {
+            unset($this->params['query_scope']);
+        } else {
+            $this->params['query_scope'] = $existingScopes->implode('|');
+        }
+    }
+
     public function fieldExistsInParams($field, $condition, $modifier): bool
     {
         $paramKey = $this->generateParamKey($field, $condition, $modifier);
@@ -249,6 +259,134 @@ trait HandleParams
         }
 
         return isset($this->params[$paramKey]);
+    }
+
+    /**
+     * Fast path for the tags component: remove the tag's value from params in the
+     * same round trip that handles the ✕ click, instead of waiting for the owning
+     * filter to hear `clear-option` and relay the change back. The filters still
+     * receive `clear-option` and still relay after resetting their UI — those
+     * relays land as no-ops via the redundancy guards. When the tag cannot be
+     * resolved to exactly one param key (range/dual-range params reset to bound
+     * values only the filter knows, or the key is genuinely ambiguous), nothing is
+     * touched here and the relay handles it exactly as before.
+     */
+    #[On('clear-option')]
+    public function clearOptionParam($tag): void
+    {
+        $target = is_array($tag) ? $this->resolveTagParamTarget($tag) : null;
+
+        if ($target === null) {
+            $this->skipRenderIfCollectionStateUnchanged();
+
+            return;
+        }
+
+        if (method_exists($this, 'resetPagination')) {
+            $this->resetPagination();
+        }
+
+        $this->removeValueFromParam($target['key'], (string) $tag['value'], $target['scope']);
+
+        $this->dispatchParamsUpdated();
+    }
+
+    /**
+     * Map a tag (field/value/condition) to the single param key it came from.
+     * Taxonomy tags carry the modifier in `condition`, so `taxonomy:field:modifier`
+     * is checked before the plain `field:condition` key; query-scope tags drop the
+     * scope name, so it is recovered from the query_scope registry. Returns null
+     * unless exactly one candidate matches — ambiguity falls back to the filter relay.
+     *
+     * @return array{key: string, scope: ?string}|null
+     */
+    protected function resolveTagParamTarget(array $tag): ?array
+    {
+        $field = $tag['field'] ?? null;
+        $value = $tag['value'] ?? null;
+        $condition = $tag['condition'] ?? null;
+
+        if (! is_string($field) || $field === '' || ! is_string($condition) || $condition === '' || ! is_scalar($value)) {
+            return null;
+        }
+
+        $value = (string) $value;
+
+        if ($condition === 'query_scope') {
+            return $this->resolveQueryScopeTagTarget($field, $value);
+        }
+
+        $candidates = [];
+
+        $taxonomyKey = 'taxonomy:'.$field.':'.$condition;
+        if ($this->paramContainsValue($taxonomyKey, $value)) {
+            $candidates[] = ['key' => $taxonomyKey, 'scope' => null];
+        }
+
+        $conditionKey = $field.':'.$condition;
+        if ($this->paramContainsValue($conditionKey, $value) && ! $this->fieldHasMultipleConditionParams($field)) {
+            $candidates[] = ['key' => $conditionKey, 'scope' => null];
+        }
+
+        return count($candidates) === 1 ? $candidates[0] : null;
+    }
+
+    /**
+     * @return array{key: string, scope: string}|null
+     */
+    protected function resolveQueryScopeTagTarget(string $field, string $value): ?array
+    {
+        if (! isset($this->params['query_scope']) || ! is_string($this->params['query_scope'])) {
+            return null;
+        }
+
+        $matches = [];
+
+        foreach (array_unique(explode('|', $this->params['query_scope'])) as $scope) {
+            if ($this->paramContainsValue($scope.':'.$field, $value)) {
+                $matches[] = ['key' => $scope.':'.$field, 'scope' => $scope];
+            }
+        }
+
+        return count($matches) === 1 ? $matches[0] : null;
+    }
+
+    protected function paramContainsValue(string $key, string $value): bool
+    {
+        return isset($this->params[$key])
+            && is_string($this->params[$key])
+            && in_array($value, explode('|', $this->params[$key]), true);
+    }
+
+    /**
+     * A field whose params hold more than one `field:condition` key is either a
+     * dual-range pair (whose removal semantics only the filter knows) or two
+     * independent filters on one field — both must go through the relay.
+     */
+    protected function fieldHasMultipleConditionParams(string $field): bool
+    {
+        return collect($this->params)
+            ->keys()
+            ->filter(fn ($key) => is_string($key) && Str::startsWith($key, $field.':'))
+            ->count() > 1;
+    }
+
+    protected function removeValueFromParam(string $key, string $value, ?string $scope): void
+    {
+        $values = collect(explode('|', $this->params[$key]))
+            ->filter(fn ($existing) => $existing !== $value);
+
+        if ($values->isNotEmpty()) {
+            $this->params[$key] = $values->implode('|');
+
+            return;
+        }
+
+        unset($this->params[$key]);
+
+        if ($scope !== null) {
+            $this->removeScopeFromRegistryIfUnused($scope);
+        }
     }
 
     /**
@@ -444,8 +582,187 @@ trait HandleParams
         return explode('|', $modifer);
     }
 
+    /**
+     * Clear every runtime filter param immediately, without waiting for each
+     * filter component to relay a `clear-filter` back. Mount-authored condition
+     * params (tag or init-hook) are exempt: a filter component managing one still
+     * clears it through its relay exactly as before, and one with no filter is a
+     * fixed constraint that must survive — both match the pre-existing clear-all
+     * outcome. `sort` is kept because LfSort never listened to `clear-all-filters`.
+     */
+    protected function clearAllFilterParams(): void
+    {
+        $removableKeys = collect($this->params)
+            ->keys()
+            ->filter(fn ($key) => is_string($key) && $this->isClearAllRemovableParamKey($key))
+            ->values();
+
+        if ($removableKeys->isEmpty()) {
+            if ($this->paginationIsReset()) {
+                $this->skipRenderIfCollectionStateUnchanged();
+            } elseif (method_exists($this, 'resetPagination')) {
+                $this->resetPagination();
+            }
+
+            return;
+        }
+
+        if (method_exists($this, 'resetPagination')) {
+            $this->resetPagination();
+        }
+
+        foreach ($removableKeys as $key) {
+            unset($this->params[$key]);
+        }
+
+        $this->pruneUnusedQueryScopes();
+
+        $this->dispatchParamsUpdated();
+    }
+
+    protected function isClearAllRemovableParamKey(string $key): bool
+    {
+        if ($key === 'sort' || $key === 'query_scope' || $key === 'page_name') {
+            return false;
+        }
+
+        if (in_array($key, $this->clearAllExemptParamKeys, true)) {
+            return false;
+        }
+
+        return str_contains($key, ':');
+    }
+
+    protected function pruneUnusedQueryScopes(): void
+    {
+        if (! isset($this->params['query_scope']) || ! is_string($this->params['query_scope'])) {
+            return;
+        }
+
+        foreach (array_unique(explode('|', $this->params['query_scope'])) as $scope) {
+            $this->removeScopeFromRegistryIfUnused($scope);
+        }
+    }
+
+    /**
+     * Condition params present at mount came from the tag, the init hooks, or the
+     * URL. Only the first two are exempt from the immediate clear-all sweep: they
+     * are site-author constraints that today survive clear-all whenever no filter
+     * component manages them. URL-hydrated params are user filter state and clear
+     * immediately. A tag key therefore only counts as tag-authored while the
+     * merged mount value still matches the tag's own — a URL override with a
+     * different value is user state and loses the exemption. The match is by
+     * value, not source, and deliberately loose: the addon echoes tag-authored
+     * params into the URL, so on the next load they hydrate back as strings and
+     * must keep their exemption. Hook-authored means added or changed by the
+     * hooks, mirroring captureHookAuthoredQueryParams().
+     *
+     * @param  array<string, mixed>  $tagParams
+     * @param  array<string, mixed>  $paramsBeforeHooks
+     */
+    protected function captureClearAllExemptParams(array $tagParams, array $paramsBeforeHooks): void
+    {
+        $tagKeys = collect($tagParams)
+            ->filter(fn ($value, $key) => is_string($key) && str_contains($key, ':')
+                && array_key_exists($key, $paramsBeforeHooks)
+                && $paramsBeforeHooks[$key] == $value)
+            ->keys();
+
+        $hookAuthoredKeys = collect($this->params)
+            ->filter(fn ($value, $key) => is_string($key) && str_contains($key, ':')
+                && (! array_key_exists($key, $paramsBeforeHooks) || $paramsBeforeHooks[$key] !== $value))
+            ->keys();
+
+        $this->clearAllExemptParamKeys = $tagKeys
+            ->merge($hookAuthoredKeys)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * True when an incoming filter-updated would change neither params nor
+     * pagination, so the whole update can be skipped. This is what makes the
+     * relay a filter still sends after the collection already applied a direct
+     * removal (clear-option / clear-all) harmless: it costs no query and no render.
+     * Comparisons that cannot be proven equal report not-redundant, so anything
+     * unusual falls through to the full (pre-existing) update path.
+     */
+    protected function filterUpdateIsRedundant($field, $condition, $payload, $modifier): bool
+    {
+        if (! $this->paginationIsReset()) {
+            return false;
+        }
+
+        if ($payload === '' || $payload === null || $payload === []) {
+            return ! $this->fieldExistsInParams($field, $condition, $modifier);
+        }
+
+        if ($condition === 'dual_range') {
+            $paramKeys = $this->generateParamKey($field, $condition, $modifier);
+
+            return is_array($payload)
+                && isset($payload['min'], $payload['max'])
+                && isset($this->params[$paramKeys['min']], $this->params[$paramKeys['max']])
+                && $this->params[$paramKeys['min']] == $payload['min']
+                && $this->params[$paramKeys['max']] == $payload['max'];
+        }
+
+        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+
+        if ($condition === 'query_scope') {
+            $expected = $field === 'resrv_availability' ? $payload : $this->toPipeSeparatedString($payload);
+
+            return isset($this->params['query_scope'])
+                && is_string($this->params['query_scope'])
+                && in_array($modifier, explode('|', $this->params['query_scope']), true)
+                && isset($this->params[$paramKey])
+                && $this->params[$paramKey] == $expected;
+        }
+
+        return isset($this->params[$paramKey])
+            && $this->params[$paramKey] === $this->toPipeSeparatedString($payload);
+    }
+
+    protected function paginationIsReset(): bool
+    {
+        if ($this->infiniteScroll && (int) $this->paginate !== (int) $this->initialPaginate) {
+            return false;
+        }
+
+        if ($this->paginate && method_exists($this, 'getPage')) {
+            return (int) $this->getPage($this->paginationPageName()) === 1;
+        }
+
+        return true;
+    }
+
+    /**
+     * One pooled Livewire request can carry several event calls for this component
+     * (e.g. a real clear plus redundant relays from other filters). skipRender()
+     * is component-wide for the request, so a no-op must never suppress the render
+     * of a real change handled in the same request — regardless of call order.
+     * The store reset clears a skip already set by an earlier no-op call (the flag
+     * guards later ones) and, unlike forceRender(), exists on Livewire 3 too.
+     */
+    protected function markCollectionStateChanged(): void
+    {
+        $this->collectionStateChangedThisRequest = true;
+
+        \Livewire\store($this)->set('skipRender', false);
+    }
+
+    protected function skipRenderIfCollectionStateUnchanged(): void
+    {
+        if (! $this->collectionStateChangedThisRequest) {
+            $this->skipRender();
+        }
+    }
+
     protected function dispatchParamsUpdated(): void
     {
+        $this->markCollectionStateChanged();
+
         if (config('statamic-livewire-filters.enable_filter_values_count')) {
             $this->dispatch('params-updated', $this->effectiveQueryParams());
         }

@@ -37,6 +37,9 @@ class LivewireCollection extends Component
     public array $trustedQueryParams = [];
 
     #[Locked]
+    public array $clearAllExemptParamKeys = [];
+
+    #[Locked]
     public $currentPath;
 
     #[Locked]
@@ -80,13 +83,17 @@ class LivewireCollection extends Component
             $this->resetPage($this->paginationPageName());
         }
 
-        $this->dispatchParamsUpdated();
-
         $paramsBeforeHooks = $this->params;
 
         $this->runHooks('init');
 
         $this->captureHookAuthoredQueryParams($paramsBeforeHooks);
+
+        $this->captureClearAllExemptParams($params, $paramsBeforeHooks);
+
+        // Dispatched after the init hooks and trust captures so the initial
+        // counts/bounds/tags payloads match what the entries query will use.
+        $this->dispatchParamsUpdated();
     }
 
     protected function resolveCurrentPath(): string
@@ -136,6 +143,11 @@ class LivewireCollection extends Component
     #[On('filter-updated')]
     public function filterUpdated($field, $condition, $payload, $modifier)
     {
+        if ($this->filterUpdateIsRedundant($field, $condition, $payload, $modifier)) {
+            $this->skipRenderIfCollectionStateUnchanged();
+
+            return;
+        }
         $this->resetPagination();
         if ($payload === '' || $payload === null || $payload === []) {
             $this->clearFilter($field, $condition, $modifier);
@@ -190,6 +202,8 @@ class LivewireCollection extends Component
 
     protected function resetPagination()
     {
+        $this->markCollectionStateChanged();
+
         if ($this->infiniteScroll) {
             $this->paginate = $this->initialPaginate;
         }
@@ -200,13 +214,14 @@ class LivewireCollection extends Component
 
     public function clearAll()
     {
+        $this->clearAllFilterParams();
         $this->dispatch('clear-all-filters');
     }
 
     #[On('clear-all-filters')]
     public function resetPaginationOnClearAll(): void
     {
-        $this->resetPagination();
+        $this->clearAllFilterParams();
     }
 
     public function entries()

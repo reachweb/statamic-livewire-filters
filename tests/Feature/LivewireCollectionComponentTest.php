@@ -520,6 +520,26 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function the_initial_params_updated_dispatch_carries_hook_authored_params()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        LivewireCollectionComponent::hook('init', function ($payload, $next) {
+            $this->params['status:is'] = 'any';
+
+            return $next($payload);
+        });
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertDispatched('params-updated', function ($event, $params) {
+                return ($params[0]['status:is'] ?? null) === 'any';
+            })
+            ->assertDispatched('tags-updated', function ($event, $params) {
+                return ($params[0]['status:is'] ?? null) === 'any';
+            });
+    }
+
+    #[Test]
     public function check_that_filter_gets_ignored_if_not_in_allowed_filters()
     {
         $params = [
@@ -715,6 +735,324 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('params', [
                 'title:is' => 'I Love Guitars',
             ]);
+    }
+
+    #[Test]
+    public function it_removes_a_tag_option_from_params_in_the_round_trip_that_handles_the_click()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: ['option1', 'option2'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['item_options:is' => 'option1|option2'])
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option1',
+                'condition' => 'is',
+            ])
+            ->assertSet('params', ['item_options:is' => 'option2'])
+            ->assertDispatched('tags-updated')
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option2',
+                'condition' => 'is',
+            ])
+            ->assertSet('params', []);
+    }
+
+    #[Test]
+    public function it_removes_a_taxonomy_tag_option_from_params_directly()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red', 'yellow'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red|yellow'])
+            ->dispatch('clear-option', [
+                'field' => 'colors',
+                'value' => 'red',
+                'condition' => 'any',
+            ])
+            ->assertSet('params', ['taxonomy:colors:any' => 'yellow']);
+    }
+
+    #[Test]
+    public function it_removes_a_query_scope_tag_option_and_prunes_the_scope_registry()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: ['xl', 'l'],
+                modifier: 'multiselect',
+            )
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'xl|l',
+            ])
+            ->dispatch('clear-option', [
+                'field' => 'sizes',
+                'value' => 'xl',
+                'condition' => 'query_scope',
+            ])
+            ->assertSet('params', [
+                'query_scope' => 'multiselect',
+                'multiselect:sizes' => 'l',
+            ])
+            ->dispatch('clear-option', [
+                'field' => 'sizes',
+                'value' => 'l',
+                'condition' => 'query_scope',
+            ])
+            ->assertSet('params', []);
+    }
+
+    #[Test]
+    public function it_leaves_dual_range_params_to_the_filter_relay_on_clear_option()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'price',
+                condition: 'dual_range',
+                payload: ['min' => '10', 'max' => '90'],
+                modifier: 'any',
+            )
+            ->assertSet('params', [
+                'price:gte' => '10',
+                'price:lte' => '90',
+            ])
+            ->dispatch('clear-option', [
+                'field' => 'price',
+                'value' => '10',
+                'condition' => 'gte',
+            ])
+            ->assertSet('params', [
+                'price:gte' => '10',
+                'price:lte' => '90',
+            ])
+            ->assertNotDispatched('tags-updated')
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function it_treats_a_second_removal_of_the_same_tag_as_a_render_free_no_op()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'is',
+                payload: 'Red Shirt',
+                modifier: 'any',
+            )
+            ->dispatch('clear-option', [
+                'field' => 'title',
+                'value' => 'Red Shirt',
+                'condition' => 'is',
+            ])
+            ->assertSet('params', [])
+            ->assertDispatched('entries-updated')
+            ->dispatch('clear-option', [
+                'field' => 'title',
+                'value' => 'Red Shirt',
+                'condition' => 'is',
+            ])
+            ->assertSet('params', [])
+            ->assertNotDispatched('tags-updated')
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function it_treats_the_filter_relay_after_a_direct_removal_as_a_render_free_no_op()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: ['option1', 'option2'],
+                modifier: 'any',
+            )
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option1',
+                'condition' => 'is',
+            ])
+            ->assertSet('params', ['item_options:is' => 'option2'])
+            // A checkbox filter that heard clear-option relays the remaining values.
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: ['option2'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['item_options:is' => 'option2'])
+            ->assertNotDispatched('tags-updated')
+            ->assertNotDispatched('entries-updated')
+            // A radio-style filter that heard clear-option relays a clear-filter.
+            ->dispatch('clear-option', [
+                'field' => 'item_options',
+                'value' => 'option2',
+                'condition' => 'is',
+            ])
+            ->dispatch('clear-filter',
+                field: 'item_options',
+                condition: 'is',
+                modifier: 'any',
+            )
+            ->assertSet('params', [])
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function a_redundant_filter_updated_still_resets_pagination_when_not_on_the_first_page()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'paginate' => 2]])
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'contains',
+                payload: 'Shirt',
+                modifier: 'any',
+            )
+            ->set('paginators.page', 2)
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'contains',
+                payload: 'Shirt',
+                modifier: 'any',
+            )
+            ->assertSet('paginators.page', 1)
+            ->assertDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function it_ignores_a_malformed_clear_option_payload()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'is',
+                payload: 'Red Shirt',
+                modifier: 'any',
+            )
+            ->dispatch('clear-option', 'not-an-array')
+            ->assertSet('params', ['title:is' => 'Red Shirt'])
+            ->assertNotDispatched('entries-updated')
+            ->dispatch('clear-option', ['field' => 'title'])
+            ->assertSet('params', ['title:is' => 'Red Shirt'])
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function clear_all_filters_clears_runtime_params_without_waiting_for_filter_relays()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('sort-updated', sort: 'title:asc')
+            ->dispatch('filter-updated',
+                field: 'item_options',
+                condition: 'is',
+                payload: ['option1', 'option2'],
+                modifier: 'any',
+            )
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: 'red',
+                modifier: 'any',
+            )
+            ->dispatch('filter-updated',
+                field: 'sizes',
+                condition: 'query_scope',
+                payload: 'xl',
+                modifier: 'multiselect',
+            )
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', ['sort' => 'title:asc'])
+            ->assertDispatched('tags-updated');
+    }
+
+    #[Test]
+    public function the_clear_all_action_clears_params_and_still_dispatches_the_event_to_filters()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'is',
+                payload: 'Red Shirt',
+                modifier: 'any',
+            )
+            ->call('clearAll')
+            ->assertSet('params', [])
+            ->assertDispatched('clear-all-filters');
+    }
+
+    #[Test]
+    public function clear_all_keeps_mount_authored_params_until_their_filter_relays_a_clear()
+    {
+        $params = [
+            'from' => 'clothes',
+            'item_options:is' => 'option1',
+        ];
+
+        // A tag-authored condition param is exempt from the immediate sweep: with no
+        // filter component managing it, it must survive clear-all (a fixed constraint,
+        // matching pre-existing behavior); with one, the filter's relay still clears it.
+        Livewire::test(LivewireCollectionComponent::class, ['params' => $params])
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', ['item_options:is' => 'option1'])
+            ->dispatch('clear-filter',
+                field: 'item_options',
+                condition: 'is',
+                modifier: 'any',
+            )
+            ->assertSet('params', []);
+    }
+
+    #[Test]
+    public function clear_all_immediately_clears_a_tag_param_overridden_by_the_url()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        // The URL replaced the tag's value, so the merged param is user filter
+        // state, not a tag constraint — it must not inherit the tag exemption.
+        Livewire::withQueryParams(['params' => ['item_options:is' => 'option2']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'item_options:is' => 'option1',
+            ]])
+            ->assertSet('params', ['item_options:is' => 'option2'])
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', []);
+    }
+
+    #[Test]
+    public function clear_all_keeps_a_tag_param_the_url_echoes_back_unchanged()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        // The addon writes tag-authored params into the URL, so on the next page
+        // load the same value hydrates back. That must not cost the key its
+        // exemption, or clear-all would delete a fixed tag constraint.
+        Livewire::withQueryParams(['params' => ['item_options:is' => 'option1']])
+            ->test(LivewireCollectionComponent::class, ['params' => [
+                'from' => 'clothes',
+                'item_options:is' => 'option1',
+            ]])
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', ['item_options:is' => 'option1']);
+    }
+
+    #[Test]
+    public function clear_all_with_nothing_to_clear_skips_the_rerender()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', [])
+            ->assertNotDispatched('entries-updated');
     }
 
     #[Test]

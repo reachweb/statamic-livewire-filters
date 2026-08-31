@@ -28,6 +28,8 @@ trait WithPagination
             return;
         }
 
+        $this->markCollectionStateChanged();
+
         $this->paginate = (int) $this->paginate + (int) $this->initialPaginate;
     }
 }
