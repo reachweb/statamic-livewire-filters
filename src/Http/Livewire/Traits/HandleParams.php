@@ -2,7 +2,6 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
@@ -620,7 +619,7 @@ trait HandleParams
             unset($this->params[$key]);
         }
 
-        $this->pruneUnusedQueryScopes($removableKeys);
+        $this->pruneUnusedQueryScopes();
 
         $this->dispatchParamsUpdated();
     }
@@ -643,23 +642,15 @@ trait HandleParams
     }
 
     /**
-     * Only scopes whose params were just removed are pruned, so a scope set on the
-     * tag or by a hook without params of its own survives clear-all.
-     *
-     * @param  Collection<int, string>  $removedKeys
+     * Every registered scope left without params is pruned, except one set on the
+     * tag or by an init hook: those are site-author constraints and survive. A
+     * scope the URL restored with no params of its own is user state, so it is
+     * pruned even though the sweep removed no param under its prefix.
      */
-    protected function pruneUnusedQueryScopes(Collection $removedKeys): void
+    protected function pruneUnusedQueryScopes(): void
     {
-        if (! isset($this->params['query_scope']) || ! is_string($this->params['query_scope'])) {
-            return;
-        }
-
-        $registeredScopes = explode('|', $this->params['query_scope']);
-
-        $removedKeys
-            ->map(fn ($key) => Str::before($key, ':'))
+        collect($this->scopeNames($this->params))
             ->unique()
-            ->filter(fn ($scope) => in_array($scope, $registeredScopes, true))
             ->reject(fn ($scope) => in_array($scope, $this->clearAllExemptScopes, true))
             ->each(fn ($scope) => $this->removeScopeFromRegistryIfUnused($scope));
     }

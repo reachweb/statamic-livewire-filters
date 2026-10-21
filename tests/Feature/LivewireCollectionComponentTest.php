@@ -15,6 +15,7 @@ use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use Statamic\Query\Scopes\Scope;
 
 class LivewireCollectionComponentTest extends TestCase
 {
@@ -1053,6 +1054,21 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function clear_all_prunes_a_url_query_scope_that_has_no_params_of_its_own()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+        RedShirtsOnlyScope::register();
+
+        Livewire::withQueryParams(['params' => ['query_scope' => 'red_shirts_only', 'title:is' => 'Red Shirt']])
+            ->test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('params', ['query_scope' => 'red_shirts_only', 'title:is' => 'Red Shirt'])
+            ->assertSet('entriesCount', 1)
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', [])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
     public function the_clear_all_action_clears_params_and_still_dispatches_the_event_to_filters()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
@@ -1809,5 +1825,15 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('paginate', false)
             ->assertSet('entriesCount', 3)
             ->assertSet('infiniteScroll', false);
+    }
+}
+
+class RedShirtsOnlyScope extends Scope
+{
+    protected static $handle = 'red_shirts_only';
+
+    public function apply($query, $values)
+    {
+        $query->where('title', 'Red Shirt');
     }
 }
