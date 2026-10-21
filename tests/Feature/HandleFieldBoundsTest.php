@@ -1065,6 +1065,11 @@ class HandleFieldBoundsTest extends TestCase
             'half on the grid' => [0, '0.5', 3.5, 3.5, 3.5],
             'integer step' => [2, 2, 5, 4, 6],
             'integer step from tag strings' => ['1', '1', 7, 7, 7],
+            'billions on an integer grid' => [0, 1, 3000000000, 3000000000, 3000000000],
+            'timestamps from tag strings' => ['0', '1', 1700000000, 1700000000, 1700000000],
+            'large value on a coarse grid' => [0, 1000, 1234567999, 1234567000, 1234568000],
+            'large fractional value' => [0, 1, 10000000.99, 10000000, 10000001],
+            'thousandths around a million' => [0, '0.001', 1000000.123, 1000000.123, 1000000.123],
         ];
     }
 

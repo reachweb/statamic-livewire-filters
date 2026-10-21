@@ -317,14 +317,15 @@ trait HandleFieldBounds
     }
 
     /**
-     * A relative tolerance absorbs float error, so 0.7 / 0.1 = 6.999… still counts as 7 steps.
+     * A tolerance of a few ulps absorbs float error, so 0.7 / 0.1 = 6.999… still counts
+     * as 7 steps, without moving bounds on large values such as timestamps.
      */
     protected function snapToStep($value, string $direction): int|float
     {
         $origin = $this->normalizeBound($this->min);
         $step = $this->boundsStep();
         $steps = ($value - $origin) / $step;
-        $tolerance = 1e-9 * max(abs($value), abs($origin), $step) / $step;
+        $tolerance = 8 * PHP_FLOAT_EPSILON * max(abs($value), abs($origin), $step) / $step;
 
         $steps = $direction === 'floor' ? floor($steps + $tolerance) : ceil($steps - $tolerance);
 
