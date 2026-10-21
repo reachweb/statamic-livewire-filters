@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
@@ -90,11 +91,11 @@ trait HandleFieldBounds
             [$minComparison, $maxComparison] = $this->boundsComparisons();
             if (in_array($minComparison, ['gt', 'greater_than', 'is_after'], true)
                 && ! $this->boundIncludesAllValues($min, $minComparison)) {
-                $min -= $this->step ?: 1;
+                $min = $this->roundToStepPrecision($min - $this->boundsStep());
             }
             if (in_array($maxComparison, ['lt', 'less_than', 'is_before'], true)
                 && ! $this->boundIncludesAllValues($max, $maxComparison)) {
-                $max += $this->step ?: 1;
+                $max = $this->roundToStepPrecision($max + $this->boundsStep());
             }
 
             $min = max($absoluteMin, $min);
@@ -115,7 +116,7 @@ trait HandleFieldBounds
             [$min, $max] = $this->widenBoundsToContainSelection($min, $max, $absoluteMin, $absoluteMax, $selectionParams);
             $disabled = false;
         } else {
-            $span = $max - $min;
+            $span = $this->boundsSpan($min, $max);
             $disabled = $span <= 0 || $span < $minimumSpan;
 
             // noUiSlider rejects ranges narrower than its margin; widen server-side
@@ -206,7 +207,7 @@ trait HandleFieldBounds
         $min = $this->normalizeBound(max($absoluteMin, min($min, $selection[0])));
         $max = $this->normalizeBound(min($absoluteMax, max($max, $selection[1])));
 
-        if (($max - $min) < max($this->minimumBoundsSpan(), $this->step ?: 1)) {
+        if ($this->boundsSpan($min, $max) < max($this->minimumBoundsSpan(), $this->boundsStep())) {
             return [$absoluteMin, $absoluteMax];
         }
 
@@ -307,16 +308,55 @@ trait HandleFieldBounds
      */
     protected function roundDownToStep($value): int|float
     {
-        $step = $this->step ?: 1;
-
-        return $this->normalizeBound($this->min + floor(($value - $this->min) / $step) * $step);
+        return $this->snapToStep($value, 'floor');
     }
 
     protected function roundUpToStep($value): int|float
     {
-        $step = $this->step ?: 1;
+        return $this->snapToStep($value, 'ceil');
+    }
 
-        return $this->normalizeBound($this->min + ceil(($value - $this->min) / $step) * $step);
+    /**
+     * A relative tolerance absorbs float error, so 0.7 / 0.1 = 6.999… still counts as 7 steps.
+     */
+    protected function snapToStep($value, string $direction): int|float
+    {
+        $origin = $this->normalizeBound($this->min);
+        $step = $this->boundsStep();
+        $steps = ($value - $origin) / $step;
+        $tolerance = 1e-9 * max(abs($value), abs($origin), $step) / $step;
+
+        $steps = $direction === 'floor' ? floor($steps + $tolerance) : ceil($steps - $tolerance);
+
+        return $this->roundToStepPrecision($origin + $steps * $step);
+    }
+
+    protected function boundsStep(): int|float
+    {
+        $step = $this->normalizeBound($this->step);
+
+        return $step > 0 ? $step : 1;
+    }
+
+    /**
+     * Rounds to the decimal places of the slider config and any operands, shedding
+     * float noise such as 0.1 * 7 = 0.7000000000000001.
+     */
+    protected function roundToStepPrecision($value, ...$operands): int|float
+    {
+        $decimals = collect([$this->boundsStep(), $this->min, $this->max, $this->minimumBoundsSpan(), ...$operands])
+            ->map(fn ($number) => strlen(rtrim(Str::after(sprintf('%.10F', (float) $number), '.'), '0')))
+            ->max();
+
+        return $this->normalizeBound(round($value, $decimals));
+    }
+
+    /**
+     * Operands keep the precision of off-grid selections, e.g. from the URL.
+     */
+    protected function boundsSpan($min, $max): int|float
+    {
+        return $this->roundToStepPrecision($max - $min, $min, $max);
     }
 
     protected function normalizeBound($value): int|float
@@ -326,10 +366,10 @@ trait HandleFieldBounds
 
     protected function widenBoundsToMinimumSpan($min, $max, $minimumSpan): array
     {
-        $max = $this->normalizeBound(min($this->max, $min + $minimumSpan));
+        $max = $this->roundToStepPrecision(min($this->max, $min + $minimumSpan));
 
-        if (($max - $min) < $minimumSpan) {
-            $min = $this->normalizeBound(max($this->min, $max - $minimumSpan));
+        if ($this->boundsSpan($min, $max) < $minimumSpan) {
+            $min = $this->roundToStepPrecision(max($this->min, $max - $minimumSpan));
         }
 
         return [$min, $max];

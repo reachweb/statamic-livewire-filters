@@ -65,6 +65,14 @@ class HandleFieldBoundsTest extends TestCase
                                 'listable' => 'hidden',
                             ],
                         ],
+                        [
+                            'handle' => 'length',
+                            'field' => [
+                                'type' => 'float',
+                                'display' => 'Length',
+                                'listable' => 'hidden',
+                            ],
+                        ],
                     ],
                 ],
             ],
@@ -328,6 +336,39 @@ class HandleFieldBoundsTest extends TestCase
             ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'special']))
             ->assertSet('dynamicMin', 4)
             ->assertSet('dynamicMax', 8);
+    }
+
+    #[Test]
+    #[DataProvider('decimalStepBounds')]
+    public function decimal_step_bounds_land_exactly_on_the_step_grid($lengths, $modifier, $dynamicMin, $dynamicMax)
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        foreach ($lengths as $index => $length) {
+            $this->makeEntry($this->collection, "boat-{$index}")->set('length', $length)->save();
+        }
+
+        Livewire::test(LfDualRangeFilter::class, array_merge($this->lengthDualRangeArguments(), ['modifier' => $modifier]))
+            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
+            ->assertSet('dynamicMin', $dynamicMin, strict: true)
+            ->assertSet('dynamicMax', $dynamicMax, strict: true)
+            ->assertDispatched('range-bounds-updated',
+                min: $dynamicMin,
+                max: $dynamicMax,
+                selectedMin: $dynamicMin,
+                selectedMax: $dynamicMax,
+                disabled: false,
+            );
+    }
+
+    public static function decimalStepBounds(): array
+    {
+        return [
+            'values on the grid' => [[12.2, 13.5, 14.3], 'any', 12.2, 14.3],
+            'values between grid points' => [[12.25, 13.5, 14.05], 'any', 12.2, 14.1],
+            'strict comparisons pad exactly one step' => [[12.3, 13.5, 14.2], 'gt|lt', 12.2, 14.3],
+            'span equal to the minimum range' => [[12.3, 12.6], 'any', 12.3, 12.6],
+        ];
     }
 
     #[Test]
@@ -1001,6 +1042,44 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
+    #[DataProvider('stepGridRounding')]
+    public function it_rounds_to_decimal_step_multiples_without_float_noise($min, $step, $value, $roundedDown, $roundedUp)
+    {
+        $component = $this->makeBoundsStub();
+        $component->min = $min;
+        $component->step = $step;
+
+        $this->assertSame($roundedDown, $component->roundDown($value));
+        $this->assertSame($roundedUp, $component->roundUp($value));
+    }
+
+    public static function stepGridRounding(): array
+    {
+        return [
+            'tenth on the grid' => [0, '0.1', 0.7, 0.7, 0.7],
+            'tenth between grid points' => [0, '0.1', 0.65, 0.6, 0.7],
+            'tenth anchored above zero' => [10, '0.1', 10.3, 10.3, 10.3],
+            'twentieth on the grid' => [0, '0.05', 0.35, 0.35, 0.35],
+            'twentieth between grid points' => [0, '0.05', 0.37, 0.35, 0.4],
+            'quarter between grid points' => [0, '0.25', 1.3, 1.25, 1.5],
+            'half on the grid' => [0, '0.5', 3.5, 3.5, 3.5],
+            'integer step' => [2, 2, 5, 4, 6],
+            'integer step from tag strings' => ['1', '1', 7, 7, 7],
+        ];
+    }
+
+    #[Test]
+    public function it_widens_decimal_bounds_without_float_noise()
+    {
+        $component = $this->makeBoundsStub();
+        $component->min = '10';
+        $component->max = '30';
+        $component->step = '0.1';
+
+        $this->assertSame([12.3, 12.6], $component->widen(12.3, 12.3, 0.3));
+    }
+
+    #[Test]
     public function it_widens_bounds_within_absolute_limits()
     {
         $component = $this->makeBoundsStub();
@@ -1125,6 +1204,19 @@ class HandleFieldBoundsTest extends TestCase
             'min' => 2,
             'max' => 10,
             'minRange' => 2,
+        ];
+    }
+
+    protected function lengthDualRangeArguments(): array
+    {
+        return [
+            'field' => 'length',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => '10',
+            'max' => '30',
+            'step' => '0.1',
+            'minRange' => '0.3',
         ];
     }
 
