@@ -3,8 +3,11 @@
         class="grid grid-cols-1 gap-y-4"
         x-data="{
             init() {
-                // Only the display syncs; the true selection is preserved server-side
+                // Only the display syncs; the true selection is preserved server-side.
+                // Bounds go first so the value isn't clamped to the old range.
                 $wire.on('range-bounds-updated', (bounds) => {
+                    $refs.range.min = bounds.min;
+                    $refs.range.max = bounds.max;
                     $refs.range.value = bounds.selected;
                     $refs.selectedValue.textContent = bounds.selected;
                 });
