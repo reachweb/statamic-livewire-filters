@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
@@ -591,7 +592,8 @@ trait HandleParams
      * params (tag or init-hook) are exempt: a filter component managing one still
      * clears it through its relay exactly as before, and one with no filter is a
      * fixed constraint that must survive — both match the pre-existing clear-all
-     * outcome. `sort` is kept because LfSort never listened to `clear-all-filters`.
+     * outcome. `sort` is kept because LfSort never listened to `clear-all-filters`,
+     * and so is Resrv's availability param, whose filter doesn't listen either.
      */
     protected function clearAllFilterParams(): void
     {
@@ -618,7 +620,7 @@ trait HandleParams
             unset($this->params[$key]);
         }
 
-        $this->pruneUnusedQueryScopes();
+        $this->pruneUnusedQueryScopes($removableKeys);
 
         $this->dispatchParamsUpdated();
     }
@@ -629,6 +631,10 @@ trait HandleParams
             return false;
         }
 
+        if ($key === 'resrv_search:resrv_availability') {
+            return false;
+        }
+
         if (in_array($key, $this->clearAllExemptParamKeys, true)) {
             return false;
         }
@@ -636,15 +642,25 @@ trait HandleParams
         return str_contains($key, ':');
     }
 
-    protected function pruneUnusedQueryScopes(): void
+    /**
+     * Only scopes whose params were just removed are pruned, so a scope set on the
+     * tag or by a hook without params of its own survives clear-all.
+     *
+     * @param  Collection<int, string>  $removedKeys
+     */
+    protected function pruneUnusedQueryScopes(Collection $removedKeys): void
     {
         if (! isset($this->params['query_scope']) || ! is_string($this->params['query_scope'])) {
             return;
         }
 
-        foreach (array_unique(explode('|', $this->params['query_scope'])) as $scope) {
-            $this->removeScopeFromRegistryIfUnused($scope);
-        }
+        $registeredScopes = explode('|', $this->params['query_scope']);
+
+        $removedKeys
+            ->map(fn ($key) => Str::before($key, ':'))
+            ->unique()
+            ->filter(fn ($scope) => in_array($scope, $registeredScopes, true))
+            ->each(fn ($scope) => $this->removeScopeFromRegistryIfUnused($scope));
     }
 
     /**

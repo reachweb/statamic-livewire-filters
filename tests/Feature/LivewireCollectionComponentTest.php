@@ -11,6 +11,7 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
+use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -249,6 +250,28 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertDontSee('Draft Shirt')
             ->set('params', [':from' => 'clothes', ':limit' => '1'])
             ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function it_never_evaluates_colon_prefixed_client_params_as_antlers()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->set('params', [':title:is' => "('a' == 'a') ? 'Red Shirt' : 'zzz'"])
+            ->assertSee('Red Shirt')
+            ->assertSee('Black Shirt');
+    }
+
+    #[Test]
+    public function the_count_pool_never_evaluates_colon_prefixed_params_as_antlers()
+    {
+        $titles = app(CountQueryPool::class)->getFieldValues(
+            'clothes',
+            [':title:is' => "('a' == 'a') ? 'Red Shirt' : 'zzz'"],
+            'title',
+        );
+
+        $this->assertContains('Red Shirt', $titles);
+        $this->assertContains('Black Shirt', $titles);
     }
 
     #[Test]
@@ -974,6 +997,45 @@ class LivewireCollectionComponentTest extends TestCase
             ->dispatch('clear-all-filters')
             ->assertSet('params', ['sort' => 'title:asc'])
             ->assertDispatched('tags-updated');
+    }
+
+    #[Test]
+    public function clear_all_keeps_a_tag_query_scope_that_has_no_params_of_its_own()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'query_scope' => 'multiselect']])
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'is',
+                payload: 'Red Shirt',
+                modifier: 'any',
+            )
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', ['query_scope' => 'multiselect']);
+    }
+
+    #[Test]
+    public function clear_all_keeps_the_resrv_availability_param_because_its_filter_never_clears()
+    {
+        $availability = ['dates' => ['date_start' => '2026-11-01', 'date_end' => '2026-11-05']];
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated',
+                field: 'resrv_availability',
+                condition: 'query_scope',
+                payload: $availability,
+                modifier: 'resrv_search',
+            )
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'is',
+                payload: 'Red Shirt',
+                modifier: 'any',
+            )
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', [
+                'query_scope' => 'resrv_search',
+                'resrv_search:resrv_availability' => $availability,
+            ]);
     }
 
     #[Test]

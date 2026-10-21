@@ -12,6 +12,8 @@ class CountQueryPool
 
     public function getFieldValues(string|array $collection, array $baseParams, string $fieldHandle): Collection
     {
+        $baseParams = BlockedQueryParams::rejectDynamicBindings($baseParams);
+
         $cacheKey = $this->cacheKey($collection, $baseParams, $fieldHandle);
 
         if (isset($this->fieldValuesCache[$cacheKey])) {
