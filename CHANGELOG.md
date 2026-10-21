@@ -10,7 +10,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ### Security
 
-- Client-supplied filter state can no longer change which entries a listing returns. Livewire keeps filter state in a public property, so a crafted request could inject Statamic query controls such as `status`, `from`, `site` or `limit` and surface draft entries, query another collection or inflate query cost. These keys are now stripped by default (see `blocked_query_params` below). ([#84](https://github.com/reachweb/statamic-livewire-filters/pull/84))
+- Client-supplied filter state can no longer inject Statamic query controls into the entries query. Livewire keeps filter state in a public property, so a crafted request could inject Statamic query controls such as `status`, `from`, `site` or `limit` and surface draft entries, query another collection or inflate query cost. These keys are now stripped by default (see `blocked_query_params` below). ([#84](https://github.com/reachweb/statamic-livewire-filters/pull/84))
 - Filter identity properties (`field`, `condition`, `modifier`, `collection`, `blueprint`, `statamic_field`) and the `collection`, `blueprint` and `fields` properties of `LfSort` are now `#[Locked]`, so a tampered request can't point a filter at another field or collection.
 - `setParameters()` on `LivewireCollection` is now `protected`, which removes it from the actions a client can call.
 - Filter state keys starting with `:` are rejected. Statamic evaluates a `:key` parameter as an Antlers expression, so a crafted request could have one evaluated inside the entries or count query.
@@ -25,24 +25,26 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
   - scope alias: `filter`
 
   Keys are matched on the segment before the first colon, so `status` blocks both `status` and `status:is`, while filters like `transmission:is` pass through.
-- Dynamic range bounds, off by default. Set `enable_dynamic_range_bounds` to `true` and the range and dual range sliders narrow to the values that still match the other active filters. A selection the visitor already made is never moved; the bounds widen to keep it reachable. When an unused slider has no room left to move, it is disabled. Bounds are computed from a copy of the filter state the collection signs, so they can't be tampered with from the browser. Each range filter runs one extra query per update, so weigh it on large collections the same way as `enable_filter_values_count`.
+- Dynamic range bounds, off by default. Set `enable_dynamic_range_bounds` to `true` and the range and dual range sliders narrow to the values that still match the other active filters. A selection the visitor already made is never moved; the bounds widen to keep it reachable. When an unused slider has no room left to move, it is disabled. Bounds are computed from an encrypted copy of the filter state that the collection sends, so they can't be tampered with from the browser. Each range filter runs one extra query per update, so weigh it on large collections the same way as `enable_filter_values_count`.
 - `range-bounds-updated` browser event for custom range views. Its payload has `min`, `max` and `disabled`, plus `selected` (range) or `selectedMin` and `selectedMax` (dual range).
 
 ### Changed
 
-- Removing a filter from the tags component, or clicking "Clear all", now updates the collection in the same Livewire round trip instead of waiting for each filter component to relay the change back. The `clear-option` and `clear-all-filters` events still reach filter components with unchanged payloads. Parameters set on the tag or by an `init` hook are still only cleared by their own filter component, and Resrv's availability filter keeps its dates. ([#85](https://github.com/reachweb/statamic-livewire-filters/pull/85))
-- A `filter-updated` event whose payload matches the current state on page 1 no longer re-renders the collection. If you dispatched it to force a refresh, use `$refresh` instead.
+- Removing a filter from the tags component, or clicking "Clear all", now updates the collection in the same Livewire round trip instead of waiting for each filter component to relay the change back. The `clear-option` and `clear-all-filters` events still reach filter components with unchanged payloads. On "Clear all", parameters set on the tag or by an `init` hook are still only cleared by their own filter component, and Resrv's availability filter keeps its dates. ([#85](https://github.com/reachweb/statamic-livewire-filters/pull/85))
+- A `filter-updated`, `clear-filter` or `clear-option` event that changes nothing (on page 1) no longer re-renders the collection. If you dispatched `filter-updated` to force a refresh, call Livewire's `$refresh` on the collection component instead.
 - Filter state from the URL (`params[...]` in either query string mode) is sanitized on page load: blocked keys are stripped, and tag-only parameters (`from`, `in`, `folder`, `use`, `collection`, `view`, `lazy-placeholder`, `paginate`, `infinite_scroll`, `allowed_filters`) are never read from the URL.
 - Parameters set on the `{{ livewire-collection }}` tag, and parameters an `init` hook adds or changes during mount, are trusted and kept even when their key is blocked.
 - A key listed in the tag's `allowed_filters` is exempt from the blocklist, and a value sent by the client for that key overrides the tag's default.
 - The `lf-range` and `lf-dual-range` views listen for `range-bounds-updated` to update the slider's bounds and value.
-- Faceted counts are computed from the same filtered state as the entries query, so control parameters set on the tag (such as `status` or `site`) scope the counts too. The first `params-updated` event is now dispatched after `init` hooks run, so the initial counts include hook-authored parameters.
+- The `params-updated` event carries the hardened parameters instead of the raw filter state, gains a second argument (the encrypted bounds query) and also fires when only dynamic bounds are on. Listeners that take one argument keep working.
+- Faceted counts are computed from the same hardened parameters as the entries query, so the blocklist and `allowed_filters` apply to them too. The first `params-updated` event is now dispatched after `init` hooks run, so the initial counts include hook-authored parameters.
 
 ### Fixed
 
 - Moving a range slider back to its default value now clears the filter instead of leaving a redundant parameter in the URL and the tags.
 - A toggle filter restored from the URL or a preset now shows as on when its `preset_value` is a number or boolean.
-- Removing a tag for a parameter that has no filter component on the page now removes the parameter. Previously the click did nothing.
+- Removing a tag for a condition, taxonomy or query scope parameter that has no filter component on the page now removes the parameter. Previously the click did nothing.
+- With `allowed_filters`, an active query scope is now allowed when its own `query_scope:<scope>` entry is listed. Previously the whole scope list had to match one entry, so two active scope filters dropped both scopes.
 
 ### Upgrading from 4.5
 
@@ -55,7 +57,7 @@ The blocklist is on by default, so most sites need no changes. Check the followi
 - **Query scopes.** `query_scope` is not blocked, because the addon builds that key itself for scope filters. If your app registers sensitive or expensive scopes, list them explicitly with `query_scope:<scope>` entries in `allowed_filters`.
 - **`setParameters()`.** It is now `protected`. Subclasses can still call it, but client-side calls (`$wire.setParameters(...)` or `wire:click="setParameters(...)"`) no longer work; set those parameters on the tag instead.
 - **Overridden methods.** `filterUpdated()` and `clearFilter()` on `LivewireCollection`, and `clearFilters()` on the filter components, have a new optional `$boundsSelection` parameter. If you extend these classes and override any of them, add `$boundsSelection = null` to your method's parameters, or PHP throws a fatal "must be compatible" error.
-- **Custom filter components.** "Clear all" now removes every filter parameter added after page load, including those from custom components that don't listen for `clear-all-filters`. If such a component should reset its own controls too, listen for that event.
+- **Custom filter components.** "Clear all" now removes every filter parameter except those set on the tag or by an `init` hook, including those from custom components that don't listen for `clear-all-filters`. If such a component should reset its own controls too, listen for that event.
 - **Published range views.** If you published `lf-range.blade.php` or `lf-dual-range.blade.php` and turn on `enable_dynamic_range_bounds`, merge in the new `range-bounds-updated` listener (or re-publish the views), otherwise the sliders won't follow the bounds. Nothing changes while the option is off.
 
 ## [4.5.1] - 2026-06-29
