@@ -8,6 +8,7 @@ use Livewire\Attributes\Renderless;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
+use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleParams
 {
@@ -187,8 +188,10 @@ trait HandleParams
     }
 
     #[On('clear-filter')]
-    public function clearFilter($field, $condition, $modifier): void
+    public function clearFilter($field, $condition, $modifier, $boundsSelection = null): void
     {
+        $this->rememberBoundsSelectionRevision($boundsSelection);
+
         if (! $this->fieldExistsInParams($field, $condition, $modifier)) {
             $this->skipRenderIfCollectionStateUnchanged();
 
@@ -759,13 +762,39 @@ trait HandleParams
         }
     }
 
+    protected function rememberBoundsSelectionRevision($selection): void
+    {
+        if (! is_array($selection)
+            || ! is_string($selection['source'] ?? null)
+            || $selection['source'] === ''
+            || ! is_int($selection['revision'] ?? null)
+            || $selection['revision'] < 1) {
+            return;
+        }
+
+        $this->boundsSelectionRevisions[$selection['source']] = $selection['revision'];
+    }
+
     protected function dispatchParamsUpdated(): void
     {
         $this->markCollectionStateChanged();
 
         if (config('statamic-livewire-filters.enable_filter_values_count')
             || config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
-            $this->dispatch('params-updated', $this->effectiveQueryParams());
+            $params = $this->effectiveQueryParams();
+            $arguments = [$params];
+
+            if (config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+                $arguments[] = RangeBoundsQuery::encode(
+                    $this->collections,
+                    $params,
+                    $this->getId(),
+                    ++$this->boundsQueryRevision,
+                    $this->boundsSelectionRevisions,
+                );
+            }
+
+            $this->dispatch('params-updated', ...$arguments);
         }
 
         // Dispatching to the tags component

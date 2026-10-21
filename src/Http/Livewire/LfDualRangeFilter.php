@@ -48,9 +48,9 @@ class LfDualRangeFilter extends Component
         $min = $this->selectedMin;
         $max = $this->selectedMax;
 
-        // A selection spanning the displayed bounds filters nothing
+        // Displayed endpoints can clear only when both comparisons include all matches.
         if ($this->selectionSpansDisplayedBounds($min, $max)) {
-            $this->clearFilters();
+            $this->clearFilters($this->rememberBoundsSelection([]));
 
             return;
         }
@@ -61,6 +61,9 @@ class LfDualRangeFilter extends Component
             $this->modifier = 'is_after|is_before';
         }
 
+        $paramKeys = $this->getParamKey();
+        $boundsSelection = $this->rememberBoundsSelection([$paramKeys['min'] => $min, $paramKeys['max'] => $max]);
+
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
@@ -69,6 +72,7 @@ class LfDualRangeFilter extends Component
                 'max' => $max,
             ],
             modifier: $this->modifier,
+            boundsSelection: $boundsSelection,
         )
             ->to(LivewireCollection::class);
     }
@@ -99,12 +103,14 @@ class LfDualRangeFilter extends Component
         $this->selectedMin = $this->min;
         $this->selectedMax = $this->max;
 
+        $boundsSelection = $this->rememberBoundsSelection([]);
+
         $this->dispatch('dual-range-preset-values',
             min: $this->selectedMin,
             max: $this->selectedMax,
         );
 
-        $this->clearFilters();
+        $this->clearFilters($boundsSelection);
     }
 
     #[On('clear-option')]
@@ -151,9 +157,13 @@ class LfDualRangeFilter extends Component
             return true;
         }
 
+        [$minComparison, $maxComparison] = $this->boundsComparisons();
+
         return $this->dynamicMin !== null
             && $min == $this->dynamicMin
-            && $max == $this->dynamicMax;
+            && $max == $this->dynamicMax
+            && $this->boundIncludesAllValues($min, $minComparison)
+            && $this->boundIncludesAllValues($max, $maxComparison);
     }
 
     protected function minimumBoundsSpan(): int|float

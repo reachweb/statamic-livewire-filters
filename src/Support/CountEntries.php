@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Support;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Statamic\Facades\Site;
 use Statamic\Query\EloquentQueryBuilder;
@@ -53,7 +54,7 @@ class CountEntries extends StatamicEntries
 
                 return $value;
             });
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // Fall back to standard pluck if raw query fails
             return $query->pluck($column);
         }
@@ -65,8 +66,6 @@ class CountEntries extends StatamicEntries
             return false;
         }
 
-        $collection = $this->collections->first();
-
-        return $collection && $collection->sites()->count() > 1;
+        return $this->collections->contains(fn ($collection) => $collection->sites()->count() > 1);
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Config;
 use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -1130,6 +1131,25 @@ class LivewireCollectionComponentTest extends TestCase
                 modifier: 'any',
             )
             ->assertDispatched('params-updated');
+    }
+
+    #[Test]
+    public function faceted_counts_accept_params_events_with_dynamic_bounds_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $collection = Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'title:contains' => 'Red',
+        ]]);
+        $event = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->dispatch('params-updated', ...$event)
+            ->assertSet('statamic_field.counts.red', 1)
+            ->assertSet('statamic_field.counts.black', 0)
+            ->assertSet('statamic_field.counts.yellow', 0);
     }
 
     #[Test]

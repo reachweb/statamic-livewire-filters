@@ -87,12 +87,13 @@ trait IsLivewireFilter
         return $this->addDictionaryToOptions($field);
     }
 
-    public function clearFilters()
+    public function clearFilters($boundsSelection = null)
     {
         $this->dispatch('clear-filter',
             field: $this->field,
             condition: $this->condition,
             modifier: $this->modifier,
+            boundsSelection: $boundsSelection,
         )
             ->to(LivewireCollection::class);
     }

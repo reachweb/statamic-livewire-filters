@@ -5,6 +5,8 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Carbon\Carbon;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
+use Reach\StatamicLivewireFilters\Support\CountQueryPool;
+use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleFieldBounds
 {
@@ -19,6 +21,23 @@ trait HandleFieldBounds
     #[Locked]
     public $boundsDisabled = false;
 
+    // Unrounded extrema distinguish strict endpoint predicates from a clear selection.
+    #[Locked]
+    public $fieldMin = null;
+
+    #[Locked]
+    public $fieldMax = null;
+
+    // Keep local changes authoritative until the collection acknowledges them.
+    #[Locked]
+    public ?array $pendingBoundsSelection = null;
+
+    #[Locked]
+    public int $boundsSelectionRevision = 0;
+
+    #[Locked]
+    public array $boundsQueryRevisions = [];
+
     abstract protected function minimumBoundsSpan(): int|float;
 
     abstract protected function clampedSelectionPayload($min, $max): array;
@@ -27,17 +46,30 @@ trait HandleFieldBounds
 
     abstract protected function selectionEventPayload(): array;
 
-    /**
-     * Blocked params are deliberately not stripped — a forged event can only
-     * skew the forger's own displayed bounds (see HandleEntriesCount::updateCounts()).
-     */
     #[On('params-updated')]
-    public function updateBounds($params): void
+    public function updateBounds($params, $boundsQuery = null): void
     {
         if (! config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
             return;
         }
 
+        // Only the collection's authenticated query can authorize visibility params;
+        // the event's plain params are client-controlled, even on an otherwise valid event.
+        $query = RangeBoundsQuery::decodeForCollection($boundsQuery, $this->collection);
+
+        if ($query === null) {
+            return;
+        }
+
+        if ($query['source'] !== null) {
+            if ($query['revision'] < ($this->boundsQueryRevisions[$query['source']] ?? 0)) {
+                return;
+            }
+
+            $this->boundsQueryRevisions[$query['source']] = $query['revision'];
+        }
+
+        $params = $query['params'];
         $fieldHandle = $this->resolveCountFieldHandle();
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
@@ -51,8 +83,22 @@ trait HandleFieldBounds
         if ($min === null) {
             [$min, $max] = [$absoluteMin, $absoluteMax];
         } else {
-            $min = max($absoluteMin, $this->roundDownToStep($min));
-            $max = min($absoluteMax, $this->roundUpToStep($max));
+            $min = $this->roundDownToStep($min);
+            $max = $this->roundUpToStep($max);
+
+            // Strict comparisons need a grid point beyond the matching values.
+            [$minComparison, $maxComparison] = $this->boundsComparisons();
+            if (in_array($minComparison, ['gt', 'greater_than', 'is_after'], true)
+                && ! $this->boundIncludesAllValues($min, $minComparison)) {
+                $min -= $this->step ?: 1;
+            }
+            if (in_array($maxComparison, ['lt', 'less_than', 'is_before'], true)
+                && ! $this->boundIncludesAllValues($max, $maxComparison)) {
+                $max += $this->step ?: 1;
+            }
+
+            $min = max($absoluteMin, $min);
+            $max = min($absoluteMax, $max);
 
             // An empty intersection inverts the clamps — fall back like no-matches
             if ($min > $max) {
@@ -60,12 +106,13 @@ trait HandleFieldBounds
             }
         }
 
-        $isActive = $this->fieldHasActiveParams($params);
+        $selectionParams = $this->boundsSelectionParams($params, $query['selections']);
+        $isActive = $this->fieldHasActiveParams($selectionParams);
         $minimumSpan = $this->minimumBoundsSpan();
 
         if ($isActive) {
             // An active range must stay adjustable: contain the selection, never disable
-            [$min, $max] = $this->widenBoundsToContainSelection($min, $max, $absoluteMin, $absoluteMax, $params);
+            [$min, $max] = $this->widenBoundsToContainSelection($min, $max, $absoluteMin, $absoluteMax, $selectionParams);
             $disabled = false;
         } else {
             $span = $max - $min;
@@ -95,6 +142,37 @@ trait HandleFieldBounds
             $selectionPayload,
             ['disabled' => $disabled],
         ));
+    }
+
+    protected function rememberBoundsSelection(array $params): ?array
+    {
+        if (! config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+            return null;
+        }
+
+        $this->pendingBoundsSelection = $params;
+
+        return ['source' => $this->getId(), 'revision' => ++$this->boundsSelectionRevision];
+    }
+
+    protected function boundsSelectionParams(array $params, array $selections): array
+    {
+        if ($this->pendingBoundsSelection === null) {
+            return $params;
+        }
+
+        $appliedSelection = array_intersect_key($params, array_flip($this->currentFilterParamKeys()));
+
+        // Equal values may belong to an older selection before a clear/reselect.
+        if (($selections[$this->getId()] ?? null) === $this->boundsSelectionRevision
+            && $appliedSelection == $this->pendingBoundsSelection) {
+            $this->pendingBoundsSelection = null;
+
+            return $params;
+        }
+
+        // Only selection handling uses these values; queries still use authenticated params.
+        return $this->pendingBoundsSelection;
     }
 
     /**
@@ -165,23 +243,63 @@ trait HandleFieldBounds
 
     protected function computeFieldBounds(array $baseParams, string $fieldHandle): array
     {
-        $values = $this->getCountFieldValues($baseParams, $fieldHandle)
+        $values = app(CountQueryPool::class)->getFieldValues($baseParams['from'], $baseParams, $fieldHandle)
             ->flatten()
             ->filter(fn ($value) => $value !== null && $value !== '');
 
         if (($this->statamic_field['type'] ?? null) === 'date') {
             $values = $values->map(function ($value) {
                 try {
-                    return Carbon::parse($value)->year;
+                    return Carbon::parse($value)->timestamp;
                 } catch (\Throwable $exception) {
                     return null;
                 }
-            })->filter();
+            })->filter(fn ($value) => $value !== null);
         } else {
             $values = $values->filter(fn ($value) => is_numeric($value))->map(fn ($value) => $value + 0);
         }
 
-        return $values->isEmpty() ? [null, null] : [$values->min(), $values->max()];
+        $this->fieldMin = $values->min();
+        $this->fieldMax = $values->max();
+
+        if ($this->fieldMin !== null && ($this->statamic_field['type'] ?? null) === 'date') {
+            return [
+                Carbon::createFromTimestamp($this->fieldMin, date_default_timezone_get())->year,
+                Carbon::createFromTimestamp($this->fieldMax, date_default_timezone_get())->year,
+            ];
+        }
+
+        return [$this->fieldMin, $this->fieldMax];
+    }
+
+    protected function boundsComparisons(): array
+    {
+        if ($this->condition !== 'dual_range') {
+            return [$this->condition, $this->condition];
+        }
+
+        if (($this->statamic_field['type'] ?? null) === 'date') {
+            return ['is_after', 'is_before'];
+        }
+
+        return $this->modifier === 'any' ? ['gte', 'lte'] : explode('|', $this->modifier);
+    }
+
+    protected function boundIncludesAllValues($value, string $comparison): bool
+    {
+        if ($this->fieldMin === null) {
+            return false;
+        }
+
+        return match ($comparison) {
+            'gt', 'greater_than' => $value < $this->fieldMin,
+            'gte', 'greater_than_or_equal_to' => $value <= $this->fieldMin,
+            'lt', 'less_than' => $value > $this->fieldMax,
+            'lte', 'less_than_or_equal_to' => $value >= $this->fieldMax,
+            'is_after' => Carbon::createFromDate($value)->startOfYear()->timestamp < $this->fieldMin,
+            'is_before' => Carbon::createFromDate($value)->endOfYear()->startOfDay()->timestamp > $this->fieldMax,
+            default => false,
+        };
     }
 
     /**

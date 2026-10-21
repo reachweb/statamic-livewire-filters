@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
+use Statamic\Support\Arr;
 
 /**
  * Faceted-query helpers shared by HandleEntriesCount and HandleFieldBounds;
@@ -72,10 +73,12 @@ trait HandleFieldValuesQuery
      */
     protected function activeScopeNames($params): array
     {
-        if (! isset($params['query_scope']) || ! is_string($params['query_scope'])) {
+        $scopes = Arr::getFirst($params, ['query_scope', 'filter']);
+
+        if (! is_string($scopes)) {
             return [];
         }
 
-        return explode('|', $params['query_scope']);
+        return explode('|', $scopes);
     }
 }

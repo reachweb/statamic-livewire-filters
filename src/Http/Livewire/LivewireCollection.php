@@ -37,6 +37,12 @@ class LivewireCollection extends Component
     public array $trustedQueryParams = [];
 
     #[Locked]
+    public int $boundsQueryRevision = 0;
+
+    #[Locked]
+    public array $boundsSelectionRevisions = [];
+
+    #[Locked]
     public array $clearAllExemptParamKeys = [];
 
     #[Locked]
@@ -141,8 +147,10 @@ class LivewireCollection extends Component
     }
 
     #[On('filter-updated')]
-    public function filterUpdated($field, $condition, $payload, $modifier)
+    public function filterUpdated($field, $condition, $payload, $modifier, $boundsSelection = null)
     {
+        $this->rememberBoundsSelectionRevision($boundsSelection);
+
         if ($this->filterUpdateIsRedundant($field, $condition, $payload, $modifier)) {
             $this->skipRenderIfCollectionStateUnchanged();
 

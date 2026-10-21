@@ -10,7 +10,7 @@ class CountQueryPool
 {
     protected array $fieldValuesCache = [];
 
-    public function getFieldValues(string $collection, array $baseParams, string $fieldHandle): Collection
+    public function getFieldValues(string|array $collection, array $baseParams, string $fieldHandle): Collection
     {
         $cacheKey = $this->cacheKey($collection, $baseParams, $fieldHandle);
 
@@ -26,7 +26,7 @@ class CountQueryPool
         return $this->fieldValuesCache[$cacheKey] = (new CountEntries($params))->pluck($fieldHandle);
     }
 
-    protected function cacheKey(string $collection, array $baseParams, string $fieldHandle): string
+    protected function cacheKey(string|array $collection, array $baseParams, string $fieldHandle): string
     {
         ksort($baseParams);
 

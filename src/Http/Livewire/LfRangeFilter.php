@@ -32,18 +32,21 @@ class LfRangeFilter extends Component
 
     public function dispatchEvent()
     {
-        // Clear the filter if we are back to default (clamped into the displayed bounds)
+        // A clamped default can clear only when its comparison includes all matches.
         if ($this->isAtClearValue()) {
-            $this->clearFilters();
+            $this->clearFilters($this->rememberBoundsSelection([]));
 
             return;
         }
+
+        $boundsSelection = $this->rememberBoundsSelection([$this->getParamKey() => $this->selected]);
 
         $this->dispatch('filter-updated',
             field: $this->field,
             condition: $this->condition,
             payload: $this->selected,
             modifier: null,
+            boundsSelection: $boundsSelection,
         )
             ->to(LivewireCollection::class);
     }
@@ -66,7 +69,7 @@ class LfRangeFilter extends Component
     {
         $this->selected = $this->default ?? $this->min;
 
-        $this->clearFilters();
+        $this->clearFilters($this->rememberBoundsSelection([]));
     }
 
     #[On('clear-option')]
@@ -89,7 +92,8 @@ class LfRangeFilter extends Component
         }
 
         return $this->dynamicMin !== null
-            && $this->selected == max($this->dynamicMin, min($default, $this->dynamicMax));
+            && $this->selected == max($this->dynamicMin, min($default, $this->dynamicMax))
+            && $this->boundIncludesAllValues($this->selected, $this->condition);
     }
 
     protected function minimumBoundsSpan(): int|float

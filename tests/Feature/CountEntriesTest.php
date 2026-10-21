@@ -152,6 +152,30 @@ class CountEntriesTest extends TestCase
         $this->assertSame(['option1'], $result->all());
     }
 
+    #[Test]
+    public function it_preserves_inherited_values_when_a_later_queried_collection_is_multisite()
+    {
+        config(['statamic.system.multisite' => true]);
+        Facades\Site::setSites([
+            'en' => ['name' => 'English', 'url' => 'http://localhost/', 'locale' => 'en_US', 'lang' => 'en'],
+            'fr' => ['name' => 'French', 'url' => 'http://localhost/fr/', 'locale' => 'fr_FR', 'lang' => 'fr'],
+        ]);
+        $this->collection->sites(['en'])->save();
+        Facades\Collection::make('localized')->sites(['en', 'fr'])->save();
+
+        $params = Parameters::make(['from' => 'pages|localized'], Context::make([]));
+        $builder = Mockery::mock(EloquentQueryBuilder::class);
+        $builder->shouldReceive('pluck')->once()->with('item_options')->andReturn(collect(['inherited-option']));
+
+        $countEntries = Mockery::mock(CountEntries::class, [$params])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+        $countEntries->shouldReceive('query')->once()->andReturn($builder);
+        $countEntries->shouldNotReceive('eloquentPluck');
+
+        $this->assertSame(['inherited-option'], $countEntries->pluck('item_options')->all());
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
