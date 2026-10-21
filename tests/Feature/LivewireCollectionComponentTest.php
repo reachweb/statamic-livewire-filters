@@ -1039,6 +1039,20 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function clear_all_keeps_a_tag_query_scope_named_like_a_filtered_field()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'query_scope' => 'title']])
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'is',
+                payload: 'Red Shirt',
+                modifier: 'any',
+            )
+            ->dispatch('clear-all-filters')
+            ->assertSet('params', ['query_scope' => 'title']);
+    }
+
+    #[Test]
     public function the_clear_all_action_clears_params_and_still_dispatches_the_event_to_filters()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
@@ -1721,6 +1735,22 @@ class LivewireCollectionComponentTest extends TestCase
             ->assertSet('paginators.results', 1)
             ->assertSet('hasMorePages', true)
             ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function allowed_filters_checks_each_active_query_scope_on_its_own()
+    {
+        $component = Livewire::test(LivewireCollectionComponent::class, ['params' => [
+            'from' => 'clothes',
+            'allowed_filters' => 'query_scope:multiselect|multiselect:sizes|query_scope:in_stock',
+        ]])
+            ->set('params', ['query_scope' => 'multiselect|in_stock|other', 'multiselect:sizes' => 'xl'])
+            ->instance();
+
+        $method = new \ReflectionMethod($component, 'generateParams');
+        $method->setAccessible(true);
+
+        $this->assertSame('multiselect|in_stock', $method->invoke($component)->get('query_scope'));
     }
 
     #[Test]

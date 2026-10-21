@@ -660,6 +660,7 @@ trait HandleParams
             ->map(fn ($key) => Str::before($key, ':'))
             ->unique()
             ->filter(fn ($scope) => in_array($scope, $registeredScopes, true))
+            ->reject(fn ($scope) => in_array($scope, $this->clearAllExemptScopes, true))
             ->each(fn ($scope) => $this->removeScopeFromRegistryIfUnused($scope));
     }
 
@@ -697,6 +698,27 @@ trait HandleParams
             ->unique()
             ->values()
             ->all();
+
+        $scopesBeforeHooks = $this->scopeNames($paramsBeforeHooks);
+
+        // A scope named like a filtered field would otherwise be pruned with that field's params
+        $this->clearAllExemptScopes = collect($this->scopeNames($tagParams))
+            ->merge(array_diff($this->scopeNames($this->params), $scopesBeforeHooks))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function scopeNames(array $params): array
+    {
+        if (! isset($params['query_scope']) || ! is_string($params['query_scope'])) {
+            return [];
+        }
+
+        return array_values(array_filter(explode('|', $params['query_scope'])));
     }
 
     /**

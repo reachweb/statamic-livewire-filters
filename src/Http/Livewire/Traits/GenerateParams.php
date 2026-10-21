@@ -81,17 +81,29 @@ trait GenerateParams
 
     protected function removeParamsNotInAllowedFiltersCollection()
     {
-        return collect($this->params)->filter(function ($value, $key) {
+        $params = collect($this->params)->filter(function ($value, $key) {
             // page_name is collection config, not a filter — it must always reach the
             // Entries tag so Statamic paginates under the same name the addon resets.
             if ($key === 'sort' || $key === 'page_name') {
                 return true;
             }
             if ($key === 'query_scope') {
-                return $this->allowedFilters->contains('query_scope:'.$value);
+                return is_string($value);
             }
 
             return $this->allowedFilters->contains($key);
-        })->all();
+        });
+
+        // Each registered scope is allowed on its own, since allowed_filters splits on `|`
+        if ($params->has('query_scope')) {
+            $scopes = collect(explode('|', $params->get('query_scope')))
+                ->filter(fn ($scope) => $this->allowedFilters->contains('query_scope:'.$scope));
+
+            $scopes->isEmpty()
+                ? $params->forget('query_scope')
+                : $params->put('query_scope', $scopes->implode('|'));
+        }
+
+        return $params->all();
     }
 }

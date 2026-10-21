@@ -46,6 +46,9 @@ class LivewireCollection extends Component
     public array $clearAllExemptParamKeys = [];
 
     #[Locked]
+    public array $clearAllExemptScopes = [];
+
+    #[Locked]
     public $currentPath;
 
     #[Locked]
