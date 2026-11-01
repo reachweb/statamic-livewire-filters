@@ -776,6 +776,7 @@ class CustomQueryStringTest extends TestCase
         Config::set('statamic-livewire-filters.custom_query_string_aliases', [
             'opt' => 'query_scope:cqs_option:item_options',
             'ttl' => 'query_scope:cqs_title:title',
+            'opt_title' => 'query_scope:cqs_option:title',
         ]);
 
         // Each filter alone now matches two entries; only "I Love Drums" matches both
@@ -808,6 +809,22 @@ class CustomQueryStringTest extends TestCase
         $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
 
         $this->assertEquals('/blog/filters/opt/option2/ttl/Love', parse_url($updateUrl['params']['newUrl'], PHP_URL_PATH));
+
+        // Two aliases on the same scope register it only once
+        (new HandleFiltersQueryString)->handle(
+            Request::create('/blog/filters/opt/option2/opt_title/Love'),
+            function ($req) use (&$params) {
+                $params = $req->input('params');
+
+                return response('ok');
+            }
+        );
+
+        $this->assertEquals([
+            'query_scope' => 'cqs_option',
+            'cqs_option:item_options' => 'option2',
+            'cqs_option:title' => 'Love',
+        ], $params);
     }
 
     protected function makeCurrentPathHarness(): object
