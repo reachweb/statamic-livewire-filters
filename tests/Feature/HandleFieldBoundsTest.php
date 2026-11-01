@@ -189,7 +189,6 @@ class HandleFieldBoundsTest extends TestCase
     #[Test]
     public function counts_and_bounds_query_the_same_tag_collections_that_have_the_field()
     {
-        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
         $other = $this->makeYachtCollection('other');
         $this->makeEntry($other, 'other-yacht')->set('cabins', 9)->save();
@@ -197,16 +196,20 @@ class HandleFieldBoundsTest extends TestCase
         $noField = Facades\Collection::make('no_field')->save();
         $this->makeEntry($noField, 'stray-yacht')->set('cabins', 2)->save();
 
-        $event = $this->collectionBoundsEvent(['from' => 'yachts|other|no_field']);
+        // Counts alone must still receive the authenticated collections
+        foreach ([false, true] as $boundsEnabled) {
+            Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', $boundsEnabled);
+            $event = $this->collectionBoundsEvent(['from' => 'yachts|other|no_field']);
 
-        Livewire::test(LfCheckboxFilter::class, [
-            'field' => 'cabins',
-            'blueprint' => 'yachts.yachts',
-            'condition' => 'is',
-            'options' => ['2' => '2', '4' => '4', '6' => '6', '8' => '8', '9' => '9'],
-        ])
-            ->dispatch('params-updated', ...$event)
-            ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === [2 => 0, 4 => 1, 6 => 1, 8 => 1, 9 => 1]);
+            Livewire::test(LfCheckboxFilter::class, [
+                'field' => 'cabins',
+                'blueprint' => 'yachts.yachts',
+                'condition' => 'is',
+                'options' => ['2' => '2', '4' => '4', '6' => '6', '8' => '8', '9' => '9'],
+            ])
+                ->dispatch('params-updated', ...$event)
+                ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === [2 => 0, 4 => 1, 6 => 1, 8 => 1, 9 => 1]);
+        }
 
         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
             ->dispatch('params-updated', ...$event)
