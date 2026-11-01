@@ -154,6 +154,15 @@ class LfTagsTest extends TestCase
     }
 
     #[Test]
+    public function a_scope_named_like_a_field_prefix_does_not_swallow_that_fields_tags()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'item_options|title', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['query_scope' => 'item', 'item:title' => 'Scoped', 'item_options:is' => 'option1'])
+            ->assertSee('Checkbox: Option 1')
+            ->assertSee('Title: Scoped');
+    }
+
+    #[Test]
     public function it_does_not_render_the_tag_when_a_filter_is_not_in_the_fields_array()
     {
         Livewire::test(LfTags::class, ['fields' => 'some_other_option', 'blueprint' => 'pages.pages'])

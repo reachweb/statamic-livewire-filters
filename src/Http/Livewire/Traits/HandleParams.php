@@ -8,6 +8,7 @@ use Livewire\Attributes\Renderless;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleParams
@@ -142,7 +143,7 @@ trait HandleParams
 
     protected function handleCondition($field, $condition, $payload)
     {
-        $paramKey = $this->generateParamKey($field, $condition);
+        $paramKey = ParamKey::build($field, $condition);
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -150,7 +151,7 @@ trait HandleParams
 
     protected function handleTaxonomyCondition($field, $payload, $modifier)
     {
-        $paramKey = $this->generateParamKey($field, 'taxonomy', $modifier);
+        $paramKey = ParamKey::build($field, 'taxonomy', $modifier);
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -160,7 +161,7 @@ trait HandleParams
     protected function handleQueryScopeCondition($field, $payload, $modifier)
     {
         $queryScopeKey = 'query_scope';
-        $paramKey = $this->generateParamKey($field, 'query_scope', $modifier);
+        $paramKey = ParamKey::build($field, 'query_scope', $modifier);
 
         if (isset($this->params[$queryScopeKey])) {
             $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
@@ -179,7 +180,7 @@ trait HandleParams
 
     protected function handleDualRangeCondition($field, $payload, $modifier)
     {
-        $paramKeys = $this->generateParamKey($field, 'dual_range', $modifier);
+        $paramKeys = ParamKey::build($field, 'dual_range', $modifier);
 
         $this->params[$paramKeys['min']] = $payload['min'];
         $this->params[$paramKeys['max']] = $payload['max'];
@@ -204,7 +205,7 @@ trait HandleParams
         }
 
         if ($condition === 'query_scope') {
-            $paramKey = $this->generateParamKey($field, 'query_scope', $modifier);
+            $paramKey = ParamKey::build($field, 'query_scope', $modifier);
             unset($this->params[$paramKey]);
 
             $this->removeScopeFromRegistryIfUnused($modifier);
@@ -214,7 +215,7 @@ trait HandleParams
             return;
         }
 
-        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+        $paramKey = ParamKey::build($field, $condition, $modifier);
 
         if (is_array($paramKey)) {
             // Handle dual_range case which returns an array of keys
@@ -254,7 +255,7 @@ trait HandleParams
 
     public function fieldExistsInParams($field, $condition, $modifier): bool
     {
-        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+        $paramKey = ParamKey::build($field, $condition, $modifier);
 
         if (is_array($paramKey)) {
             // Handle dual_range case which returns an array of keys
@@ -321,12 +322,12 @@ trait HandleParams
 
         $candidates = [];
 
-        $taxonomyKey = 'taxonomy:'.$field.':'.$condition;
+        $taxonomyKey = ParamKey::build($field, 'taxonomy', $condition);
         if ($this->paramContainsValue($taxonomyKey, $value)) {
             $candidates[] = ['key' => $taxonomyKey, 'scope' => null];
         }
 
-        $conditionKey = $field.':'.$condition;
+        $conditionKey = ParamKey::build($field, $condition);
         if ($this->paramContainsValue($conditionKey, $value) && ! $this->fieldHasMultipleConditionParams($field)) {
             $candidates[] = ['key' => $conditionKey, 'scope' => null];
         }
@@ -346,8 +347,10 @@ trait HandleParams
         $matches = [];
 
         foreach (array_unique(explode('|', $this->params['query_scope'])) as $scope) {
-            if ($this->paramContainsValue($scope.':'.$field, $value)) {
-                $matches[] = ['key' => $scope.':'.$field, 'scope' => $scope];
+            $key = ParamKey::build($field, 'query_scope', $scope);
+
+            if ($this->paramContainsValue($key, $value)) {
+                $matches[] = ['key' => $key, 'scope' => $scope];
             }
         }
 
@@ -574,17 +577,6 @@ trait HandleParams
             : $normalizedPath;
     }
 
-    protected function getDualRangeConditions($modifer): array
-    {
-        $modifiers = ['gte', 'lte'];
-
-        if ($modifer === 'any') {
-            return $modifiers;
-        }
-
-        return explode('|', $modifer);
-    }
-
     /**
      * Clear every runtime filter param immediately, without waiting for each
      * filter component to relay a `clear-filter` back. Mount-authored condition
@@ -731,7 +723,7 @@ trait HandleParams
         }
 
         if ($condition === 'dual_range') {
-            $paramKeys = $this->generateParamKey($field, $condition, $modifier);
+            $paramKeys = ParamKey::build($field, $condition, $modifier);
 
             return is_array($payload)
                 && isset($payload['min'], $payload['max'])
@@ -740,7 +732,7 @@ trait HandleParams
                 && $this->params[$paramKeys['max']] == $payload['max'];
         }
 
-        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+        $paramKey = ParamKey::build($field, $condition, $modifier);
 
         if ($condition === 'query_scope') {
             $expected = $field === 'resrv_availability' ? $payload : $this->toPipeSeparatedString($payload);
@@ -824,27 +816,5 @@ trait HandleParams
 
         // Dispatching to the tags component
         $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
-    }
-
-    protected function generateParamKey(string $field, string $condition, ?string $modifier = null): string|array
-    {
-        if ($condition === 'query_scope') {
-            return $modifier.':'.$field;
-        }
-
-        if ($condition === 'taxonomy') {
-            return 'taxonomy:'.$field.':'.$modifier;
-        }
-
-        if ($condition === 'dual_range') {
-            [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
-
-            return [
-                'min' => $field.':'.$minModifier,
-                'max' => $field.':'.$maxModifier,
-            ];
-        }
-
-        return $field.':'.$condition;
     }
 }

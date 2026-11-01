@@ -58,7 +58,6 @@ class LfDualRangeFilter extends Component
         if ($this->statamic_field['type'] === 'date') {
             $min = Carbon::createFromDate($this->selectedMin)->startOfYear()->format('Y-m-d');
             $max = Carbon::createFromDate($this->selectedMax)->endOfYear()->format('Y-m-d');
-            $this->modifier = 'is_after|is_before';
         }
 
         $paramKeys = $this->getParamKey();

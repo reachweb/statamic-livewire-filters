@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Livewire\Attributes\Locked;
 use Reach\StatamicLivewireFilters\Exceptions\TaxonomyFieldHandleMismatchException;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Statamic\Facades\Taxonomy;
 use Statamic\Support\Arr;
 
@@ -47,6 +48,11 @@ trait IsLivewireFilter
 
         if ($this->condition === 'taxonomy') {
             $this->ensureFieldHandleIsTaxonomy($field);
+        }
+
+        // The collection never sees the field type, so date ranges carry their comparisons in the modifier.
+        if ($this->condition === 'dual_range' && $field->type() === 'date') {
+            $this->modifier = 'is_after|is_before';
         }
 
         $field = $this->processFieldByType($field);
@@ -118,33 +124,6 @@ trait IsLivewireFilter
 
     protected function getParamKey()
     {
-        if ($this->condition === 'taxonomy') {
-            return 'taxonomy:'.$this->field.':'.$this->modifier;
-        }
-
-        if ($this->condition === 'query_scope') {
-            return $this->modifier.':'.$this->field;
-        }
-
-        if ($this->condition === 'dual_range') {
-            $minModifier = 'gte';
-            $maxModifier = 'lte';
-
-            if ($this->statamic_field['type'] === 'date') {
-                $minModifier = 'is_after';
-                $maxModifier = 'is_before';
-            }
-
-            if ($this->modifier !== 'any') {
-                [$minModifier, $maxModifier] = explode('|', $this->modifier);
-            }
-
-            return [
-                'min' => $this->field.':'.$minModifier,
-                'max' => $this->field.':'.$maxModifier,
-            ];
-        }
-
-        return $this->field.':'.$this->condition;
+        return ParamKey::build($this->field, $this->condition, $this->modifier);
     }
 }

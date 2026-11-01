@@ -8,6 +8,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 
 class LfTags extends Component
 {
@@ -79,10 +80,10 @@ class LfTags extends Component
     public function parseConditions()
     {
         $this->params->each(function ($value, $key) {
-            [$field, $condition] = explode(':', $key);
+            $key = ParamKey::parse($key);
             $values = collect(explode('|', $value));
-            $values->each(function ($value) use ($field, $condition) {
-                $this->addFieldOptionToTags($field, $value, $condition);
+            $values->each(function ($value) use ($key) {
+                $this->addFieldOptionToTags($key->field, $value, $key->condition);
             });
         });
     }
@@ -109,8 +110,8 @@ class LfTags extends Component
         $scopes = collect(explode('|', $scopes->first()));
 
         $scopes->each(function ($scopeName) {
-            $scopeValues = $this->params->filter(fn ($value, $key) => Str::startsWith($key, $scopeName));
-            $this->handleQueryScopeCondition($scopeValues);
+            $scopeValues = $this->params->filter(fn ($value, $key) => ParamKey::parse($key, [$scopeName])->condition === 'query_scope');
+            $this->handleQueryScopeCondition($scopeValues, $scopeName);
         });
 
         $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, 'query_scope'));
@@ -120,31 +121,31 @@ class LfTags extends Component
     public function handleTaxonomyTermConditions($taxonomies)
     {
         $taxonomies->each(function ($values, $key) {
-            [$taxonomy, $field, $condition] = explode(':', $key);
+            $key = ParamKey::parse($key);
             $terms = collect(explode('|', $values));
-            $terms->each(function ($value) use ($field, $condition) {
-                $this->addFieldOptionToTags($field, $value, $condition);
+            $terms->each(function ($value) use ($key) {
+                // Taxonomy tags carry the modifier as their condition
+                $this->addFieldOptionToTags($key->field, $value, $key->modifier);
             });
         });
 
         $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, 'taxonomy:'));
     }
 
-    public function handleQueryScopeCondition($values)
+    public function handleQueryScopeCondition($values, $scope)
     {
-        $values->each(function ($values, $key) {
-            [$scope, $field] = explode(':', $key);
+        $values->each(function ($values, $key) use ($scope) {
+            $field = ParamKey::parse($key, [$scope])->field;
             if ($this->isNotTaggable($field)) {
-                $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, $scope));
-
                 return;
             }
             $selectedValues = is_array($values) ? collect($values)->flatten() : collect(explode('|', $values));
             $selectedValues->each(function ($value) use ($field) {
                 $this->addFieldOptionToTags($field, $value, 'query_scope');
             });
-            $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, $scope));
         });
+
+        $this->params = $this->params->except($values->keys());
     }
 
     public function addFieldOptionToTags($field, $value, $condition = null)

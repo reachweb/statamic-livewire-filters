@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Tags\Concerns;
 
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Statamic\Taxonomies\LocalizedTerm;
 
 trait SupportTaxonomyTermRoute
@@ -12,7 +13,7 @@ trait SupportTaxonomyTermRoute
             return;
         }
         if ($this->isTermPage() && $this->isTerm()) {
-            $this->params['taxonomy:'.$this->getTaxonomy().':any'] = $this->getTerm();
+            $this->params[ParamKey::build($this->getTaxonomy(), 'taxonomy')] = $this->getTerm();
         }
     }
 
