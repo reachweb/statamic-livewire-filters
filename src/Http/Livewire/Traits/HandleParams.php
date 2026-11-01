@@ -811,19 +811,15 @@ trait HandleParams
         if (config('statamic-livewire-filters.enable_filter_values_count')
             || config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
             $params = $this->effectiveQueryParams();
-            $arguments = [$params];
 
-            if (config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
-                $arguments[] = RangeBoundsQuery::encode(
-                    $this->collections,
-                    $params,
-                    $this->getId(),
-                    ++$this->boundsQueryRevision,
-                    $this->boundsSelectionRevisions,
-                );
-            }
-
-            $this->dispatch('params-updated', ...$arguments);
+            // Counts and bounds listeners trust only the token's params, never the plain payload.
+            $this->dispatch('params-updated', $params, RangeBoundsQuery::encode(
+                $this->collections,
+                $params,
+                $this->getId(),
+                ++$this->boundsQueryRevision,
+                $this->boundsSelectionRevisions,
+            ));
         }
 
         // Dispatching to the tags component

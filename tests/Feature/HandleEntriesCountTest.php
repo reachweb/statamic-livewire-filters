@@ -7,7 +7,9 @@ use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleEntriesCount;
+use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
@@ -204,6 +206,63 @@ class HandleEntriesCountTest extends TestCase
             ->dispatch('params-updated', ['status:is' => 'any'])
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1];
+            });
+    }
+
+    #[Test]
+    public function it_ignores_a_forged_plain_payload_when_a_valid_token_is_present()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        EntryFactory::id('draft')->collection('pages')->slug('draft')->make()
+            ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['status:is' => 'any'], RangeBoundsQuery::encode('pages', []))
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+            })
+            // Tag-authored visibility params still scope the counts through the token.
+            ->dispatch('params-updated', [], RangeBoundsQuery::encode('pages', ['status:is' => 'any']))
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1];
+            });
+    }
+
+    #[Test]
+    public function it_ignores_the_event_when_the_token_is_invalid_or_for_another_collection()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        EntryFactory::id('draft')->collection('pages')->slug('draft')->make()
+            ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['status:is' => 'any'], 'forged-token')
+            ->assertNotDispatched('counts-updated')
+            ->dispatch('params-updated', ['status:is' => 'any'], RangeBoundsQuery::encode('secrets', []))
+            ->assertNotDispatched('counts-updated')
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
+            });
+    }
+
+    #[Test]
+    public function the_collection_token_keeps_counts_authoritative_when_only_counts_are_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', false);
+
+        EntryFactory::id('draft')->collection('pages')->slug('draft')->make()
+            ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
+
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages']]);
+        [, $token] = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['status:is' => 'any'], $token)
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             });
     }
 

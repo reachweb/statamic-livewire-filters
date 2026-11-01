@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 use Statamic\Entries\EntryCollection;
 
 trait HandleEntriesCount
@@ -25,20 +26,29 @@ trait HandleEntriesCount
     }
 
     /**
-     * Blocked params are intentionally NOT stripped here (deliberate trade-off).
-     * This path exposes only aggregate counts of this field's own option values —
-     * CountEntries plucks the single field, never entry data — so a forged
-     * `params-updated` event can at most skew the forger's own count numbers, a
-     * low-severity aggregate effect we accept in exchange for letting tag-authored
-     * control params (status, site, ...) scope the counts the same way they scope
-     * the entries query. Collection switching stays blocked regardless:
-     * CountQueryPool forces the component's locked collection to win the `from` merge.
+     * The collection sends an encrypted query token alongside the plain params.
+     * When a token arrives, only its params are used, so a forged plain payload
+     * (e.g. `status:is any`) cannot change the counts, while tag-authored control
+     * params (status, site, ...) still scope the counts like the entries query.
+     * A token that fails to verify for this filter's collection is ignored outright.
+     * Without any token, the plain params are used unstripped (legacy trade-off kept
+     * for backwards compatibility): a forged event can at most skew the forger's own
+     * aggregate counts of this field's options, never expose entry data. Collection
+     * switching stays blocked regardless: CountQueryPool forces the locked collection.
      */
     #[On('params-updated')]
-    public function updateCounts($params)
+    public function updateCounts($params, $countsQuery = null)
     {
         if (! config('statamic-livewire-filters.enable_filter_values_count')) {
             return;
+        }
+
+        if ($countsQuery !== null) {
+            $params = RangeBoundsQuery::paramsForCollection($countsQuery, $this->collection);
+
+            if ($params === null) {
+                return;
+            }
         }
 
         $fieldHandle = $this->resolveCountFieldHandle();
