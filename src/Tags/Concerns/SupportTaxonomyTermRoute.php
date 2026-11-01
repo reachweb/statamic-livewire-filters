@@ -2,6 +2,8 @@
 
 namespace Reach\StatamicLivewireFilters\Tags\Concerns;
 
+use Statamic\Taxonomies\LocalizedTerm;
+
 trait SupportTaxonomyTermRoute
 {
     public function addTaxonomyTermRoute()
@@ -16,7 +18,7 @@ trait SupportTaxonomyTermRoute
 
     protected function isTermPage()
     {
-        return $this->context->get('page') instanceof \Statamic\Taxonomies\LocalizedTerm;
+        return $this->context->get('page') instanceof LocalizedTerm;
     }
 
     protected function isTerm()
@@ -31,6 +33,7 @@ trait SupportTaxonomyTermRoute
 
     protected function getTerm()
     {
-        return $this->context->get('last_segment') ?? $this->context->get('is_term')->augmentable()->slug();
+        // Taxonomy conditions match default-locale slugs, while the URL holds the localized slug.
+        return $this->context->get('page')->term()->slug();
     }
 }
