@@ -424,6 +424,23 @@ class LfDualRangeFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_clears_only_the_tagged_bound_of_a_same_year_date_preset()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2026,
+            'minRange' => 1,
+        ])
+            ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2022-12-31'])
+            ->dispatch('clear-option', ['field' => 'year', 'value' => '2022-01-01', 'condition' => 'is_after'])
+            ->assertSet('selectedMin', 2018)
+            ->assertSet('selectedMax', 2022);
+    }
+
+    #[Test]
     public function it_loads_bare_year_date_presets_and_ignores_unparseable_ones()
     {
         Livewire::test(LfDualRangeFilter::class, [

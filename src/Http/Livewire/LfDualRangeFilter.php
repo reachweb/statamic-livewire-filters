@@ -125,13 +125,17 @@ class LfDualRangeFilter extends Component
             return;
         }
 
+        // Tags from LfTags name their bound in `condition`, which still tells the
+        // bounds apart when both hold the same value, e.g. a same-year date range.
+        $paramKeys = $this->getParamKey();
+        $tagKey = isset($tag['condition']) ? $this->field.':'.$tag['condition'] : null;
         $value = $this->sliderValueFromParam($tag['value']);
 
-        if ($value == $this->selectedMin) {
+        if ($tagKey ? $tagKey === $paramKeys['min'] : $value == $this->selectedMin) {
             $this->selectedMin = $this->min;
         }
 
-        if ($value == $this->selectedMax) {
+        if ($tagKey ? $tagKey === $paramKeys['max'] : $value == $this->selectedMax) {
             $this->selectedMax = $this->max;
         }
 
