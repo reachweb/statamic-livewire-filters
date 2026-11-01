@@ -189,6 +189,35 @@ class HandleEntriesCountTest extends TestCase
     }
 
     #[Test]
+    public function it_counts_prefixed_values_against_bare_slug_options_for_a_single_taxonomy_terms_field()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Facades\Taxonomy::make('colors')->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('blue')->data(['title' => 'Blue'])->save();
+
+        Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        ['handle' => 'shades', 'field' => ['type' => 'terms', 'taxonomies' => ['colors']]],
+                    ],
+                ],
+            ],
+        ])->setHandle('shaded')->setNamespace('collections.pages')->save();
+
+        EntryFactory::id('c')->collection('pages')->slug('c')->make()->set('shades', ['red', 'blue'])->save();
+        EntryFactory::id('d')->collection('pages')->slug('d')->make()->set('shades', ['colors::red'])->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'shades', 'blueprint' => 'pages.shaded', 'condition' => 'overlaps'])
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['red' => 2, 'blue' => 1];
+            });
+    }
+
+    #[Test]
     public function it_applies_visibility_params_to_the_counts_query_so_counts_match_the_entries_query()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);

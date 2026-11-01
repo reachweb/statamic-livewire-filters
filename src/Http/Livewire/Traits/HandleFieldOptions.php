@@ -13,8 +13,16 @@ trait HandleFieldOptions
     protected function addTermsToOptions($field)
     {
         $options = Blink::once($this->fieldOptionsCacheKey('terms', $field->config()['taxonomies'] ?? []), function () use ($field) {
-            return collect($field->config()['taxonomies'] ?? [])
-                ->reduce(fn ($carry, $taxonomy) => array_replace($carry, $this->getTaxonomyTerms($taxonomy)->all()), []);
+            $taxonomies = collect($field->config()['taxonomies'] ?? []);
+
+            // Statamic stores bare slugs for single-taxonomy fields and "taxonomy::slug" otherwise
+            if ($taxonomies->count() === 1) {
+                return $this->getTaxonomyTerms($taxonomies->first())->all();
+            }
+
+            return $taxonomies->flatMap(fn ($taxonomy) => $this->getTaxonomyTerms($taxonomy)
+                ->mapWithKeys(fn ($title, $slug) => ["{$taxonomy}::{$slug}" => $title])
+            )->all();
         });
 
         return $this->setFieldOptionsAndCounts($field, $options);

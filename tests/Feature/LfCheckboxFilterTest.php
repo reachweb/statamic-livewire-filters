@@ -432,6 +432,55 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_keys_options_and_counts_by_taxonomy_and_slug_for_a_terms_field_with_several_taxonomies()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Facades\Taxonomy::make('materials')->save();
+        Facades\Term::make()->taxonomy('materials')->inDefaultLocale()->slug('red')->data(['title' => 'Red Leather'])->save();
+        Facades\Term::make()->taxonomy('materials')->inDefaultLocale()->slug('cotton')->data(['title' => 'Cotton'])->save();
+
+        Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        ['handle' => 'title', 'field' => ['type' => 'text']],
+                        ['handle' => 'features', 'field' => ['type' => 'terms', 'taxonomies' => ['colors', 'materials']]],
+                    ],
+                ],
+            ],
+        ])->setHandle('products')->setNamespace('collections.clothes')->save();
+
+        $clothes = Facades\Collection::findByHandle('clothes');
+        $this->makeEntry($clothes, 'shirt')->set('title', 'Shirt')->set('features', ['colors::red', 'materials::cotton'])->save();
+        $this->makeEntry($clothes, 'jacket')->set('title', 'Jacket')->set('features', ['materials::red'])->save();
+        $this->makeEntry($clothes, 'boots')->set('title', 'Boots')->set('features', ['colors::black', 'materials::red'])->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'features', 'blueprint' => 'clothes.products', 'condition' => 'overlaps'])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['options'] === [
+                    'colors::red' => 'Red',
+                    'colors::black' => 'Black',
+                    'colors::yellow' => 'Yellow',
+                    'materials::red' => 'Red Leather',
+                    'materials::cotton' => 'Cotton',
+                ];
+            })
+            ->dispatch('params-updated', [])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === [
+                    'colors::red' => 1,
+                    'colors::black' => 1,
+                    'colors::yellow' => 0,
+                    'materials::red' => 2,
+                    'materials::cotton' => 1,
+                ];
+            })
+            ->set('selected', ['materials::red'])
+            ->assertDispatched('filter-updated', field: 'features', condition: 'overlaps', payload: ['materials::red']);
+    }
+
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])

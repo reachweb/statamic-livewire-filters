@@ -60,19 +60,32 @@ trait HandleEntriesCount
             return;
         }
 
+        $singleTaxonomyPrefix = $this->singleTaxonomyPrefix();
+
         foreach ($fieldValues as $fieldValue) {
-            // Handle array values (entries, terms fields can be multi-select)
-            if (is_array($fieldValue)) {
-                foreach ($fieldValue as $value) {
-                    if (isset($this->statamic_field['counts'][$value])) {
-                        $this->statamic_field['counts'][$value]++;
-                    }
+            // Array values come from multi-select fields (entries, terms, ...)
+            foreach (is_array($fieldValue) ? $fieldValue : [$fieldValue] as $value) {
+                // Single-taxonomy options use bare slugs, but entries may store "taxonomy::slug"
+                if ($singleTaxonomyPrefix && is_string($value) && str_starts_with($value, $singleTaxonomyPrefix)) {
+                    $value = substr($value, strlen($singleTaxonomyPrefix));
                 }
-            } elseif (isset($this->statamic_field['counts'][$fieldValue])) {
-                // Handle single values - combined condition for better performance
-                $this->statamic_field['counts'][$fieldValue]++;
+
+                if (isset($this->statamic_field['counts'][$value])) {
+                    $this->statamic_field['counts'][$value]++;
+                }
             }
         }
+    }
+
+    protected function singleTaxonomyPrefix(): ?string
+    {
+        $taxonomies = (array) ($this->statamic_field['taxonomies'] ?? []);
+
+        if (($this->statamic_field['type'] ?? null) !== 'terms' || count($taxonomies) !== 1) {
+            return null;
+        }
+
+        return reset($taxonomies).'::';
     }
 
     protected function getOptionParam($option)
