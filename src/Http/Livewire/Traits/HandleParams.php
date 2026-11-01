@@ -812,7 +812,7 @@ trait HandleParams
             || config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
             $params = $this->effectiveQueryParams();
 
-            // Counts and bounds listeners trust only the token's params, never the plain payload.
+            // Counts and bounds listeners require the token and use only its params.
             $this->dispatch('params-updated', $params, RangeBoundsQuery::encode(
                 $this->collections,
                 $params,

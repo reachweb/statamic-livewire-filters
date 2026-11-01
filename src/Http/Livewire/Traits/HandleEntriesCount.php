@@ -25,30 +25,19 @@ trait HandleEntriesCount
         return [];
     }
 
-    /**
-     * The collection sends an encrypted query token alongside the plain params.
-     * When a token arrives, only its params are used, so a forged plain payload
-     * (e.g. `status:is any`) cannot change the counts, while tag-authored control
-     * params (status, site, ...) still scope the counts like the entries query.
-     * A token that fails to verify for this filter's collection is ignored outright.
-     * Without any token, the plain params are used unstripped (legacy trade-off kept
-     * for backwards compatibility): a forged event can at most skew the forger's own
-     * aggregate counts of this field's options, never expose entry data. Collection
-     * switching stays blocked regardless: CountQueryPool forces the locked collection.
-     */
+    // Only the collection's encrypted query can scope counts; the plain params are client-controlled
+    // and could probe hidden entries (e.g. `status:is any` with `title:contains`), so they are ignored.
     #[On('params-updated')]
-    public function updateCounts($params, $countsQuery = null)
+    public function updateCounts($params, $boundsQuery = null)
     {
         if (! config('statamic-livewire-filters.enable_filter_values_count')) {
             return;
         }
 
-        if ($countsQuery !== null) {
-            $params = RangeBoundsQuery::paramsForCollection($countsQuery, $this->collection);
+        $params = RangeBoundsQuery::paramsForCollection($boundsQuery, $this->collection);
 
-            if ($params === null) {
-                return;
-            }
+        if ($params === null) {
+            return;
         }
 
         $fieldHandle = $this->resolveCountFieldHandle();

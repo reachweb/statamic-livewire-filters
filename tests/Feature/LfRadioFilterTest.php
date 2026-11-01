@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
+use Reach\StatamicLivewireFilters\Tests\DispatchesParamsUpdated;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
 
 class LfRadioFilterTest extends TestCase
 {
-    use PreventSavingStacheItemsToDisk;
+    use DispatchesParamsUpdated, PreventSavingStacheItemsToDisk;
 
     protected $collection;
 
@@ -157,7 +158,7 @@ class LfRadioFilterTest extends TestCase
 
         Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', '')
-            ->dispatch('params-updated', ['item_options:is' => 'option1'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['item_options:is' => 'option1']))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             })
@@ -174,7 +175,7 @@ class LfRadioFilterTest extends TestCase
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => null, 'option2' => null, 'option3' => null];
             })
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             });
