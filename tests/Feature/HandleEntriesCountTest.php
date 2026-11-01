@@ -7,14 +7,17 @@ use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleEntriesCount;
+use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
+use Reach\StatamicLivewireFilters\Tests\DispatchesParamsUpdated;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
 
 class HandleEntriesCountTest extends TestCase
 {
-    use PreventSavingStacheItemsToDisk;
+    use DispatchesParamsUpdated, PreventSavingStacheItemsToDisk;
 
     private $component;
 
@@ -168,7 +171,7 @@ class HandleEntriesCountTest extends TestCase
         Config::set('statamic-livewire-filters.enable_filter_values_count', false);
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertNotDispatched('counts-updated')
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
@@ -181,7 +184,7 @@ class HandleEntriesCountTest extends TestCase
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertDispatched('counts-updated')
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
@@ -211,14 +214,36 @@ class HandleEntriesCountTest extends TestCase
         EntryFactory::id('d')->collection('pages')->slug('d')->make()->set('shades', ['colors::red'])->save();
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'shades', 'blueprint' => 'pages.shaded', 'condition' => 'overlaps'])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['red' => 2, 'blue' => 1];
             });
     }
 
     #[Test]
-    public function it_applies_visibility_params_to_the_counts_query_so_counts_match_the_entries_query()
+    public function it_computes_counts_when_stored_values_include_nested_arrays_and_nulls()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        // Livewire turns a TypeError into a bare 419 unless debug is on
+        Config::set('app.debug', true);
+
+        EntryFactory::id('c')->collection('pages')->slug('c')->make()
+            ->set('title', 'Entry C')->set('item_options', [['option1', 'option2'], 'option2'])->save();
+        EntryFactory::id('d')->collection('pages')->slug('d')->make()
+            ->set('title', 'Entry D')->set('item_options', null)->save();
+        EntryFactory::id('e')->collection('pages')->slug('e')->make()
+            ->set('title', 'Entry E')->set('item_options', ['option1', null])->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertDispatched('counts-updated')
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 2];
+            });
+    }
+
+    #[Test]
+    public function it_applies_visibility_params_from_the_encrypted_query_so_counts_match_the_entries_query()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
 
@@ -226,13 +251,76 @@ class HandleEntriesCountTest extends TestCase
             ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             })
-            ->dispatch('params-updated', ['status:is' => 'any'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['status:is' => 'any']))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1];
+            });
+    }
+
+    #[Test]
+    public function it_uses_only_the_encrypted_query_params_and_ignores_the_plain_payload()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        EntryFactory::id('draft')->collection('pages')->slug('draft')->make()
+            ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['status:is' => 'any'], RangeBoundsQuery::encode('pages', []))
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+            })
+            ->dispatch('params-updated', [], RangeBoundsQuery::encode('pages', ['status:is' => 'any']))
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1];
+            });
+    }
+
+    #[Test]
+    public function it_ignores_events_without_a_valid_encrypted_query_for_its_collection()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        EntryFactory::id('draft')->collection('pages')->slug('draft')->make()
+            ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
+
+        $forged = ['status:is' => 'any', 'title:contains' => 'Draft'];
+        $tampered = RangeBoundsQuery::encode('pages', $forged);
+        $tampered[strlen($tampered) - 2] = $tampered[strlen($tampered) - 2] === 'A' ? 'B' : 'A';
+
+        foreach ([[$forged], [$forged, null], [$forged, ''], [$forged, []], [$forged, 'forged-token'],
+            [$forged, $tampered], [$forged, RangeBoundsQuery::encode('secrets', $forged)]] as $arguments) {
+            Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+                ->dispatch('params-updated', ...$arguments)
+                ->assertNotDispatched('counts-updated')
+                ->assertViewHas('statamic_field', function ($statamic_field) {
+                    return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
+                });
+        }
+    }
+
+    #[Test]
+    public function the_collection_sends_its_encrypted_query_when_only_counts_are_enabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', false);
+
+        EntryFactory::id('draft')->collection('pages')->slug('draft')->make()
+            ->set('title', 'Draft')->set('item_options', 'option1')->published(false)->save();
+
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages']]);
+        $arguments = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
+
+        $this->assertCount(2, $arguments);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ['status:is' => 'any'], $arguments[1])
+            ->assertViewHas('statamic_field', function ($statamic_field) {
+                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             });
     }
 
@@ -246,11 +334,11 @@ class HandleEntriesCountTest extends TestCase
         EntryFactory::id('s2')->collection('secrets')->slug('s2')->make()->set('item_options', 'option1')->save();
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
-            ->dispatch('params-updated', ['from' => 'secrets'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['from' => 'secrets']))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             })
-            ->dispatch('params-updated', ['collection' => 'secrets', 'in' => 'secrets'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['collection' => 'secrets', 'in' => 'secrets']))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             });

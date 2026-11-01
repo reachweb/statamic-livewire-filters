@@ -13,9 +13,9 @@ return [
     // `status` blocks both a bare `status` param and condition-style params like `status:is`.
     // Params you set directly on the tag are trusted and always kept; this list only strips
     // keys that arrive through client-tamperable filter state on the entries query. The
-    // faceted-count query intentionally does NOT strip them (see HandleEntriesCount): that path
-    // returns only aggregate counts of a field's own option values, an accepted trade-off that
-    // lets tag-authored control params scope the counts the same way they scope the entries.
+    // faceted-count and range-bounds queries only use the params in the collection's encrypted
+    // query, so tag-authored control params scope them like the entries query and events
+    // without a valid encrypted query are ignored.
     // Add the exact param key to `allowed_filters` on the tag to re-permit one on the entries query.
     //
     // Note: `query_scope` is intentionally absent. Statamic treats `query_scope` and `filter`
