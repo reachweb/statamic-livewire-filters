@@ -110,7 +110,12 @@ class LfTags extends Component
         $scopes = collect(explode('|', $scopes->first()));
 
         $scopes->each(function ($scopeName) {
-            $scopeValues = $this->params->filter(fn ($value, $key) => ParamKey::parse($key, [$scopeName])->condition === 'query_scope');
+            $scopeValues = $this->params->filter(function ($value, $key) use ($scopeName) {
+                $parsed = ParamKey::parse($key, [$scopeName]);
+
+                // A plain `field:query_scope` key also parses with condition query_scope
+                return $parsed->condition === 'query_scope' && $parsed->modifier === $scopeName;
+            });
             $this->handleQueryScopeCondition($scopeValues, $scopeName);
         });
 
