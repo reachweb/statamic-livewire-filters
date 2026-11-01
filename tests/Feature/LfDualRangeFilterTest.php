@@ -7,6 +7,7 @@ use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyExceptio
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -323,6 +324,38 @@ class LfDualRangeFilterTest extends TestCase
                 payload: ['min' => '2020-01-01', 'max' => '2024-12-31'],
                 modifier: 'is_after|is_before',
             );
+    }
+
+    #[Test]
+    public function a_date_field_clears_its_date_keys_before_it_has_dispatched()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2024,
+        ])
+            ->dispatch('clear-all-filters')
+            ->assertDispatched('clear-filter', field: 'year', condition: 'dual_range', modifier: 'is_after|is_before');
+
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts', 'year:is_after' => '2020-01-01', 'year:is_before' => '2024-12-31']])
+            ->dispatch('clear-filter', field: 'year', condition: 'dual_range', modifier: 'is_after|is_before')
+            ->assertSet('params', []);
+    }
+
+    #[Test]
+    public function the_date_comparisons_only_apply_to_the_dual_range_slider()
+    {
+        Livewire::test(LfToggleFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'modifier' => 'gte|lte',
+            'preset_value' => ['min' => '2020-01-01', 'max' => '2024-12-31'],
+        ])
+            ->set('selected', true)
+            ->assertDispatched('filter-updated', field: 'year', condition: 'dual_range', modifier: 'gte|lte');
     }
 
     #[Test]

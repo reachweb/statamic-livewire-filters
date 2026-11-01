@@ -42,6 +42,18 @@ class LfDualRangeFilter extends LivewireFilter
         $this->selectedMax = $this->max;
     }
 
+    /**
+     * The collection never sees the field type, so the year slider carries its
+     * date comparisons in the modifier. Runs after mount and on every hydrate,
+     * so snapshots taken before this rule existed pick it up too.
+     */
+    public function booted()
+    {
+        if ($this->statamic_field['type'] === 'date') {
+            $this->modifier = 'is_after|is_before';
+        }
+    }
+
     public function dispatchEvent()
     {
         // Displayed endpoints can clear only when both comparisons include all matches.
@@ -49,10 +61,6 @@ class LfDualRangeFilter extends LivewireFilter
             $this->clearFilters($this->rememberBoundsSelection([]));
 
             return;
-        }
-
-        if ($this->statamic_field['type'] === 'date') {
-            $this->modifier = 'is_after|is_before';
         }
 
         $payload = $this->payload();

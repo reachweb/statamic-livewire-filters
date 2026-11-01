@@ -789,6 +789,15 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function a_tag_condition_named_like_a_filter_condition_is_not_built_as_one()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red']])
+            ->dispatch('clear-option', ['field' => 'colors', 'value' => 'red', 'condition' => 'dual_range'])
+            ->dispatch('clear-option', ['field' => 'colors', 'value' => 'red', 'condition' => 'taxonomy'])
+            ->assertSet('params', ['taxonomy:colors:any' => 'red']);
+    }
+
+    #[Test]
     public function it_removes_a_taxonomy_tag_option_from_params_directly()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])

@@ -108,6 +108,15 @@ class LfTextFilterTest extends TestCase
     }
 
     #[Test]
+    public function a_filter_without_a_condition_ignores_preset_params()
+    {
+        Livewire::test(LfTextFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages'])
+            ->dispatch('preset-params', ['item_options:is' => 'option1'])
+            ->assertStatus(200)
+            ->assertSet('selected', '');
+    }
+
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfTextFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])
