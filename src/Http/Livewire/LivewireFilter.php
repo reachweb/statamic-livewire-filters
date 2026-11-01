@@ -7,9 +7,14 @@ use Livewire\Component;
 
 /**
  * Shared behaviour for the filter components. Subclasses declare their own
- * `#[Locked] public $view` and `$selected`; Livewire reads property and method
- * attributes from the declaring class only, so a subclass that redeclares one
- * of these properties or #[On] methods must repeat its attribute.
+ * `#[Locked] public $view`; Livewire reads property and method attributes from
+ * the declaring class only, so a subclass that redeclares a property or #[On]
+ * method must repeat its attribute.
+ *
+ * updatedSelected(), clear() and the default payload(), emptyValue() and
+ * applyPreset() assume a `$selected` property. A filter without one, like
+ * LfDualRangeFilter with `selectedMin`/`selectedMax`, must override clear(),
+ * payload() and applyPreset().
  */
 abstract class LivewireFilter extends Component implements FilterContract
 {

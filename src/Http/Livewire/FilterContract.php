@@ -9,10 +9,13 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
  *  - `clear-all-filters`: reset the selection; handled by clear().
  *  - `clear-option` with a tag `{field, value, condition}` from LfTags: drop
  *    that value when `field` matches; handled by clearOption().
- *  - `preset-params` with the collection's params keyed like getParamKey():
- *    restore the selection from the URL or tag; handled by setPresetValues().
- *  - `params-updated` with the collection's params: only filters that show
+ *  - `preset-params` with the collection's params keyed like getParamKey(),
+ *    sent once when they come from the collection tag or the URL: restore the
+ *    selection; handled by setPresetValues().
+ *  - `params-updated` with `(params, boundsQuery)`: only filters that show
  *    counts or dynamic bounds listen (HandleEntriesCount, HandleFieldBounds).
+ *    They ignore the plain `params`, which a client controls, and read the
+ *    filter state only from the encrypted `boundsQuery` (RangeBoundsQuery).
  *
  * A filter emits to LivewireCollection:
  *  - `filter-updated` with `field`, `condition`, `payload` (string, list of
