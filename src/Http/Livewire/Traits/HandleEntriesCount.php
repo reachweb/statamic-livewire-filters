@@ -44,16 +44,16 @@ trait HandleEntriesCount
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
-        $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
+        $this->updateCountsWithBatchQuery($baseParams, $fieldHandle, $baseParams['from']);
 
         $this->dispatch('counts-updated', $this->counts());
     }
 
-    protected function updateCountsWithBatchQuery($baseParams, $fieldHandle)
+    protected function updateCountsWithBatchQuery($baseParams, $fieldHandle, $collections = null)
     {
         $this->statamic_field['counts'] = array_fill_keys(array_keys($this->statamic_field['options']), 0);
 
-        $fieldValues = $this->getCountFieldValues($baseParams, $fieldHandle);
+        $fieldValues = $this->getCountFieldValues($baseParams, $fieldHandle, $collections);
 
         if ($fieldValues->isEmpty()) {
             return;
