@@ -778,6 +778,9 @@ class CustomQueryStringTest extends TestCase
             'ttl' => 'query_scope:cqs_title:title',
         ]);
 
+        // Each filter alone now matches two entries; only "I Love Drums" matches both
+        $this->makeEntry($this->collection, 'd')->set('title', 'I Hate Drums')->set('item_options', 'option2')->save();
+
         $params = null;
 
         (new HandleFiltersQueryString)->handle(
