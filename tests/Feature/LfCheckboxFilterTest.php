@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Tests\DispatchesParamsUpdated;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Entries\Entry;
@@ -16,7 +17,7 @@ use Statamic\Facades;
 
 class LfCheckboxFilterTest extends TestCase
 {
-    use PreventSavingStacheItemsToDisk;
+    use DispatchesParamsUpdated, PreventSavingStacheItemsToDisk;
 
     protected $collection;
 
@@ -335,7 +336,7 @@ class LfCheckboxFilterTest extends TestCase
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
-            ->dispatch('params-updated', ['item_options:is' => 'option1'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['item_options:is' => 'option1']))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             })
@@ -380,7 +381,7 @@ class LfCheckboxFilterTest extends TestCase
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'country', 'blueprint' => 'pages.pages_with_country', 'condition' => 'is'])
             ->assertSet('selected', [])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 // USA should have 2, GBR should have 1, others should have 0
                 return $statamic_field['counts']['USA'] === 2
@@ -398,7 +399,7 @@ class LfCheckboxFilterTest extends TestCase
         // Using simple option values that we already know work
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->assertSet('selected', [])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 // After params-updated event, counts should be populated
                 // Based on setUp: option1=2 (entries a,b), option2=1 (entry c), option3=0
@@ -422,7 +423,7 @@ class LfCheckboxFilterTest extends TestCase
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'overlaps'])
             ->assertSet('selected', [])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([], 'posts'))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 // Guitar should have 2, Drums should have 1, Piano should have 0
                 return $statamic_field['counts']['guitar'] === 2
@@ -709,7 +710,7 @@ class LfCheckboxFilterTest extends TestCase
             'condition' => 'is',
             'options' => $customOptions,
         ])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             })
@@ -931,7 +932,7 @@ class LfCheckboxFilterTest extends TestCase
         $this->makeEntry($clothesCollection, 'shirt3')->set('title', 'Yellow Shirt')->set('colors', ['yellow'])->save();
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([], 'clothes'))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts']['red'] === 2
                     && $statamic_field['counts']['black'] === 1
@@ -951,7 +952,7 @@ class LfCheckboxFilterTest extends TestCase
         $this->makeEntry($postsCollection, 'post3')->set('title', 'Post 3')->set('related_instruments', ['drums'])->save();
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'related_instruments', 'blueprint' => 'posts.posts', 'condition' => 'overlaps'])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([], 'posts'))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts']['guitar'] === 2
                     && $statamic_field['counts']['drums'] === 2
@@ -1005,7 +1006,7 @@ class LfCheckboxFilterTest extends TestCase
             'condition' => 'is',
             'options' => $customOptions,
         ])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'][1] === 2
                     && $statamic_field['counts'][0] === 1;
@@ -1018,7 +1019,7 @@ class LfCheckboxFilterTest extends TestCase
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
-            ->dispatch('params-updated', ['title:is' => 'nonexistent-title-that-matches-nothing'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:is' => 'nonexistent-title-that-matches-nothing']))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts']['option1'] === 0
                     && $statamic_field['counts']['option2'] === 0
@@ -1035,7 +1036,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => null, 'option2' => null, 'option3' => null];
             })
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 2, 'option2' => 1, 'option3' => 0];
             });
@@ -1053,7 +1054,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => null, 'option2' => null, 'option3' => null];
             })
-            ->dispatch('params-updated', $params)
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments($params))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 0, 'option3' => 0];
             });

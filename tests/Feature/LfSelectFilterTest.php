@@ -8,13 +8,14 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Tests\DispatchesParamsUpdated;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
 
 class LfSelectFilterTest extends TestCase
 {
-    use PreventSavingStacheItemsToDisk;
+    use DispatchesParamsUpdated, PreventSavingStacheItemsToDisk;
 
     protected $collection;
 
@@ -249,7 +250,7 @@ class LfSelectFilterTest extends TestCase
             ->assertDontSee('Item Two Hundred');
 
         Livewire::test(LfSelectFilter::class, ['field' => 'years', 'blueprint' => 'vintages.vintages', 'condition' => 'taxonomy'])
-            ->dispatch('params-updated', [])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([], 'vintages'))
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts']['100'] === 1
                     && $statamic_field['counts']['200'] === 1;
