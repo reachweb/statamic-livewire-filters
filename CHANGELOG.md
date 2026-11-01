@@ -14,6 +14,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 - The `params-updated` event always carries its second argument, the encrypted query, whenever `enable_filter_values_count` or `enable_dynamic_range_bounds` is on. Custom code that dispatches `params-updated` to refresh counts must now pass this argument; events with only plain params no longer update counts.
 
+### Fixed
+
+- A filter with `condition="taxonomy"` on a field whose handle doesn't match a taxonomy handle now throws `TaxonomyFieldHandleMismatchException` at mount, naming the taxonomy to rename the field to. Statamic only filters terms fields whose handle matches the taxonomy handle, so such a filter previously crashed the collection with `Call to a member function collections() on null`.
+
 ## [4.6.0] - 2026-10-21
 
 ### Security
