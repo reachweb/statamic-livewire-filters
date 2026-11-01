@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Dependencies persist in the snapshot. This addon uses in-memory SQLite tests
+# and needs no database daemon, authentication, or other wake-time repair.

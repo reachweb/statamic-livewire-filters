@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+export DEBIAN_FRONTEND=noninteractive
+SECONDS=0
+
+echo 'Installing missing PHP 8.4 packages'
+packages=(ca-certificates curl unzip php8.4-cli php8.4-curl php8.4-mbstring
+    php8.4-xml php8.4-zip php8.4-sqlite3 php8.4-bcmath php8.4-soap
+    php8.4-intl php8.4-gd php8.4-imagick)
+missing=()
+for package in "${packages[@]}"; do
+    if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then
+        missing+=("$package")
+    fi
+done
+if ((${#missing[@]})); then
+    if [[ ! -f /etc/apt/sources.list.d/php.list ]]; then
+        # Debian 12 ships PHP 8.2; the lockfile requires PHP 8.4.
+        sudo apt-get update -qq
+        sudo apt-get install -y ca-certificates curl
+        keyring=$(mktemp)
+        trap 'rm -f "$keyring"' EXIT
+        curl -fsSL https://packages.sury.org/debsuryorg-archive-keyring.deb -o "$keyring"
+        sudo dpkg -i "$keyring"
+        echo 'deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ bookworm main' |
+            sudo tee /etc/apt/sources.list.d/php.list >/dev/null
+    fi
+    sudo apt-get update -qq
+    sudo apt-get install -y "${missing[@]}"
+fi
+sudo update-alternatives --set php /usr/bin/php8.4
+echo "PHP ready (${SECONDS}s elapsed)"
+
+if ! command -v composer >/dev/null; then
+    echo 'Installing Composer 2 with installer signature verification'
+    installer=$(mktemp)
+    trap 'rm -f "${keyring:-}" "$installer"' EXIT
+    curl -fsSL https://getcomposer.org/installer -o "$installer"
+    expected=$(curl -fsSL https://composer.github.io/installer.sig)
+    actual=$(php -r 'echo hash_file("sha384", $argv[1]);' "$installer")
+    [[ "$actual" == "$expected" ]] || { echo 'Composer installer signature mismatch' >&2; exit 1; }
+    php "$installer" --2 --install-dir="$(dirname "$installer")" --filename=composer.phar
+    sudo install -m 0755 "$(dirname "$installer")/composer.phar" /usr/local/bin/composer
+    rm -f "$(dirname "$installer")/composer.phar"
+fi
+
+echo 'Installing locked Composer dependencies'
+# This is an addon, not a Laravel application: its publishing hook needs a host artisan.
+composer install --prefer-dist --no-interaction --no-progress --no-scripts
+composer check-platform-reqs
+echo "Composer dependencies ready (${SECONDS}s elapsed)"
+
+echo 'Installing locked frontend dependencies'
+# Node is provided by the orb base image; Vite 7 requires these minimum versions.
+node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (!((major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major > 22)) throw new Error("Vite requires Node 20.19+ or 22.12+")'
+npm ci --no-audit --no-fund
+echo "Setup complete (${SECONDS}s elapsed)"
