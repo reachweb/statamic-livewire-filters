@@ -562,6 +562,69 @@ class HandleFieldBoundsTest extends TestCase
         }
     }
 
+    #[Test]
+    #[DataProvider('rangeSelectionCases')]
+    public function it_keeps_the_full_collection_bounds_after_clear_all(bool $dualRange)
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']]);
+        $filter = Livewire::test(
+            $dualRange ? LfDualRangeFilter::class : LfRangeFilter::class,
+            $dualRange ? $this->dualRangeArguments() : $this->rangeArguments(),
+        );
+
+        $collection->dispatch('filter-updated', field: 'category', condition: 'is', payload: 'catamaran', modifier: null);
+        $filter->dispatch('params-updated', ...collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'])
+            ->assertSet('dynamicMax', 6);
+
+        // The browser delivers clearAll's dispatches in order: params-updated, then clear-all-filters.
+        $collection->call('clearAll');
+        $filter->dispatch('params-updated', ...collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'])
+            ->dispatch('clear-all-filters');
+
+        $clearUpdate = collect($filter->effects['dispatches'])->firstWhere('name', 'clear-filter')['params'];
+        $collection->dispatch('clear-filter', ...$clearUpdate)
+            ->assertNotDispatched('params-updated');
+
+        $filter->assertSet('dynamicMin', 4)->assertSet('dynamicMax', 8);
+        if ($dualRange) {
+            $filter->assertSet('selectedMin', 4)
+                ->assertSet('selectedMax', 8)
+                ->assertDispatched('dual-range-preset-values', min: 4, max: 8);
+        } else {
+            $filter->assertSet('selected', 4);
+        }
+    }
+
+    #[Test]
+    #[DataProvider('rangeSelectionCases')]
+    public function it_keeps_the_dynamic_bounds_when_clear_all_has_nothing_to_remove(bool $dualRange)
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        // A tag-authored condition survives clear-all, so no params-updated follows it.
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts', 'category:is' => 'catamaran']]);
+        $filter = Livewire::test(
+            $dualRange ? LfDualRangeFilter::class : LfRangeFilter::class,
+            $dualRange ? $this->dualRangeArguments() : $this->rangeArguments(),
+        );
+        $filter->dispatch('params-updated', ...collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params']);
+
+        $collection->call('clearAll')
+            ->assertNotDispatched('params-updated')
+            ->assertDispatched('clear-all-filters');
+        $filter->dispatch('clear-all-filters');
+
+        if ($dualRange) {
+            $filter->assertSet('selectedMin', 4)
+                ->assertSet('selectedMax', 6)
+                ->assertDispatched('dual-range-preset-values', min: 4, max: 6);
+        } else {
+            $filter->assertSet('selected', 4);
+        }
+    }
+
     public static function rangeSelectionCases(): array
     {
         return [
