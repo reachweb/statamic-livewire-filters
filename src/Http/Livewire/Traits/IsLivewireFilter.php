@@ -3,7 +3,10 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Livewire\Attributes\Locked;
+use Reach\StatamicLivewireFilters\Exceptions\TaxonomyFieldHandleMismatchException;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Statamic\Facades\Taxonomy;
+use Statamic\Support\Arr;
 
 trait IsLivewireFilter
 {
@@ -42,9 +45,24 @@ trait IsLivewireFilter
         $blueprint = $this->getStatamicBlueprint();
         $field = $this->getStatamicField($blueprint);
 
+        if ($this->condition === 'taxonomy') {
+            $this->ensureFieldHandleIsTaxonomy($field);
+        }
+
         $field = $this->processFieldByType($field);
 
         $this->statamic_field = $field->toArray();
+    }
+
+    // The collection tag reads taxonomy:{handle}:{modifier} as a taxonomy handle, and
+    // Statamic only associates entries with terms stored under the taxonomy's handle.
+    protected function ensureFieldHandleIsTaxonomy($field): void
+    {
+        $taxonomies = Arr::wrap($field->get('taxonomies'));
+
+        if (($field->type() === 'terms' && ! in_array($this->field, $taxonomies, true)) || ! Taxonomy::findByHandle($this->field)) {
+            throw new TaxonomyFieldHandleMismatchException($this->field, $taxonomies);
+        }
     }
 
     protected function processFieldByType($field)
