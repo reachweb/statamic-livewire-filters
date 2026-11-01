@@ -327,7 +327,8 @@ trait HandleParams
             $candidates[] = ['key' => $taxonomyKey, 'scope' => null];
         }
 
-        $conditionKey = ParamKey::build($field, $condition);
+        // A tag's condition is the key's own suffix, not a filter condition to build from
+        $conditionKey = $field.':'.$condition;
         if ($this->paramContainsValue($conditionKey, $value) && ! $this->fieldHasMultipleConditionParams($field)) {
             $candidates[] = ['key' => $conditionKey, 'scope' => null];
         }

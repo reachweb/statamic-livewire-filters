@@ -50,11 +50,6 @@ trait IsLivewireFilter
             $this->ensureFieldHandleIsTaxonomy($field);
         }
 
-        // The collection never sees the field type, so date ranges carry their comparisons in the modifier.
-        if ($this->condition === 'dual_range' && $field->type() === 'date') {
-            $this->modifier = 'is_after|is_before';
-        }
-
         $field = $this->processFieldByType($field);
 
         $this->statamic_field = $field->toArray();
