@@ -377,6 +377,30 @@ class LfDualRangeFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_loads_date_preset_params_as_years_and_keeps_updating()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2026,
+            'minRange' => 1,
+        ])
+            ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2025-12-31'])
+            ->assertDispatched('dual-range-preset-values', min: 2022, max: 2025)
+            ->assertSet('selectedMin', 2022)
+            ->assertSet('selectedMax', 2025)
+            ->set('selectedMin', 2019)
+            ->assertDispatched('filter-updated',
+                field: 'year',
+                condition: 'dual_range',
+                payload: ['min' => '2019-01-01', 'max' => '2025-12-31'],
+                modifier: 'is_after|is_before',
+            );
+    }
+
+    #[Test]
     public function it_forbids_client_tampering_with_the_condition_property()
     {
         $this->expectException(CannotUpdateLockedPropertyException::class);

@@ -144,11 +144,16 @@ class LfDualRangeFilter extends Component
     public function setPresetValues($params)
     {
         $paramKeys = $this->getParamKey();
+        // Date params are stored as Y-m-d, but the slider works in years.
+        $toSliderValue = fn ($value) => $this->statamic_field['type'] === 'date'
+            ? Carbon::parse($value)->year
+            : $value;
+
         if (isset($params[$paramKeys['min']])) {
-            $this->selectedMin = $params[$paramKeys['min']];
+            $this->selectedMin = $toSliderValue($params[$paramKeys['min']]);
         }
         if (isset($params[$paramKeys['max']])) {
-            $this->selectedMax = $params[$paramKeys['max']];
+            $this->selectedMax = $toSliderValue($params[$paramKeys['max']]);
         }
         $this->dispatch('dual-range-preset-values',
             min: $this->selectedMin,
