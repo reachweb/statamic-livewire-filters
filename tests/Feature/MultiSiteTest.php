@@ -790,6 +790,38 @@ class MultiSiteTest extends TestCase
             });
     }
 
+    #[Test]
+    public function it_filters_entries_on_a_localized_taxonomy_term_route()
+    {
+        Config::set('statamic-livewire-filters.enable_term_routes', true);
+
+        $this->withFakeViews();
+        $this->viewShouldReturnRaw('layout', '{{ template_content }}');
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection from="clothes" }}');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }}{{ title }} {{ /entries }}</div>');
+
+        Facades\Taxonomy::find('colors')->termTemplate('default')->layout('default')->save();
+        // Set the slug after data(), which would otherwise overwrite the localized slug.
+        Facades\Term::find('colors::red')->in('es')->data(['title' => 'Rojo'])->slug('rojo')->save();
+
+        $redShirt = EntryFactory::id('red-shirt')->collection('clothes')->slug('red-shirt')->locale('en')
+            ->data(['title' => 'Red Shirt', 'colors' => ['red']])->create();
+        $blackShirt = EntryFactory::id('black-shirt')->collection('clothes')->slug('black-shirt')->locale('en')
+            ->data(['title' => 'Black Shirt', 'colors' => ['black']])->create();
+
+        EntryFactory::id('red-shirt-es')->collection('clothes')->slug('camisa-roja')->locale('es')
+            ->origin($redShirt->id())->data(['title' => 'Camisa Roja'])->create();
+        EntryFactory::id('black-shirt-es')->collection('clothes')->slug('camisa-negra')->locale('es')
+            ->origin($blackShirt->id())->data(['title' => 'Camisa Negra'])->create();
+
+        Facades\Stache::clear();
+
+        $this->get('/es/colors/rojo')
+            ->assertOk()
+            ->assertSee('Camisa Roja')
+            ->assertDontSee('Camisa Negra');
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
