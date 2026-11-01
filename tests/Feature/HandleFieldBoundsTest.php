@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
@@ -172,7 +173,7 @@ class HandleFieldBoundsTest extends TestCase
     public function it_accepts_authenticated_queries_that_include_its_collection()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
-        $other = Facades\Collection::make('other')->save();
+        $other = $this->makeYachtCollection('other');
         $this->makeEntry($other, 'other-yacht')->set('cabins', 9)->save();
 
         foreach (['other|yachts', ['other', 'yachts'], '*'] as $collections) {
@@ -186,10 +187,41 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
+    public function counts_and_bounds_query_the_same_tag_collections_that_have_the_field()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        $other = $this->makeYachtCollection('other');
+        $this->makeEntry($other, 'other-yacht')->set('cabins', 9)->save();
+        // No blueprint in this collection declares cabins, so its stray value is ignored
+        $noField = Facades\Collection::make('no_field')->save();
+        $this->makeEntry($noField, 'stray-yacht')->set('cabins', 2)->save();
+
+        // Counts alone must still receive the authenticated collections
+        foreach ([false, true] as $boundsEnabled) {
+            Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', $boundsEnabled);
+            $event = $this->collectionBoundsEvent(['from' => 'yachts|other|no_field']);
+
+            Livewire::test(LfCheckboxFilter::class, [
+                'field' => 'cabins',
+                'blueprint' => 'yachts.yachts',
+                'condition' => 'is',
+                'options' => ['2' => '2', '4' => '4', '6' => '6', '8' => '8', '9' => '9'],
+            ])
+                ->dispatch('params-updated', ...$event)
+                ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === [2 => 0, 4 => 1, 6 => 1, 8 => 1, 9 => 1]);
+        }
+
+        Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+            ->dispatch('params-updated', ...$event)
+            ->assertSet('dynamicMin', 4)
+            ->assertSet('dynamicMax', 9);
+    }
+
+    #[Test]
     public function adjusting_a_dual_range_keeps_matches_from_all_authenticated_collections()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
-        $other = Facades\Collection::make('other')->save();
+        $other = $this->makeYachtCollection('other');
         $this->makeEntry($other, 'other-yacht')->set('cabins', 9)->save();
 
         $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts|other']])
@@ -214,8 +246,8 @@ class HandleFieldBoundsTest extends TestCase
     public function multi_collection_bounds_preserve_query_constraints_and_visibility()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
-        $other = Facades\Collection::make('other')->save();
-        $outside = Facades\Collection::make('outside')->save();
+        $other = $this->makeYachtCollection('other');
+        $outside = $this->makeYachtCollection('outside');
         $this->makeEntry($other, 'other-yacht')->set('cabins', 9)->set('category', 'catamaran')->save();
         $this->makeEntry($other, 'nonmatching-yacht')->set('cabins', 3)->set('category', 'monohull')->save();
         $this->makeEntry($other, 'draft-yacht')->set('cabins', 10)->set('category', 'catamaran')->published(false)->save();
@@ -1246,6 +1278,15 @@ class HandleFieldBoundsTest extends TestCase
             'min' => 1,
             'max' => 10,
         ];
+    }
+
+    protected function makeYachtCollection(string $handle)
+    {
+        $collection = Facades\Collection::make($handle)->save();
+        Facades\Blueprint::make()->setContents($this->blueprint->contents())
+            ->setHandle($handle)->setNamespace('collections.'.$handle)->save();
+
+        return $collection;
     }
 
     protected function makeEntry($collection, $slug)

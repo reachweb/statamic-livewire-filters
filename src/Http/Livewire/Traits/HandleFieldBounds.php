@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleFieldBounds
@@ -244,7 +243,7 @@ trait HandleFieldBounds
 
     protected function computeFieldBounds(array $baseParams, string $fieldHandle): array
     {
-        $values = app(CountQueryPool::class)->getFieldValues($baseParams['from'], $baseParams, $fieldHandle)
+        $values = $this->getCountFieldValues($baseParams, $fieldHandle, $baseParams['from'])
             ->flatten()
             ->filter(fn ($value) => $value !== null && $value !== '');
 

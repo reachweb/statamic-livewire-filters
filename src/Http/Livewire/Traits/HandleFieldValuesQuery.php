@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
+use Statamic\Facades\Collection;
 use Statamic\Support\Arr;
 
 /**
@@ -63,9 +64,37 @@ trait HandleFieldValuesQuery
         return $baseParams;
     }
 
-    protected function getCountFieldValues(array $baseParams, string $fieldHandle)
+    /**
+     * Queries the tag's collections that have the field in a blueprint, falling back
+     * to the locked collection. Pass only server-authenticated collections, never event params.
+     */
+    protected function getCountFieldValues(array $baseParams, string $fieldHandle, string|array|null $collections = null)
     {
-        return app(CountQueryPool::class)->getFieldValues($this->collection, $baseParams, $fieldHandle);
+        return app(CountQueryPool::class)->getFieldValues(
+            $this->collectionsWithField($collections ?? $this->collection, $fieldHandle),
+            $baseParams,
+            $fieldHandle
+        );
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function collectionsWithField(string|array $collections, string $fieldHandle): array
+    {
+        $handles = $collections === '*'
+            ? Collection::handles()->all()
+            : (is_string($collections) ? explode('|', $collections) : $collections);
+
+        $handles = collect($handles)
+            ->unique()
+            ->filter(fn ($handle) => Collection::find($handle)?->entryBlueprints()
+                ->contains(fn ($blueprint) => $blueprint->hasField($fieldHandle)))
+            ->sort()
+            ->values()
+            ->all();
+
+        return $handles ?: [$this->collection];
     }
 
     /**
