@@ -100,6 +100,11 @@ class LfDualRangeFilter extends LivewireFilter
         $this->selectedMin = $this->min;
         $this->selectedMax = $this->max;
 
+        // Reset to the last known bounds; on clear-all the relay may not trigger another params-updated.
+        if ($this->dynamicMin !== null) {
+            $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
+        }
+
         $boundsSelection = $this->rememberBoundsSelection([]);
 
         $this->dispatch('dual-range-preset-values',
