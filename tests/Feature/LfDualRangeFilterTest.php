@@ -437,7 +437,28 @@ class LfDualRangeFilterTest extends TestCase
             ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2022-12-31'])
             ->dispatch('clear-option', ['field' => 'year', 'value' => '2022-01-01', 'condition' => 'is_after'])
             ->assertSet('selectedMin', 2018)
-            ->assertSet('selectedMax', 2022);
+            ->assertSet('selectedMax', 2022)
+            ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2022-12-31'])
+            ->dispatch('clear-option', ['field' => 'year', 'value' => '2022-12-31', 'condition' => 'is_before'])
+            ->assertSet('selectedMin', 2022)
+            ->assertSet('selectedMax', 2026);
+    }
+
+    #[Test]
+    public function it_clears_only_the_tagged_bound_of_an_equal_numeric_range()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 0,
+        ])
+            ->dispatch('preset-params', ['cabins:gte' => 6, 'cabins:lte' => 6])
+            ->dispatch('clear-option', ['field' => 'cabins', 'value' => 6, 'condition' => 'lte'])
+            ->assertSet('selectedMin', 6)
+            ->assertSet('selectedMax', 10);
     }
 
     #[Test]
@@ -448,13 +469,13 @@ class LfDualRangeFilterTest extends TestCase
             'blueprint' => 'yachts.yachts',
             'condition' => 'dual_range',
             'min' => 2018,
-            'max' => 2026,
+            'max' => 2025,
             'minRange' => 1,
         ])
             ->dispatch('preset-params', ['year:is_after' => '2021', 'year:is_before' => 'not-a-date'])
             ->assertSet('selectedMin', 2021)
-            ->assertSet('selectedMax', 2026)
-            ->assertDispatched('dual-range-preset-values', min: 2021, max: 2026);
+            ->assertSet('selectedMax', 2025)
+            ->assertDispatched('dual-range-preset-values', min: 2021, max: 2025);
     }
 
     #[Test]
