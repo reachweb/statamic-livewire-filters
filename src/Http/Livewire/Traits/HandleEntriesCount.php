@@ -60,16 +60,12 @@ trait HandleEntriesCount
         }
 
         foreach ($fieldValues as $fieldValue) {
-            // Handle array values (entries, terms fields can be multi-select)
-            if (is_array($fieldValue)) {
-                foreach ($fieldValue as $value) {
-                    if (isset($this->statamic_field['counts'][$value])) {
-                        $this->statamic_field['counts'][$value]++;
-                    }
+            // Multi-select values (checkboxes, entries, terms) are flattened one level; nested
+            // arrays and objects (e.g. Carbon dates) are skipped, as such offsets throw in isset()
+            foreach (is_array($fieldValue) ? $fieldValue : [$fieldValue] as $value) {
+                if (is_scalar($value) && isset($this->statamic_field['counts'][$value])) {
+                    $this->statamic_field['counts'][$value]++;
                 }
-            } elseif (isset($this->statamic_field['counts'][$fieldValue])) {
-                // Handle single values - combined condition for better performance
-                $this->statamic_field['counts'][$fieldValue]++;
             }
         }
     }
