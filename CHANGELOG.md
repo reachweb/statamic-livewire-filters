@@ -9,10 +9,13 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 ### Security
 
 - Faceted counts now only use the encrypted copy of the filter state that the collection sends, the same one dynamic range bounds use. Before, a crafted `params-updated` event could put query controls such as `status:is any` into the count query and, combined with a condition like `title:contains`, reveal whether matching draft, future or other-site entries exist. A count update without a valid encrypted query for the filter's collection is now ignored.
+- The `view` property of every filter component is now `#[Locked]`, so a tampered request can't switch a filter to another view. Before, only `LfDualRangeFilter` locked it. Setting `view` on the tag still works.
 
 ### Changed
 
 - The `params-updated` event always carries its second argument, the encrypted query, whenever `enable_filter_values_count` or `enable_dynamic_range_bounds` is on. Custom code that dispatches `params-updated` to refresh counts must now pass this argument; events with only plain params no longer update counts.
+- The filter components now extend a new abstract `LivewireFilter` class, which implements a `FilterContract` interface documenting the events a filter consumes and emits. The `IsLivewireFilter` trait is unchanged for custom filters built on `Livewire\Component`. A subclass of a bundled filter that already defines `payload()`, `emptyValue()`, `applyPreset()` or `dispatchFilterUpdated()` must now match the base class's signatures; those methods are what the base calls to build `filter-updated`, clear the selection and apply preset params. A subclass of `LfTextFilter` or `LfDateFilter` that defines `rules()` is now validated on update when `validate_filter_values` is on, as checkbox and radio filters already were.
+- `LfRangeFilter` now sends its own `modifier` in `filter-updated` instead of `null`, matching the `clear-filter` event it already sent. Range conditions such as `gte` ignore the modifier, so existing filters behave the same.
 
 ### Fixed
 
