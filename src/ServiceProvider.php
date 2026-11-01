@@ -7,6 +7,7 @@ use Reach\StatamicLivewireFilters\Console\Commands\UpdateLivewireFilters;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCount;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfDateRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
@@ -63,6 +64,7 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('livewire-collection', LivewireCollectionComponent::class);
         Livewire::component('lf-checkbox-filter', LfCheckboxFilter::class);
         Livewire::component('lf-date-filter', LfDateFilter::class);
+        Livewire::component('lf-date-range-filter', LfDateRangeFilter::class);
         Livewire::component('lf-dual-range-filter', LfDualRangeFilter::class);
         Livewire::component('lf-radio-filter', LfRadioFilter::class);
         Livewire::component('lf-range-filter', LfRangeFilter::class);

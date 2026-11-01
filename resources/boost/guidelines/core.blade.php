@@ -27,6 +27,7 @@ Available filter types:
 - **RadioFilter**: Single-choice radio buttons.
 - **SelectFilter**: Dropdown selection, with optional search.
 - **DateFilter**: Date filtering using Flatpickr.
+- **DateRangeFilter**: Inclusive from/to date range using Alpine Calendar, with optional presets. No `condition` needed.
 - **RangeFilter**: Single range slider.
 - **DualRangeFilter**: Min/max range selection using noUiSlider.
 - **ToggleFilter**: Boolean toggle switch.
@@ -74,6 +75,17 @@ Available filter types:
     min="2"
     max="9"
     default="2"
+}}
+</code-snippet>
+@endverbatim
+
+@verbatim
+<code-snippet name="Date range filter" lang="antlers">
+{{ livewire:lf-date-range-filter
+    blueprint="cars.car"
+    field="date_of_registration"
+    presets="today|7days|30days|this_month|this_year"
+    format="D MMM YYYY"
 }}
 </code-snippet>
 @endverbatim

@@ -181,8 +181,14 @@ trait HandleParams
     {
         $paramKeys = $this->generateParamKey($field, 'dual_range', $modifier);
 
-        $this->params[$paramKeys['min']] = $payload['min'];
-        $this->params[$paramKeys['max']] = $payload['max'];
+        // An empty end leaves the range open on that side (the date range filter).
+        foreach (['min', 'max'] as $end) {
+            if (($payload[$end] ?? null) === null || $payload[$end] === '') {
+                unset($this->params[$paramKeys[$end]]);
+            } else {
+                $this->params[$paramKeys[$end]] = $payload[$end];
+            }
+        }
 
         $this->dispatchParamsUpdated();
     }
@@ -733,11 +739,24 @@ trait HandleParams
         if ($condition === 'dual_range') {
             $paramKeys = $this->generateParamKey($field, $condition, $modifier);
 
-            return is_array($payload)
-                && isset($payload['min'], $payload['max'])
-                && isset($this->params[$paramKeys['min']], $this->params[$paramKeys['max']])
-                && $this->params[$paramKeys['min']] == $payload['min']
-                && $this->params[$paramKeys['max']] == $payload['max'];
+            if (! is_array($payload)) {
+                return false;
+            }
+
+            foreach (['min', 'max'] as $end) {
+                $expected = $payload[$end] ?? null;
+                $actual = $this->params[$paramKeys[$end]] ?? null;
+
+                $matches = ($expected === null || $expected === '')
+                    ? $actual === null
+                    : $actual !== null && $actual == $expected;
+
+                if (! $matches) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         $paramKey = $this->generateParamKey($field, $condition, $modifier);

@@ -8,6 +8,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Statamic\Facades\Site;
 
 class LfTags extends Component
 {
@@ -29,6 +30,10 @@ class LfTags extends Component
 
     #[Locked]
     public $tags;
+
+    /** Field handle => display format, registered by date range filters. */
+    #[Locked]
+    public array $dateRangeFormats = [];
 
     public function mount($blueprint, $fields)
     {
@@ -163,7 +168,45 @@ class LfTags extends Component
             'condition' => $condition,
         ];
 
-        $this->tags->push($tag);
+        $this->tags->push($this->withDateRangeLabel($tag));
+    }
+
+    /**
+     * Registration can arrive after the initial tags, so relabel any already built.
+     */
+    #[On('date-range-filter-registered')]
+    public function registerDateRangeFilter($field, $format): void
+    {
+        if (! is_string($field) || ! is_string($format) || $this->isNotTaggable($field)) {
+            return;
+        }
+
+        $this->dateRangeFormats[$field] = $format;
+        $this->tags = $this->tags->map(fn ($tag) => $this->withDateRangeLabel($tag));
+    }
+
+    /**
+     * Date range ends are stored as exclusive UTC bounds; show them as "from"/"to" local dates.
+     */
+    protected function withDateRangeLabel(array $tag): array
+    {
+        $format = $this->dateRangeFormats[$tag['field']] ?? null;
+
+        if ($format === null || ! in_array($tag['condition'], ['is_after', 'is_before'], true)) {
+            return $tag;
+        }
+
+        $isStart = $tag['condition'] === 'is_after';
+
+        if (! $date = LfDateRangeFilter::paramToDate($tag['value'], $isStart)) {
+            return $tag;
+        }
+
+        return [
+            ...$tag,
+            'conditionLabel' => trans('statamic-livewire-filters::ui.'.($isStart ? 'date_from' : 'date_to')),
+            'optionLabel' => $date->locale(Site::current()->locale())->isoFormat($format),
+        ];
     }
 
     public function removeOption($field, $value)

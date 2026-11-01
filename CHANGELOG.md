@@ -6,12 +6,18 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- `lf-date-range-filter`: "from" and "to" date pickers built on [Alpine Calendar](https://github.com/reachweb/alpine-calendar), with optional `presets` (`today|7days|30days|this_month|this_year`), a `format` for the inputs and tag chips, and `earliest_date`/`latest_date` read from the blueprint. Each end is inclusive of its whole day in `app.timezone` and either end can be left open. `lf-tags` shows one chip per end ("Date from 1 Jan 2026", "Date to 31 Dec 2026"), and each chip clears only its own end. Alpine Calendar is bundled in `livewire-filters.js` and registers itself on Livewire's Alpine.
+
 ### Security
 
 - Faceted counts now only use the encrypted copy of the filter state that the collection sends, the same one dynamic range bounds use. Before, a crafted `params-updated` event could put query controls such as `status:is any` into the count query and, combined with a condition like `title:contains`, reveal whether matching draft, future or other-site entries exist. A count update without a valid encrypted query for the filter's collection is now ignored.
 
 ### Changed
 
+- A `dual_range` update with an empty `min` or `max` now removes that end's param instead of storing an empty value.
+- The tags view prints `$tag['conditionLabel']` when a tag has one, falling back to the condition translation. Published `tags.blade.php` views keep working, but show date range chips as "is after …" until updated.
 - The `params-updated` event always carries its second argument, the encrypted query, whenever `enable_filter_values_count` or `enable_dynamic_range_bounds` is on. Custom code that dispatches `params-updated` to refresh counts must now pass this argument; events with only plain params no longer update counts.
 
 ### Fixed
