@@ -59,15 +59,33 @@ trait HandleEntriesCount
             return;
         }
 
+        $singleTaxonomyPrefix = $this->singleTaxonomyPrefix();
+
         foreach ($fieldValues as $fieldValue) {
             // Multi-select values (checkboxes, entries, terms) are flattened one level; nested
             // arrays and objects (e.g. Carbon dates) are skipped, as such offsets throw in isset()
             foreach (is_array($fieldValue) ? $fieldValue : [$fieldValue] as $value) {
+                // Single-taxonomy options use bare slugs, but entries may store "taxonomy::slug"
+                if ($singleTaxonomyPrefix && is_string($value) && str_starts_with($value, $singleTaxonomyPrefix)) {
+                    $value = substr($value, strlen($singleTaxonomyPrefix));
+                }
+
                 if (is_scalar($value) && isset($this->statamic_field['counts'][$value])) {
                     $this->statamic_field['counts'][$value]++;
                 }
             }
         }
+    }
+
+    protected function singleTaxonomyPrefix(): ?string
+    {
+        $taxonomies = (array) ($this->statamic_field['taxonomies'] ?? []);
+
+        if (($this->statamic_field['type'] ?? null) !== 'terms' || count($taxonomies) !== 1) {
+            return null;
+        }
+
+        return reset($taxonomies).'::';
     }
 
     protected function getOptionParam($option)

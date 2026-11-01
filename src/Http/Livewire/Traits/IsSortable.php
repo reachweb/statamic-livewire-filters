@@ -99,6 +99,23 @@ trait IsSortable
 
     protected function getTaxonomyTermsSortedBy($handle, $sortBy, $sortDirection): void
     {
+        $taxonomies = (array) ($this->statamic_field['taxonomies'] ?? []);
+
+        // Fields with several taxonomies key their options by "taxonomy::slug"
+        if (count($taxonomies) > 1) {
+            $this->statamic_field['options'] = collect($taxonomies)
+                ->flatMap(fn ($taxonomy) => $this->queryTaxonomyTermsSortedBy($taxonomy, $sortBy, $sortDirection)
+                    ->mapWithKeys(fn ($title, $slug) => ["{$taxonomy}::{$slug}" => $title]))
+                ->all();
+
+            return;
+        }
+
+        $this->statamic_field['options'] = $this->queryTaxonomyTermsSortedBy($handle, $sortBy, $sortDirection)->all();
+    }
+
+    protected function queryTaxonomyTermsSortedBy($handle, $sortBy, $sortDirection)
+    {
         $taxonomy = Taxonomy::findByHandle($handle);
 
         // Check if the field exists
@@ -108,7 +125,7 @@ trait IsSortable
 
         $siteHandle = Site::current()->handle();
 
-        $this->statamic_field['options'] = $taxonomy->queryTerms()
+        return $taxonomy->queryTerms()
             ->orderBy($sortBy, $sortDirection)->get()
             ->unique(fn ($term) => $term->inDefaultLocale()->slug())
             ->mapWithKeys(function ($term) use ($siteHandle) {
@@ -117,6 +134,6 @@ trait IsSortable
                 return [
                     $default->slug() => ($term->in($siteHandle) ?? $default)->title(),
                 ];
-            })->all();
+            });
     }
 }
