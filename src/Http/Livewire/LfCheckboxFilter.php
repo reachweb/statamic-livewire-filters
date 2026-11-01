@@ -6,12 +6,12 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class LfCheckboxFilter extends Component
+class LfCheckboxFilter extends LivewireFilter
 {
-    use Traits\HandleEntriesCount, Traits\IsLivewireFilter, Traits\IsSortable;
+    use Traits\HandleEntriesCount, Traits\IsSortable;
 
+    #[Locked]
     public $view = 'lf-checkbox';
 
     #[Locked]
@@ -35,28 +35,6 @@ class LfCheckboxFilter extends Component
         }
     }
 
-    public function updatedSelected()
-    {
-        if (config('statamic-livewire-filters.validate_filter_values')) {
-            $this->validate();
-        }
-
-        $this->dispatch('filter-updated',
-            field: $this->field,
-            condition: $this->condition,
-            payload: $this->selected,
-            modifier: $this->modifier,
-        )
-            ->to(LivewireCollection::class);
-    }
-
-    #[On('clear-all-filters')]
-    public function clear()
-    {
-        $this->selected = [];
-        $this->clearFilters();
-    }
-
     public function rules()
     {
         return [
@@ -64,27 +42,25 @@ class LfCheckboxFilter extends Component
         ];
     }
 
-    #[On('clear-option')]
-    public function clearOption($tag)
+    protected function emptyValue(): mixed
     {
-        if ($tag['field'] === $this->field) {
-            if (in_array($tag['value'], $this->selected)) {
-                $this->selected = array_values(array_diff($this->selected, [$tag['value']]));
-                $this->updatedSelected();
-            }
-        }
+        return [];
     }
 
-    #[On('preset-params')]
-    public function setPresetValues($params)
+    protected function applyPreset(array $params): void
     {
         if (array_key_exists($this->getParamKey(), $params)) {
             $this->selected = explode('|', $params[$this->getParamKey()]);
         }
     }
 
-    public function render()
+    // Removes only the cleared value; the other checked options stay selected.
+    #[On('clear-option')]
+    public function clearOption($tag)
     {
-        return view('statamic-livewire-filters::livewire.filters.'.$this->view);
+        if ($tag['field'] === $this->field && in_array($tag['value'], $this->selected)) {
+            $this->selected = array_values(array_diff($this->selected, [$tag['value']]));
+            $this->updatedSelected();
+        }
     }
 }

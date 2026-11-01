@@ -4,12 +4,12 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Component;
 
-class LfRangeFilter extends Component
+class LfRangeFilter extends LivewireFilter
 {
-    use Traits\HandleFieldBounds, Traits\IsLivewireFilter;
+    use Traits\HandleFieldBounds;
 
+    #[Locked]
     public $view = 'lf-range';
 
     public $selected;
@@ -41,14 +41,7 @@ class LfRangeFilter extends Component
 
         $boundsSelection = $this->rememberBoundsSelection([$this->getParamKey() => $this->selected]);
 
-        $this->dispatch('filter-updated',
-            field: $this->field,
-            condition: $this->condition,
-            payload: $this->selected,
-            modifier: null,
-            boundsSelection: $boundsSelection,
-        )
-            ->to(LivewireCollection::class);
+        $this->dispatchFilterUpdated(['boundsSelection' => $boundsSelection]);
     }
 
     public function updatedSelected()
@@ -56,18 +49,20 @@ class LfRangeFilter extends Component
         $this->dispatchEvent();
     }
 
-    #[On('preset-params')]
-    public function setPresetValues($params)
+    protected function emptyValue(): mixed
     {
-        if (array_key_exists($this->getParamKey(), $params)) {
-            $this->selected = $params[$this->getParamKey()];
-        }
+        return $this->default ?? $this->min;
     }
 
     #[On('clear-all-filters')]
     public function clear(): void
     {
-        $this->selected = $this->default ?? $this->min;
+        $this->selected = $this->emptyValue();
+
+        // Reset to the last known bounds; on clear-all the relay may not trigger another params-updated.
+        if ($this->dynamicMin !== null) {
+            $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
+        }
 
         $this->clearFilters($this->rememberBoundsSelection([]));
     }
@@ -79,13 +74,13 @@ class LfRangeFilter extends Component
             return;
         }
 
-        $this->selected = $this->default ?? $this->min;
+        $this->selected = $this->emptyValue();
         $this->dispatchEvent();
     }
 
     protected function isAtClearValue(): bool
     {
-        $default = $this->default ?? $this->min;
+        $default = $this->emptyValue();
 
         if ($this->selected == $default) {
             return true;
@@ -108,16 +103,11 @@ class LfRangeFilter extends Component
 
     protected function pinSelectionToBounds($min, $max): void
     {
-        $this->selected = max($min, min($this->default ?? $this->min, $max));
+        $this->selected = max($min, min($this->emptyValue(), $max));
     }
 
     protected function selectionEventPayload(): array
     {
         return ['selected' => $this->selected];
-    }
-
-    public function render()
-    {
-        return view('statamic-livewire-filters::livewire.filters.'.$this->view);
     }
 }

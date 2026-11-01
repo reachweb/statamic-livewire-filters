@@ -6,11 +6,10 @@ use Carbon\Carbon;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
-use Livewire\Component;
 
-class LfDualRangeFilter extends Component
+class LfDualRangeFilter extends LivewireFilter
 {
-    use Traits\HandleFieldBounds, Traits\IsLivewireFilter;
+    use Traits\HandleFieldBounds;
 
     #[Locked]
     public $view = 'lf-dual-range';
@@ -57,35 +56,30 @@ class LfDualRangeFilter extends Component
 
     public function dispatchEvent()
     {
-        $min = $this->selectedMin;
-        $max = $this->selectedMax;
-
         // Displayed endpoints can clear only when both comparisons include all matches.
-        if ($this->selectionSpansDisplayedBounds($min, $max)) {
+        if ($this->selectionSpansDisplayedBounds($this->selectedMin, $this->selectedMax)) {
             $this->clearFilters($this->rememberBoundsSelection([]));
 
             return;
         }
 
+        $payload = $this->payload();
+        $paramKeys = $this->getParamKey();
+        $boundsSelection = $this->rememberBoundsSelection([$paramKeys['min'] => $payload['min'], $paramKeys['max'] => $payload['max']]);
+
+        $this->dispatchFilterUpdated(['boundsSelection' => $boundsSelection]);
+    }
+
+    protected function payload(): mixed
+    {
         if ($this->statamic_field['type'] === 'date') {
-            $min = Carbon::createFromDate($this->selectedMin)->startOfYear()->format('Y-m-d');
-            $max = Carbon::createFromDate($this->selectedMax)->endOfYear()->format('Y-m-d');
+            return [
+                'min' => Carbon::createFromDate($this->selectedMin)->startOfYear()->format('Y-m-d'),
+                'max' => Carbon::createFromDate($this->selectedMax)->endOfYear()->format('Y-m-d'),
+            ];
         }
 
-        $paramKeys = $this->getParamKey();
-        $boundsSelection = $this->rememberBoundsSelection([$paramKeys['min'] => $min, $paramKeys['max'] => $max]);
-
-        $this->dispatch('filter-updated',
-            field: $this->field,
-            condition: $this->condition,
-            payload: [
-                'min' => $min,
-                'max' => $max,
-            ],
-            modifier: $this->modifier,
-            boundsSelection: $boundsSelection,
-        )
-            ->to(LivewireCollection::class);
+        return ['min' => $this->selectedMin, 'max' => $this->selectedMax];
     }
 
     public function updatedSelectedMin($value)
@@ -113,6 +107,11 @@ class LfDualRangeFilter extends Component
     {
         $this->selectedMin = $this->min;
         $this->selectedMax = $this->max;
+
+        // Reset to the last known bounds; on clear-all the relay may not trigger another params-updated.
+        if ($this->dynamicMin !== null) {
+            $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
+        }
 
         $boundsSelection = $this->rememberBoundsSelection([]);
 
@@ -146,8 +145,7 @@ class LfDualRangeFilter extends Component
         );
     }
 
-    #[On('preset-params')]
-    public function setPresetValues($params)
+    protected function applyPreset(array $params): void
     {
         $paramKeys = $this->getParamKey();
         if (isset($params[$paramKeys['min']])) {
@@ -202,10 +200,5 @@ class LfDualRangeFilter extends Component
             'selectedMin' => $this->selectedMin,
             'selectedMax' => $this->selectedMax,
         ];
-    }
-
-    public function render()
-    {
-        return view('statamic-livewire-filters::livewire.filters.'.$this->view);
     }
 }
