@@ -207,8 +207,12 @@ class HandleFiltersQueryString
             // Handle query_scopes
             if (str_contains($actualKey, 'query_scope')) {
                 [$scopeString, $scopeClass, $scopeKey] = explode(':', $actualKey);
-                // Add the query scope param to the array
-                $params['query_scope'] = $scopeClass;
+                // Register the scope, keeping scopes from earlier aliases
+                $params['query_scope'] = collect(explode('|', $params['query_scope'] ?? ''))
+                    ->push($scopeClass)
+                    ->filter()
+                    ->unique()
+                    ->implode('|');
                 // Set the the actual parameter key
                 $actualKey = $scopeClass.':'.$scopeKey;
             }

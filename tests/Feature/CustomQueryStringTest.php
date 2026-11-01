@@ -14,6 +14,7 @@ use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use Statamic\Query\Scopes\Scope;
 
 class CustomQueryStringTest extends TestCase
 {
@@ -766,6 +767,66 @@ class CustomQueryStringTest extends TestCase
         });
     }
 
+    #[Test]
+    public function it_round_trips_two_aliased_query_scopes_between_url_and_params()
+    {
+        CustomQueryStringOptionScope::register();
+        CustomQueryStringTitleScope::register();
+
+        Config::set('statamic-livewire-filters.custom_query_string_aliases', [
+            'opt' => 'query_scope:cqs_option:item_options',
+            'ttl' => 'query_scope:cqs_title:title',
+            'opt_title' => 'query_scope:cqs_option:title',
+        ]);
+
+        // Each filter alone now matches two entries; only "I Love Drums" matches both
+        $this->makeEntry($this->collection, 'd')->set('title', 'I Hate Drums')->set('item_options', 'option2')->save();
+
+        $params = null;
+
+        (new HandleFiltersQueryString)->handle(
+            Request::create('/blog/filters/opt/option2/ttl/Love'),
+            function ($req) use (&$params) {
+                $params = $req->input('params');
+
+                return response('ok');
+            }
+        );
+
+        $this->assertEquals([
+            'query_scope' => 'cqs_option|cqs_title',
+            'cqs_option:item_options' => 'option2',
+            'cqs_title:title' => 'Love',
+        ], $params);
+
+        // Both scopes apply, so only the entry matching both filters remains
+        Livewire::test(LivewireCollection::class, ['params' => array_merge(['from' => 'pages'], $params)])
+            ->assertSet('entriesCount', 1);
+
+        $component = $this->makeUrlHandlerHarness($params, 'blog');
+        $component->updateCustomQueryStringUrl();
+
+        $updateUrl = collect($component->dispatches)->last(fn ($dispatch) => $dispatch['name'] === 'update-url');
+
+        $this->assertEquals('/blog/filters/opt/option2/ttl/Love', parse_url($updateUrl['params']['newUrl'], PHP_URL_PATH));
+
+        // Two aliases on the same scope register it only once
+        (new HandleFiltersQueryString)->handle(
+            Request::create('/blog/filters/opt/option2/opt_title/Love'),
+            function ($req) use (&$params) {
+                $params = $req->input('params');
+
+                return response('ok');
+            }
+        );
+
+        $this->assertEquals([
+            'query_scope' => 'cqs_option',
+            'cqs_option:item_options' => 'option2',
+            'cqs_option:title' => 'Love',
+        ], $params);
+    }
+
     protected function makeCurrentPathHarness(): object
     {
         return new class extends LivewireCollection
@@ -816,5 +877,29 @@ class CustomQueryStringTest extends TestCase
                 return $this;
             }
         };
+    }
+}
+
+class CustomQueryStringOptionScope extends Scope
+{
+    protected static $handle = 'cqs_option';
+
+    public function apply($query, $values)
+    {
+        if (isset($values['cqs_option:item_options'])) {
+            $query->where('item_options', $values['cqs_option:item_options']);
+        }
+    }
+}
+
+class CustomQueryStringTitleScope extends Scope
+{
+    protected static $handle = 'cqs_title';
+
+    public function apply($query, $values)
+    {
+        if (isset($values['cqs_title:title'])) {
+            $query->where('title', 'like', '%'.$values['cqs_title:title'].'%');
+        }
     }
 }

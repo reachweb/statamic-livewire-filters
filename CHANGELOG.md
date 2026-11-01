@@ -17,6 +17,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 ### Fixed
 
 - A filter with `condition="taxonomy"` on a field whose handle doesn't match a taxonomy handle now throws `TaxonomyFieldHandleMismatchException` at mount, naming the taxonomy to rename the field to. Statamic only filters terms fields whose handle matches the taxonomy handle, so such a filter previously crashed the collection with `Call to a member function collections() on null`.
+- Pretty URLs in custom query-string mode with several `query_scope` aliases now apply every scope. Before, only the last aliased scope was applied, while the other filters still showed as selected. ([#93](https://github.com/reachweb/statamic-livewire-filters/pull/93))
 - Faceted counts no longer crash with `TypeError: Cannot access offset of type ...` when a counted field holds nested arrays or objects, such as Carbon dates on the Stache driver. Those values are now skipped; plain values inside a list are still counted.
 
 ## [4.6.0] - 2026-10-21
