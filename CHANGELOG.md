@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- A filter with `condition="taxonomy"` on a field whose handle doesn't match a taxonomy handle now throws `TaxonomyFieldHandleMismatchException` at mount, naming the taxonomy to rename the field to. Statamic only filters terms fields whose handle matches the taxonomy handle, so such a filter previously crashed the collection with `Call to a member function collections() on null`.
+
 ## [4.6.0] - 2026-10-21
 
 ### Security

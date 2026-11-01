@@ -195,6 +195,35 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_throws_when_a_taxonomy_filter_field_handle_differs_from_its_taxonomy()
+    {
+        Facades\Taxonomy::make('car_brand')->save();
+        Facades\Term::make()->taxonomy('car_brand')->inDefaultLocale()->slug('audi')->data(['title' => 'Audi'])->save();
+        Facades\Collection::make('cars')->taxonomies(['car_brand'])->save();
+        Facades\Blueprint::make()->setContents([
+            'sections' => [
+                'main' => [
+                    'fields' => [
+                        ['handle' => 'brands', 'field' => ['type' => 'terms', 'taxonomies' => ['car_brand']]],
+                    ],
+                ],
+            ],
+        ])->setHandle('cars')->setNamespace('collections.cars')->save();
+
+        $this->expectExceptionMessage('Field [brands] uses the taxonomy condition but its handle does not match a taxonomy handle. Rename the field to [car_brand].');
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'brands', 'blueprint' => 'cars.cars', 'condition' => 'taxonomy']);
+    }
+
+    #[Test]
+    public function it_throws_when_a_taxonomy_filter_field_is_not_a_taxonomy()
+    {
+        $this->expectExceptionMessage('Field [item_options] uses the taxonomy condition but its handle does not match a taxonomy handle.');
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'taxonomy']);
+    }
+
+    #[Test]
     public function it_changes_the_value_of_selected_property_when_an_option_is_set_and_sends_an_event()
     {
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
