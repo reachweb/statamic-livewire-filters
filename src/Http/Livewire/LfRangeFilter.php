@@ -69,6 +69,11 @@ class LfRangeFilter extends Component
     {
         $this->selected = $this->default ?? $this->min;
 
+        // Reset to the last known bounds; on clear-all the relay may not trigger another params-updated.
+        if ($this->dynamicMin !== null) {
+            $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
+        }
+
         $this->clearFilters($this->rememberBoundsSelection([]));
     }
 

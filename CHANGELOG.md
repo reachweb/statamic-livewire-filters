@@ -18,6 +18,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 - A filter with `condition="taxonomy"` on a field whose handle doesn't match a taxonomy handle now throws `TaxonomyFieldHandleMismatchException` at mount, naming the taxonomy to rename the field to. Statamic only filters terms fields whose handle matches the taxonomy handle, so such a filter previously crashed the collection with `Call to a member function collections() on null`.
 - Faceted counts no longer crash with `TypeError: Cannot access offset of type ...` when a counted field holds nested arrays or objects, such as Carbon dates on the Stache driver. Those values are now skipped; plain values inside a list are still counted.
+- With `enable_dynamic_range_bounds` on, Clear all now resets range and dual-range filters to the full-collection bounds instead of the tag's absolute `min`/`max`. Before, the slider could end with a selection outside its displayed bounds, because no bounds update followed the reset.
 
 ## [4.6.0] - 2026-10-21
 
