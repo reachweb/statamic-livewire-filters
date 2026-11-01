@@ -18,7 +18,7 @@ final class ParamKey
     /**
      * @return string|array{min: string, max: string}
      */
-    public static function build(string $field, string $condition, ?string $modifier = 'any'): string|array
+    public static function build(string $field, ?string $condition, ?string $modifier = 'any'): string|array
     {
         if ($condition === 'taxonomy') {
             return 'taxonomy:'.$field.':'.$modifier;

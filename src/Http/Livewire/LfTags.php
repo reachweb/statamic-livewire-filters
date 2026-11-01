@@ -132,10 +132,10 @@ class LfTags extends Component
         $this->params = $this->params->reject(fn ($value, $key) => Str::startsWith($key, 'taxonomy:'));
     }
 
-    public function handleQueryScopeCondition($values, $scope)
+    public function handleQueryScopeCondition($values, $scope = null)
     {
         $values->each(function ($values, $key) use ($scope) {
-            $field = ParamKey::parse($key, [$scope])->field;
+            $field = ParamKey::parse($key, [$scope ?? Str::before($key, ':')])->field;
             if ($this->isNotTaggable($field)) {
                 return;
             }
