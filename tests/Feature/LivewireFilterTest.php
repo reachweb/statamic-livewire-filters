@@ -66,8 +66,8 @@ class LivewireFilterTest extends TestCase
     #[Test]
     public function the_range_filter_sends_its_own_modifier_when_updated()
     {
-        Livewire::test(LfRangeFilter::class, ['field' => 'max_items', 'blueprint' => 'pages.pages', 'condition' => 'gte', 'min' => 1, 'max' => 4])
+        Livewire::test(LfRangeFilter::class, ['field' => 'max_items', 'blueprint' => 'pages.pages', 'condition' => 'gte', 'modifier' => 'custom', 'min' => 1, 'max' => 4])
             ->set('selected', 3)
-            ->assertDispatched('filter-updated', field: 'max_items', condition: 'gte', payload: 3, modifier: 'any');
+            ->assertDispatched('filter-updated', field: 'max_items', condition: 'gte', payload: 3, modifier: 'custom');
     }
 }
