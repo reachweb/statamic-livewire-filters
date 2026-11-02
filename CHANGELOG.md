@@ -8,7 +8,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ### Added
 
-- `lf-date-range-filter`: "from" and "to" date pickers built on [Alpine Calendar](https://github.com/reachweb/alpine-calendar), with optional `presets` (`today|7days|30days|this_month|this_year`), a `format` for the inputs and tag chips, and `earliest_date`/`latest_date` read from the blueprint. Each end is inclusive of its whole day in `app.timezone` and either end can be left open. `lf-tags` shows one chip per end ("Date from 1 Jan 2026", "Date to 31 Dec 2026"), and each chip clears only its own end. Alpine Calendar is bundled in `livewire-filters.js` and registers itself on Livewire's Alpine.
+- `lf-date-range-filter`: "from" and "to" date pickers built on [Alpine Calendar](https://github.com/reachweb/alpine-calendar), with optional `presets` (`today|7days|30days|this_month|this_year`), a `format` for the inputs and tag chips, and `earliest_date`/`latest_date` read from the blueprint. Each end is inclusive of its whole day in `app.timezone` and either end can be left open. `lf-tags` shows one chip per end ("Date from 1 Jan 2026", "Date to 31 Dec 2026"), and each chip clears only its own end. Alpine Calendar is bundled in `livewire-filters.js` and registers itself on Livewire's Alpine; this adds about 17 KB gzipped to the JS and 13 KB to `livewire-filters.css`, whether or not a page uses the filter.
 
 ### Security
 
@@ -17,7 +17,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 ### Changed
 
 - A `dual_range` update with an empty `min` or `max` now removes that end's param instead of storing an empty value.
-- The tags view prints `$tag['conditionLabel']` when a tag has one, falling back to the condition translation. Published `tags.blade.php` views keep working, but show date range chips as "is after …" until updated.
+- The tags view prints `$tag['conditionLabel']` and `$tag['dateLabel']` when a tag has them, falling back to the condition translation and `optionLabel`. Published `tags.blade.php` views keep working but show date range chips as raw bounds ("is after 2025-12-31T23:59:59Z") until they use the new keys.
 - The `params-updated` event always carries its second argument, the encrypted query, whenever `enable_filter_values_count` or `enable_dynamic_range_bounds` is on. Custom code that dispatches `params-updated` to refresh counts must now pass this argument; events with only plain params no longer update counts.
 
 ### Fixed

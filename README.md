@@ -77,7 +77,7 @@ Optional parameters: `text` (override the label) and `class` (button classes). P
 - The calendars are limited to the field's `earliest_date` and `latest_date` from the blueprint.
 - `lf-tags` shows one chip per end ("Starts from 1 Jan 2026", "Starts to 31 Dec 2026"); removing a chip clears only that end.
 
-The range is stored as an `is_after`/`is_before` pair holding UTC timestamps one second outside the chosen days (e.g. `starts:is_after=2025-12-31T23:59:59Z`), which is also what appears in the query string. `gte`/`lte` can't be used for dates: Statamic compares those as strings, and on the front end it turns dates into strings using the site's `date_format`.
+The range is stored as an `is_after`/`is_before` pair of UTC timestamps: the second before the first day and the midnight after the last day (e.g. `starts:is_after=2025-12-31T23:59:59Z` and `starts:is_before=2027-01-01T00:00:00Z` for 2026 in UTC), which is also what appears in the query string. `gte`/`lte` can't be used for dates: Statamic compares those as strings, and on the front end it turns dates into strings using the site's `date_format`.
 
 ## License 
 

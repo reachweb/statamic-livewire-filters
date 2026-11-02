@@ -17,7 +17,8 @@ class LfDateRangeFilter extends Component
      * gte/lte compare dates as strings, and Statamic's front end stringifies
      * Carbon with the site's date_format, so they can't bound a date range.
      * is_after/is_before parse the value and compare instants, but are
-     * exclusive: each end is sent one second outside its local day, in UTC.
+     * exclusive: the start is sent as the second before its local day and the
+     * end as the midnight after it, in UTC.
      */
     public const MODIFIER = 'is_after|is_before';
 
@@ -169,6 +170,26 @@ class LfDateRangeFilter extends Component
         if (isset($params[$paramKeys['max']])) {
             $this->selectedTo = self::paramToDate($params[$paramKeys['max']], isStart: false)?->toDateString() ?? '';
         }
+
+        // The calendars drop a day outside the blueprint limits, and a reversed range,
+        // which would leave an empty input over an active filter: fix the range and
+        // send it, so the query matches what the inputs show.
+        $from = $this->clampDate($this->selectedFrom);
+        $to = $this->clampDate($this->selectedTo);
+
+        if ($from !== $this->selectedFrom || $to !== $this->selectedTo || ($from !== '' && $to !== '' && $from > $to)) {
+            [$this->selectedFrom, $this->selectedTo] = [$from, $to];
+            $this->dispatchEvent();
+        }
+    }
+
+    protected function clampDate(string $date): string
+    {
+        if ($date === '') {
+            return '';
+        }
+
+        return min(max($date, $this->boundDate('earliest_date') ?? ''), $this->boundDate('latest_date') ?? '9999-12-31');
     }
 
     /**
@@ -231,23 +252,25 @@ class LfDateRangeFilter extends Component
     }
 
     /**
-     * The local day an exclusive bound from dateToParam() stands for.
+     * The first (is_after) or last (is_before) local day an exclusive bound lets
+     * through. Values without a zone, such as a tag's `field:is_after="2026-01-01"`,
+     * are read in the app timezone like Statamic reads them.
      */
     public static function paramToDate($value, bool $isStart): ?Carbon
     {
-        if (! is_string($value)) {
+        if (! is_string($value) || $value === '') {
             return null;
         }
 
         try {
-            $bound = Carbon::parse($value, 'UTC');
+            $bound = Carbon::parse($value, config('app.timezone'))->setTimezone(config('app.timezone'));
         } catch (\Throwable) {
             return null;
         }
 
-        return ($isStart ? $bound->addSecond() : $bound->subSecond())
-            ->setTimezone(config('app.timezone'))
-            ->startOfDay();
+        return $isStart
+            ? $bound->startOfDay()->addDay()->startOfDay()
+            : $bound->subSecond()->startOfDay();
     }
 
     public function render()

@@ -177,7 +177,9 @@ class LfTags extends Component
     #[On('date-range-filter-registered')]
     public function registerDateRangeFilter($field, $format): void
     {
-        if (! is_string($field) || ! is_string($format) || $this->isNotTaggable($field)) {
+        // The format comes from the client and isoFormat() is quadratic in its length:
+        // real formats are a handful of tokens, so refuse anything longer.
+        if (! is_string($field) || ! is_string($format) || $format === '' || mb_strlen($format) > 64 || $this->isNotTaggable($field)) {
             return;
         }
 
@@ -186,7 +188,9 @@ class LfTags extends Component
     }
 
     /**
-     * Date range ends are stored as exclusive UTC bounds; show them as "from"/"to" local dates.
+     * Date range ends are stored as exclusive UTC bounds; label them as "from"/"to"
+     * local dates. New keys only, so published views that print `optionLabel` after
+     * the condition still show the raw (accurate) bound.
      */
     protected function withDateRangeLabel(array $tag): array
     {
@@ -205,7 +209,7 @@ class LfTags extends Component
         return [
             ...$tag,
             'conditionLabel' => trans('statamic-livewire-filters::ui.'.($isStart ? 'date_from' : 'date_to')),
-            'optionLabel' => $date->locale(Site::current()->locale())->isoFormat($format),
+            'dateLabel' => $date->locale(Site::current()->locale())->isoFormat($format),
         ];
     }
 

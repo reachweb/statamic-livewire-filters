@@ -173,8 +173,9 @@ class LfDateRangeFilterTest extends TestCase
         foreach ($expected as $preset => [$from, $to]) {
             $component->call('applyPreset', $preset)
                 ->assertSet('selectedFrom', $from)
-                ->assertSet('selectedTo', $to)
-                ->assertSee('aria-pressed="true"', false);
+                ->assertSet('selectedTo', $to);
+
+            $this->assertSame($preset, $component->instance()->activePreset);
         }
 
         $component->call('applyPreset', 'today')
@@ -212,6 +213,61 @@ class LfDateRangeFilterTest extends TestCase
         $this->assertSame('2018-11-05T02:00:00Z', LfDateRangeFilter::dateToParam('2018-11-04', isStart: false));
         $this->assertSame('2018-11-04', LfDateRangeFilter::paramToDate('2018-11-05T02:00:00Z', isStart: false)->toDateString());
         $this->assertSame('2018-11-04', LfDateRangeFilter::paramToDate(LfDateRangeFilter::dateToParam('2018-11-04', isStart: true), isStart: true)->toDateString());
+    }
+
+    #[Test]
+    public function repeating_an_open_ended_range_is_a_no_op()
+    {
+        $payload = ['min' => null, 'max' => '2026-03-20T22:00:00Z'];
+
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'events']])
+            ->dispatch('filter-updated', field: 'starts', condition: 'dual_range', payload: $payload, modifier: 'is_after|is_before')
+            ->assertDispatched('tags-updated')
+            ->dispatch('filter-updated', field: 'starts', condition: 'dual_range', payload: $payload, modifier: 'is_after|is_before')
+            ->assertNotDispatched('tags-updated')
+            ->assertSet('params', ['starts:is_before' => '2026-03-20T22:00:00Z']);
+    }
+
+    #[Test]
+    public function url_values_outside_the_blueprint_dates_or_reversed_are_fixed_and_resent()
+    {
+        // The blueprint allows 2026-01-01 to 2026-12-31.
+        Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events'])
+            ->dispatch('preset-params', [
+                'starts:is_after' => '2025-05-31T20:59:59Z',
+                'starts:is_before' => '2027-03-01T22:00:00Z',
+            ])
+            ->assertSet('selectedFrom', '2026-01-01')
+            ->assertSet('selectedTo', '2026-12-31')
+            ->assertDispatched('filter-updated', payload: ['min' => '2025-12-31T21:59:59Z', 'max' => '2026-12-31T22:00:00Z']);
+
+        Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events'])
+            ->dispatch('preset-params', [
+                'starts:is_after' => '2026-03-19T21:59:59Z',
+                'starts:is_before' => '2026-03-15T22:00:00Z',
+            ])
+            ->assertSet('selectedFrom', '2026-03-15')
+            ->assertSet('selectedTo', '2026-03-20');
+    }
+
+    #[Test]
+    public function values_without_a_zone_are_read_as_exclusive_bounds_in_the_app_timezone()
+    {
+        // Statamic treats `is_after 2026-03-15` as after local midnight, so the 16th is the first full day.
+        Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events'])
+            ->dispatch('preset-params', ['starts:is_after' => '2026-03-15', 'starts:is_before' => '2026-03-20'])
+            ->assertSet('selectedFrom', '2026-03-16')
+            ->assertSet('selectedTo', '2026-03-19');
+    }
+
+    #[Test]
+    public function tags_ignore_an_oversized_format_from_the_client()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'starts', 'blueprint' => 'events.events'])
+            ->dispatch('tags-updated', ['starts:is_after' => '2026-03-14T21:59:59Z'])
+            ->dispatch('date-range-filter-registered', field: 'starts', format: str_repeat('é', 65))
+            ->assertSet('dateRangeFormats', [])
+            ->assertSee('Starts is after 2026-03-14T21:59:59Z');
     }
 
     #[Test]
