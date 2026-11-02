@@ -72,7 +72,7 @@ Optional parameters: `text` (override the label) and `class` (button classes). P
 ```
 
 - Both days are inclusive, in `config('app.timezone')`, for date-only and time-enabled fields. Either end can be left empty for an open range.
-- `presets` (optional) adds buttons that set both ends: `today`, `7days` and `30days` (ending today), `this_month` and `this_year` (the whole month or year).
+- `presets` (optional) adds buttons that set both ends: `today`, `7days` and `30days` (ending today), `this_month` and `this_year` (the whole month or year). Presets are clamped to `earliest_date`/`latest_date`, and a preset entirely outside them is hidden.
 - `format` (default `DD/MM/YYYY`) uses Alpine Calendar tokens (`D`, `DD`, `M`, `MM`, `MMM`, `MMMM`, `YY`, `YYYY`) for the inputs and the `lf-tags` chips.
 - The calendars are limited to the field's `earliest_date` and `latest_date` from the blueprint.
 - `lf-tags` shows one chip per end ("Starts from 1 Jan 2026", "Starts to 31 Dec 2026"); removing a chip clears only that end.

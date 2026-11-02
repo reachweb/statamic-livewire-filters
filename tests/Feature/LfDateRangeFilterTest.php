@@ -182,6 +182,39 @@ class LfDateRangeFilterTest extends TestCase
     }
 
     #[Test]
+    public function presets_are_clamped_to_the_blueprint_dates_and_hidden_outside_them()
+    {
+        // The blueprint allows 2026-01-01 to 2026-12-31.
+        Carbon::setTestNow(Carbon::parse('2026-01-10 12:00:00', 'Europe/Athens'));
+
+        Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events', 'presets' => '30days'])
+            ->call('applyPreset', '30days')
+            ->assertSet('selectedFrom', '2026-01-01')
+            ->assertSet('selectedTo', '2026-01-10')
+            ->assertSee('aria-pressed="true"', false);
+
+        Carbon::setTestNow(Carbon::parse('2027-02-01 12:00:00', 'Europe/Athens'));
+
+        Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events', 'presets' => 'this_year|30days'])
+            ->assertDontSee('This year')
+            ->assertDontSee('Last 30 days')
+            ->call('applyPreset', 'this_year')
+            ->assertSet('selectedFrom', '')
+            ->assertNotDispatched('filter-updated');
+    }
+
+    #[Test]
+    public function the_to_bound_is_the_next_local_midnight_when_dst_skips_midnight()
+    {
+        // São Paulo skipped 2018-11-04 00:00, so that day started at 01:00 (-02:00).
+        config(['app.timezone' => 'America/Sao_Paulo']);
+
+        $this->assertSame('2018-11-05T02:00:00Z', LfDateRangeFilter::dateToParam('2018-11-04', isStart: false));
+        $this->assertSame('2018-11-04', LfDateRangeFilter::paramToDate('2018-11-05T02:00:00Z', isStart: false)->toDateString());
+        $this->assertSame('2018-11-04', LfDateRangeFilter::paramToDate(LfDateRangeFilter::dateToParam('2018-11-04', isStart: true), isStart: true)->toDateString());
+    }
+
+    #[Test]
     public function presets_not_enabled_on_the_tag_are_ignored()
     {
         Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events', 'presets' => 'today'])

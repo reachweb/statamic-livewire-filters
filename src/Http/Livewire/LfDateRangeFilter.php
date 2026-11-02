@@ -65,9 +65,7 @@ class LfDateRangeFilter extends Component
             return;
         }
 
-        [$from, $to] = $this->presetRange($preset);
-        $this->selectedFrom = $from->toDateString();
-        $this->selectedTo = $to->toDateString();
+        [$this->selectedFrom, $this->selectedTo] = $this->presetRange($preset);
 
         $this->dispatchEvent();
     }
@@ -108,16 +106,17 @@ class LfDateRangeFilter extends Component
     #[Computed]
     public function presetOptions(): array
     {
-        return array_values(array_intersect(explode('|', (string) $this->presets), self::PRESETS));
+        return array_values(array_filter(
+            array_intersect(explode('|', (string) $this->presets), self::PRESETS),
+            fn ($preset) => $this->presetRange($preset) !== null,
+        ));
     }
 
     #[Computed]
     public function activePreset(): ?string
     {
         foreach ($this->presetOptions as $preset) {
-            [$from, $to] = $this->presetRange($preset);
-
-            if ($from->toDateString() === $this->selectedFrom && $to->toDateString() === $this->selectedTo) {
+            if ($this->presetRange($preset) === [$this->selectedFrom, $this->selectedTo]) {
                 return $preset;
             }
         }
@@ -173,19 +172,38 @@ class LfDateRangeFilter extends Component
     }
 
     /**
-     * @return array{0: Carbon, 1: Carbon}
+     * The preset's `Y-m-d` days, clamped to the blueprint's earliest/latest dates
+     * (the calendars can't show a day outside them), or null when none are left.
+     *
+     * @return array{0: string, 1: string}|null
      */
-    protected function presetRange(string $preset): array
+    protected function presetRange(string $preset): ?array
     {
         $today = Carbon::now(config('app.timezone'))->startOfDay();
 
-        return match ($preset) {
-            'today' => [$today, $today->copy()],
+        [$from, $to] = match ($preset) {
+            'today' => [$today, $today],
             '7days' => [$today->copy()->subDays(6), $today],
             '30days' => [$today->copy()->subDays(29), $today],
             'this_month' => [$today->copy()->startOfMonth(), $today->copy()->endOfMonth()],
             'this_year' => [$today->copy()->startOfYear(), $today->copy()->endOfYear()],
         };
+
+        $from = max($from->toDateString(), $this->boundDate('earliest_date') ?? '');
+        $to = min($to->toDateString(), $this->boundDate('latest_date') ?? '9999-12-31');
+
+        return $from <= $to ? [$from, $to] : null;
+    }
+
+    protected function boundDate(string $key): ?string
+    {
+        $value = $this->filterOptions[$key] ?? null;
+
+        try {
+            return $value ? Carbon::parse($value, config('app.timezone'))->toDateString() : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected function normalizeDate($value): string
@@ -207,7 +225,9 @@ class LfDateRangeFilter extends Component
     {
         $day = Carbon::createFromFormat('!Y-m-d', $date, config('app.timezone'));
 
-        return ($isStart ? $day->subSecond() : $day->addDay())->utc()->format(self::PARAM_FORMAT);
+        // startOfDay() again: where DST skips midnight the day starts at 01:00, and
+        // addDay() would carry that hour into the next day.
+        return ($isStart ? $day->subSecond() : $day->addDay()->startOfDay())->utc()->format(self::PARAM_FORMAT);
     }
 
     /**
