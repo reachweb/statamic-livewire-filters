@@ -7,6 +7,7 @@ use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyExceptio
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -480,6 +481,20 @@ class LfDualRangeFilterTest extends TestCase
     #[Test]
     public function it_clears_only_the_tagged_bound_of_an_equal_numeric_range()
     {
+        // Both tags share the value 6, so only the condition identifies the clicked one.
+        $maxTag = [
+            'field' => 'cabins',
+            'value' => '6',
+            'fieldLabel' => 'Cabins',
+            'optionLabel' => '6',
+            'condition' => 'lte',
+        ];
+
+        Livewire::test(LfTags::class, ['fields' => 'cabins', 'blueprint' => 'yachts.yachts'])
+            ->dispatch('tags-updated', ['cabins:gte' => '6', 'cabins:lte' => '6'])
+            ->call('removeOption', 'cabins', '6', 'lte')
+            ->assertDispatched('clear-option', $maxTag);
+
         Livewire::test(LfDualRangeFilter::class, [
             'field' => 'cabins',
             'blueprint' => 'yachts.yachts',
@@ -488,9 +503,26 @@ class LfDualRangeFilterTest extends TestCase
             'max' => 10,
             'minRange' => 0,
         ])
-            ->dispatch('preset-params', ['cabins:gte' => 6, 'cabins:lte' => 6])
-            ->dispatch('clear-option', ['field' => 'cabins', 'value' => 6, 'condition' => 'lte'])
-            ->assertSet('selectedMin', 6)
+            ->dispatch('preset-params', ['cabins:gte' => '6', 'cabins:lte' => '6'])
+            ->dispatch('clear-option', $maxTag)
+            ->assertSet('selectedMin', '6')
+            ->assertSet('selectedMax', 10);
+    }
+
+    #[Test]
+    public function it_clears_by_value_when_a_tag_condition_is_not_a_string()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 2,
+        ])
+            ->set('selectedMin', 5)
+            ->dispatch('clear-option', ['field' => 'cabins', 'value' => 5, 'condition' => ['lte']])
+            ->assertSet('selectedMin', 2)
             ->assertSet('selectedMax', 10);
     }
 

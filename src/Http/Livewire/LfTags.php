@@ -172,9 +172,13 @@ class LfTags extends Component
         $this->tags->push($tag);
     }
 
-    public function removeOption($field, $value)
+    public function removeOption($field, $value, $condition = null)
     {
-        $tag = $this->tags->firstOrFail(fn ($item) => $item['field'] === $field && $item['value'] === $value);
+        // The condition tells apart tags with the same value, such as the two
+        // bounds of a dual-range filter set to the same number.
+        $tag = $this->tags->firstOrFail(fn ($item) => $item['field'] === $field
+            && $item['value'] === $value
+            && ($condition === null || (string) ($item['condition'] ?? '') === $condition));
         $this->dispatch('clear-option', $tag);
     }
 
