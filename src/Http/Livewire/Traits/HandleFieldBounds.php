@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleFieldBounds
@@ -283,11 +284,7 @@ trait HandleFieldBounds
             return [$this->condition, $this->condition];
         }
 
-        if (($this->statamic_field['type'] ?? null) === 'date') {
-            return ['is_after', 'is_before'];
-        }
-
-        return $this->modifier === 'any' ? ['gte', 'lte'] : explode('|', $this->modifier);
+        return array_map(fn ($key) => ParamKey::parse($key)->condition, array_values($this->getParamKey()));
     }
 
     protected function boundIncludesAllValues($value, string $comparison): bool

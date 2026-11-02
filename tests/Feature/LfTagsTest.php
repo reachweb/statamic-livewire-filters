@@ -35,6 +35,13 @@ class LfTagsTest extends TestCase
                             ],
                         ],
                         [
+                            'handle' => 'query_scope',
+                            'field' => [
+                                'type' => 'text',
+                                'display' => 'Scoped field',
+                            ],
+                        ],
+                        [
 
                             'handle' => 'item_options',
                             'field' => [
@@ -151,6 +158,24 @@ class LfTagsTest extends TestCase
         Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages'])
             ->dispatch('tags-updated', ['item_options:is' => 'option1'])
             ->assertSee('Checkbox: Option 1');
+    }
+
+    #[Test]
+    public function a_scope_named_like_a_field_prefix_does_not_swallow_that_fields_tags()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'item_options|title', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['query_scope' => 'item', 'item:title' => 'Scoped', 'item_options:is' => 'option1'])
+            ->assertSee('Checkbox: Option 1')
+            ->assertSee('Title: Scoped');
+    }
+
+    #[Test]
+    public function a_scope_does_not_claim_another_scopes_key_for_a_field_named_query_scope()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'item_options|query_scope', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['query_scope' => 'item|other', 'item:item_options' => 'option1', 'other:query_scope' => 'Scoped'])
+            ->assertSee('Checkbox: Option 1')
+            ->assertSee('Scoped field: Scoped');
     }
 
     #[Test]

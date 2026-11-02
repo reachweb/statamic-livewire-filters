@@ -9,15 +9,20 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 ### Security
 
 - Faceted counts now only use the encrypted copy of the filter state that the collection sends, the same one dynamic range bounds use. Before, a crafted `params-updated` event could put query controls such as `status:is any` into the count query and, combined with a condition like `title:contains`, reveal whether matching draft, future or other-site entries exist. A count update without a valid encrypted query for the filter's collection is now ignored.
+- The `view` property of every filter component is now `#[Locked]`, so a tampered request can't switch a filter to another view. Before, only `LfDualRangeFilter` locked it. Setting `view` on the tag still works.
 
 ### Changed
 
 - The `params-updated` event always carries its second argument, the encrypted query, whenever `enable_filter_values_count` or `enable_dynamic_range_bounds` is on. Custom code that dispatches `params-updated` to refresh counts must now pass this argument; events with only plain params no longer update counts.
+- The filter components now extend a new abstract `LivewireFilter` class, which implements a `FilterContract` interface documenting the events a filter consumes and emits. The `IsLivewireFilter` trait is unchanged for custom filters built on `Livewire\Component`. A subclass of a bundled filter that already defines `payload()`, `emptyValue()`, `applyPreset()` or `dispatchFilterUpdated()` must now match the base class's signatures; those methods are what the base calls to build `filter-updated`, clear the selection and apply preset params. A subclass of `LfTextFilter` or `LfDateFilter` that defines `rules()` is now validated on update when `validate_filter_values` is on, as checkbox and radio filters already were.
+- `LfRangeFilter` now sends its own `modifier` in `filter-updated` instead of `null`, matching the `clear-filter` event it already sent. Range conditions such as `gte` ignore the modifier, so existing filters behave the same.
 
 ### Fixed
 
 - A filter with `condition="taxonomy"` on a field whose handle doesn't match a taxonomy handle now throws `TaxonomyFieldHandleMismatchException` at mount, naming the taxonomy to rename the field to. Statamic only filters terms fields whose handle matches the taxonomy handle, so such a filter previously crashed the collection with `Call to a member function collections() on null`.
 - Pretty URLs in custom query-string mode with several `query_scope` aliases now apply every scope. Before, only the last aliased scope was applied, while the other filters still showed as selected. ([#93](https://github.com/reachweb/statamic-livewire-filters/pull/93))
+- A date dual-range filter now clears its `is_after`/`is_before` params even before it has dispatched a value. Before, it cleared with the `any` modifier, which the collection read as `gte`/`lte` keys, so the date params stayed applied.
+- Tags no longer disappear for a field whose handle starts with the name of an active query scope, such as `item_options` next to an `item` scope.
 - Faceted counts no longer crash with `TypeError: Cannot access offset of type ...` when a counted field holds nested arrays or objects, such as Carbon dates on the Stache driver. Those values are now skipped; plain values inside a list are still counted.
 - With `enable_dynamic_range_bounds` on, Clear all now resets range and dual-range filters to the full-collection bounds instead of the tag's absolute `min`/`max`. Before, the slider could end with a selection outside its displayed bounds, because no bounds update followed the reset.
 - A dual-range filter on a date field no longer crashes with `A non-numeric value encountered` when the slider moves after its values were preset from the URL or tag. Preset `Y-m-d` dates are now converted to years, which is what the slider uses, and an unparseable preset falls back to the slider's `min`/`max`. Removing the tag of a preset date bound now also clears it.
