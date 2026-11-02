@@ -7,6 +7,7 @@ use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyExceptio
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -407,6 +408,139 @@ class LfDualRangeFilterTest extends TestCase
             ->assertDispatched('dual-range-preset-values', min: 5, max: 10)
             ->assertSet('selectedMin', 5)
             ->assertSet('selectedMax', 10);
+    }
+
+    #[Test]
+    public function it_loads_date_preset_params_as_years_and_keeps_updating()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2026,
+            'minRange' => 1,
+        ])
+            ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2025-12-31'])
+            ->assertDispatched('dual-range-preset-values', min: 2022, max: 2025)
+            ->assertSet('selectedMin', 2022)
+            ->assertSet('selectedMax', 2025)
+            ->set('selectedMin', 2019)
+            ->assertDispatched('filter-updated',
+                field: 'year',
+                condition: 'dual_range',
+                payload: ['min' => '2019-01-01', 'max' => '2025-12-31'],
+                modifier: 'is_after|is_before',
+            );
+    }
+
+    #[Test]
+    public function it_clears_a_date_preset_using_the_clear_option_event()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2026,
+            'minRange' => 1,
+        ])
+            ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2025-12-31'])
+            ->dispatch('clear-option', ['field' => 'year', 'value' => '2022-01-01'])
+            ->assertSet('selectedMin', 2018)
+            ->assertSet('selectedMax', 2025)
+            ->assertDispatched('filter-updated',
+                field: 'year',
+                condition: 'dual_range',
+                payload: ['min' => '2018-01-01', 'max' => '2025-12-31'],
+                modifier: 'is_after|is_before',
+            );
+    }
+
+    #[Test]
+    public function it_clears_only_the_tagged_bound_of_a_same_year_date_preset()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2026,
+            'minRange' => 1,
+        ])
+            ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2022-12-31'])
+            ->dispatch('clear-option', ['field' => 'year', 'value' => '2022-01-01', 'condition' => 'is_after'])
+            ->assertSet('selectedMin', 2018)
+            ->assertSet('selectedMax', 2022)
+            ->dispatch('preset-params', ['year:is_after' => '2022-01-01', 'year:is_before' => '2022-12-31'])
+            ->dispatch('clear-option', ['field' => 'year', 'value' => '2022-12-31', 'condition' => 'is_before'])
+            ->assertSet('selectedMin', 2022)
+            ->assertSet('selectedMax', 2026);
+    }
+
+    #[Test]
+    public function it_clears_only_the_tagged_bound_of_an_equal_numeric_range()
+    {
+        // Both tags share the value 6, so only the condition identifies the clicked one.
+        $maxTag = [
+            'field' => 'cabins',
+            'value' => '6',
+            'fieldLabel' => 'Cabins',
+            'optionLabel' => '6',
+            'condition' => 'lte',
+        ];
+
+        Livewire::test(LfTags::class, ['fields' => 'cabins', 'blueprint' => 'yachts.yachts'])
+            ->dispatch('tags-updated', ['cabins:gte' => '6', 'cabins:lte' => '6'])
+            ->call('removeOption', 'cabins', '6', 'lte')
+            ->assertDispatched('clear-option', $maxTag);
+
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 0,
+        ])
+            ->dispatch('preset-params', ['cabins:gte' => '6', 'cabins:lte' => '6'])
+            ->dispatch('clear-option', $maxTag)
+            ->assertSet('selectedMin', '6')
+            ->assertSet('selectedMax', 10);
+    }
+
+    #[Test]
+    public function it_clears_by_value_when_a_tag_condition_is_not_a_string()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 2,
+        ])
+            ->set('selectedMin', 5)
+            ->dispatch('clear-option', ['field' => 'cabins', 'value' => 5, 'condition' => ['lte']])
+            ->assertSet('selectedMin', 2)
+            ->assertSet('selectedMax', 10);
+    }
+
+    #[Test]
+    public function it_loads_bare_year_date_presets_and_ignores_unparseable_ones()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2025,
+            'minRange' => 1,
+        ])
+            ->dispatch('preset-params', ['year:is_after' => '2021', 'year:is_before' => 'not-a-date'])
+            ->assertSet('selectedMin', 2021)
+            ->assertSet('selectedMax', 2025)
+            ->assertDispatched('dual-range-preset-values', min: 2021, max: 2025);
     }
 
     #[Test]

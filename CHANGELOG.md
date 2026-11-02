@@ -25,6 +25,8 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 - Tags no longer disappear for a field whose handle starts with the name of an active query scope, such as `item_options` next to an `item` scope.
 - Faceted counts no longer crash with `TypeError: Cannot access offset of type ...` when a counted field holds nested arrays or objects, such as Carbon dates on the Stache driver. Those values are now skipped; plain values inside a list are still counted.
 - With `enable_dynamic_range_bounds` on, Clear all now resets range and dual-range filters to the full-collection bounds instead of the tag's absolute `min`/`max`. Before, the slider could end with a selection outside its displayed bounds, because no bounds update followed the reset.
+- A dual-range filter on a date field no longer crashes with `A non-numeric value encountered` when the slider moves after its values were preset from the URL or tag. Preset `Y-m-d` dates are now converted to years, which is what the slider uses, and an unparseable preset falls back to the slider's `min`/`max`. Removing the tag of a preset date bound now also clears it.
+- Removing a dual-range tag now resets only the bound that tag names, for numeric and date fields alike. Before, when both bounds held the same value (for example `cabins:gte=6` and `cabins:lte=6`), clicking ✕ on either tag reset both. Custom tag views should pass the tag's condition as the third argument of `removeOption`; without it, the first tag with a matching field and value is removed, as before.
 
 ## [4.6.0] - 2026-10-21
 

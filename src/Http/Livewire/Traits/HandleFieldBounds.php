@@ -232,6 +232,11 @@ trait HandleFieldBounds
     protected function boundValueFromParam($value): int|float|null
     {
         if (($this->statamic_field['type'] ?? null) === 'date') {
+            // Carbon reads a bare "2022" as the time 20:22 today.
+            if (is_scalar($value) && preg_match('/^\d{4}$/', (string) $value)) {
+                return (int) $value;
+            }
+
             try {
                 return Carbon::parse($value)->year;
             } catch (\Throwable $exception) {

@@ -130,11 +130,17 @@ class LfDualRangeFilter extends LivewireFilter
             return;
         }
 
-        if ($tag['value'] == $this->selectedMin) {
+        // Tags from LfTags name their bound in `condition`, which still tells the
+        // bounds apart when both hold the same value, e.g. a same-year date range.
+        $paramKeys = $this->getParamKey();
+        $tagKey = is_string($tag['condition'] ?? null) ? $this->field.':'.$tag['condition'] : null;
+        $value = $this->sliderValueFromParam($tag['value']);
+
+        if ($tagKey ? $tagKey === $paramKeys['min'] : $value == $this->selectedMin) {
             $this->selectedMin = $this->min;
         }
 
-        if ($tag['value'] == $this->selectedMax) {
+        if ($tagKey ? $tagKey === $paramKeys['max'] : $value == $this->selectedMax) {
             $this->selectedMax = $this->max;
         }
 
@@ -149,15 +155,23 @@ class LfDualRangeFilter extends LivewireFilter
     {
         $paramKeys = $this->getParamKey();
         if (isset($params[$paramKeys['min']])) {
-            $this->selectedMin = $params[$paramKeys['min']];
+            $this->selectedMin = $this->sliderValueFromParam($params[$paramKeys['min']]) ?? $this->min;
         }
         if (isset($params[$paramKeys['max']])) {
-            $this->selectedMax = $params[$paramKeys['max']];
+            $this->selectedMax = $this->sliderValueFromParam($params[$paramKeys['max']]) ?? $this->max;
         }
         $this->dispatch('dual-range-preset-values',
             min: $this->selectedMin,
             max: $this->selectedMax,
         );
+    }
+
+    /**
+     * Date params and tags hold Y-m-d values, but the slider works in years.
+     */
+    protected function sliderValueFromParam($value)
+    {
+        return $this->statamic_field['type'] === 'date' ? $this->boundValueFromParam($value) : $value;
     }
 
     protected function selectionSpansDisplayedBounds($min, $max): bool
