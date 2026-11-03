@@ -52,7 +52,7 @@ class LfCheckboxFilter extends LivewireFilter
      */
     protected function dispatchFilterUpdated(array $extra = []): void
     {
-        if ($this->syncedByView) {
+        if ($this->syncedByView && $this->dispatchesFromView()) {
             $this->syncedByView = false;
 
             return;
@@ -61,10 +61,21 @@ class LfCheckboxFilter extends LivewireFilter
         parent::dispatchFilterUpdated($extra);
     }
 
-    // The flag covers one request, even when failed validation never reached the dispatch.
-    public function dehydrate(): void
+    /**
+     * The browser can only send `$selected` as is, so a subclass that changes how the
+     * selection becomes filter-updated keeps the server relay, even with the bundled view.
+     */
+    protected function dispatchesFromView(): bool
     {
-        $this->syncedByView = false;
+        foreach (['payload', 'updatedSelected', 'dispatchFilterUpdated'] as $method) {
+            $declaringClass = (new \ReflectionMethod($this, $method))->getDeclaringClass()->getName();
+
+            if (! in_array($declaringClass, [self::class, LivewireFilter::class], true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected function emptyValue(): mixed

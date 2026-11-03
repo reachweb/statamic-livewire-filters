@@ -101,8 +101,21 @@ class LfCountTest extends TestCase
             ->assertSee('3 entries');
     }
 
+    /** A page rendered before the listener moved to the browser still sends the event to the server. */
+    public function test_a_subclass_defining_its_own_hydrate_still_accepts_the_event_after_mount()
+    {
+        Livewire::test(HydratingCount::class)
+            ->dispatch('entries-updated', 3)
+            ->assertSet('count', 3);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
     }
+}
+
+class HydratingCount extends LfCount
+{
+    public function hydrate(): void {}
 }

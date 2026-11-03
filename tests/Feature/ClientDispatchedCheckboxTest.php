@@ -112,4 +112,42 @@ class ClientDispatchedCheckboxTest extends TestCase
             ->assertSet('selected', ['option2'])
             ->assertDispatched('filter-updated', payload: ['option2']);
     }
+
+    /** The browser can only send `$selected` as is, so a custom payload needs the server relay. */
+    #[Test]
+    public function a_subclass_with_its_own_payload_keeps_the_server_relay()
+    {
+        $component = Livewire::test(PayloadMappingCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertDontSeeHtml('syncedByView = true');
+
+        $this->viewCommit($component, ['option1'])
+            ->assertDispatched('filter-updated', payload: ['mapped-option1']);
+    }
+
+    /** Failed validation never reaches the dispatch that resets the flag, so a stale flag would swallow the next relay. */
+    #[Test]
+    public function the_flag_resets_after_failed_validation_even_when_a_subclass_defines_its_own_dehydrate()
+    {
+        Config::set('statamic-livewire-filters.validate_filter_values', true);
+
+        $component = Livewire::test(DehydratingCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSeeHtml('syncedByView = true');
+
+        $this->viewCommit($component, ['not-an-option'])
+            ->assertHasErrors('selected')
+            ->assertSet('syncedByView', false);
+    }
+}
+
+class PayloadMappingCheckboxFilter extends LfCheckboxFilter
+{
+    protected function payload(): mixed
+    {
+        return array_map(fn ($value) => 'mapped-'.$value, $this->selected);
+    }
+}
+
+class DehydratingCheckboxFilter extends LfCheckboxFilter
+{
+    public function dehydrate(): void {}
 }

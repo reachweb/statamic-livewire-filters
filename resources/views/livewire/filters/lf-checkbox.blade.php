@@ -1,18 +1,22 @@
 <div>
-    {{-- Sends filter-updated from the browser, pooled with the wire:model commit: one request instead of two. --}}
+    {{--
+        Sends filter-updated from the browser, pooled with the wire:model commit: one request instead of two.
+        The input's own wire:model listener has already updated $wire.selected, so it is exactly what
+        LivewireFilter::dispatchFilterUpdated() would send, values that aren't rendered options included.
+    --}}
     <div
         class="grid grid-cols-1 gap-y-4"
+        @if ($this->dispatchesFromView())
         x-on:change="if ($event.target.type === 'checkbox') {
-            const checked = Array.from($el.querySelectorAll('input[type=checkbox]:checked')).map((input) => input.value);
-            const kept = Array.from($wire.selected ?? []).map(String).filter((value) => checked.includes(value));
             $wire.syncedByView = true;
             $wire.$dispatchTo('livewire-collection', 'filter-updated', {
                 field: @js($field),
                 condition: @js($condition),
-                payload: [...kept, ...checked.filter((value) => ! kept.includes(value))],
+                payload: Array.from($wire.selected ?? []),
                 modifier: @js($modifier),
             });
         }"
+        @endif
     >
         @foreach($this->filter_options as $value => $label)
         <div class="flex items-center">

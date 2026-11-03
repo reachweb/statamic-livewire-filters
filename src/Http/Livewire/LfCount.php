@@ -10,13 +10,8 @@ class LfCount extends Component
 
     public $view = 'count';
 
-    /** Request-scoped: set when an existing snapshot is hydrated, never at mount. */
+    /** Request-scoped: set when an existing snapshot is hydrated, never at mount (see ServiceProvider). */
     protected bool $hydrated = false;
-
-    public function hydrate(): void
-    {
-        $this->hydrated = true;
-    }
 
     /**
      * The bundled view updates itself from the browser event, so it advertises no
