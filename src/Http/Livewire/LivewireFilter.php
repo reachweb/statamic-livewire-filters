@@ -46,6 +46,7 @@ abstract class LivewireFilter extends Component implements FilterContract
             $this->validate();
         }
 
+        $this->markFilterStateChanged();
         $this->dispatchFilterUpdated();
     }
 
@@ -66,6 +67,7 @@ abstract class LivewireFilter extends Component implements FilterContract
     public function clear()
     {
         $this->selected = $this->emptyValue();
+        $this->markFilterStateChanged();
         $this->clearFilters();
     }
 
@@ -74,12 +76,17 @@ abstract class LivewireFilter extends Component implements FilterContract
     {
         if ($tag['field'] === $this->field) {
             $this->clear();
+
+            return;
         }
+
+        $this->skipRenderIfFilterStateUnchanged();
     }
 
     #[On('preset-params')]
     public function setPresetValues($params)
     {
+        $this->markFilterStateChanged();
         $this->applyPreset($params);
     }
 

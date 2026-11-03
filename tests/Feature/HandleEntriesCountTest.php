@@ -173,10 +173,11 @@ class HandleEntriesCountTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertNotDispatched('counts-updated')
-            ->assertViewHas('statamic_field', function ($statamic_field) {
-                return ! array_key_exists('counts', $statamic_field);
-            })
-            ->tap(fn ($component) => $this->assertSame(['option1' => null, 'option2' => null], $component->instance()->counts()));
+            ->tap(function ($component) {
+                $this->assertArrayNotHasKey('counts', $component->get('statamic_field'));
+                $this->assertSame(['option1' => null, 'option2' => null], $component->instance()->counts());
+                $this->assertArrayNotHasKey('html', $component->effects, 'a no-op must not re-render');
+            });
     }
 
     #[Test]
@@ -298,9 +299,7 @@ class HandleEntriesCountTest extends TestCase
             Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
                 ->dispatch('params-updated', ...$arguments)
                 ->assertNotDispatched('counts-updated')
-                ->assertViewHas('statamic_field', function ($statamic_field) {
-                    return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
-                });
+                ->assertSet('statamic_field.counts', ['option1' => null, 'option2' => null]);
         }
     }
 
@@ -340,8 +339,6 @@ class HandleEntriesCountTest extends TestCase
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             })
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['collection' => 'secrets', 'in' => 'secrets']))
-            ->assertViewHas('statamic_field', function ($statamic_field) {
-                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
-            });
+            ->assertSet('statamic_field.counts', ['option1' => 1, 'option2' => 1]);
     }
 }

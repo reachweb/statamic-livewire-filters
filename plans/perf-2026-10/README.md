@@ -29,7 +29,7 @@ under "Conflict hotspots" — the plan text, not the diff, is the contract.
 |------|-------|----------|--------|------|------------|--------|
 | 008 | Share resolved key sets and drop the sort in faceted count and bounds queries | P1 | M | MED | — | DONE |
 | 011 | Slim filter snapshots and resolve term/entry options from Stache indexes | P2 | M | LOW-MED | — | DONE |
-| 010 | Skip renders nobody uses: `wire:ignore` roots, disabled-feature listeners, unchanged counts/bounds, foreign clear-option | P1 | M | LOW-MED | — | TODO |
+| 010 | Skip renders nobody uses: `wire:ignore` roots, disabled-feature listeners, unchanged counts/bounds, foreign clear-option | P1 | M | LOW-MED | — | DONE (tier 1) |
 | 009 | Cut Livewire round trips: client-side filter dispatch, zero-request page load, relay-free clear-all, separate bounds event | P1 | L | MED | apply after 010 and 008 | TODO |
 | 012 | Multiselect scope: one Stache index pass for all selected values | P2 | S | LOW | — | TODO |
 | 013 | Skip the `entries-updated` dispatch on page-change requests when nothing changed | P3 | S | LOW | 009 | TODO |

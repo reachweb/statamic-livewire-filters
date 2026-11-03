@@ -35,12 +35,16 @@ trait HandleEntriesCount
     public function updateCounts($params, $boundsQuery = null)
     {
         if (! config('statamic-livewire-filters.enable_filter_values_count')) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
         $params = RangeBoundsQuery::paramsForCollection($boundsQuery, $this->collection);
 
         if ($params === null) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
@@ -48,7 +52,16 @@ trait HandleEntriesCount
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
+        $countsBefore = $this->statamic_field['counts'] ?? null;
+
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle, $baseParams['from']);
+
+        // The Alpine views update from counts-updated; only views printing counts need the html.
+        if ($this->statamic_field['counts'] === $countsBefore) {
+            $this->skipRenderIfFilterStateUnchanged();
+        } else {
+            $this->markFilterStateChanged();
+        }
 
         $this->dispatch('counts-updated', $this->counts());
     }
