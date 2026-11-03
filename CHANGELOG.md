@@ -6,6 +6,8 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+## [4.6.2] - 2026-11-04
+
 ### Changed
 
 - Faceted counts and dynamic range bounds now find the matching entries once per filter state per request and read each field straight from the Stache index, instead of running one sorted query per filter. On a 5,000-entry collection with 8 filters, the counts request after page load drops from about 1 s to 300 ms, and the requests after filter changes get about 25% faster overall (less when many filters are active). Counts and bounds are the same as before. The Eloquent driver is unchanged.
@@ -213,7 +215,8 @@ If you published `lf-checkbox-advanced.blade.php` or `lf-select-advanced.blade.p
 
 For releases before 4.0.0, see the [GitHub releases](https://github.com/reachweb/statamic-livewire-filters/releases).
 
-[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.1...HEAD
+[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.2...HEAD
+[4.6.2]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.1...v4.6.2
 [4.6.1]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.0...v4.6.1
 [4.6.0]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.5.1...v4.6.0
 [4.5.1]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.5.0...v4.5.1
