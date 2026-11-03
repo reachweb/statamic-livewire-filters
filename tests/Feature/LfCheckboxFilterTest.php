@@ -607,6 +607,21 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_reorders_custom_options_by_count()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $options = ['option3' => 'Option 3', 'option1' => 'Option 1', 'option2' => 'Option 2'];
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'options' => $options, 'sort' => 'count:desc'])
+            ->assertSeeHtmlInOrder(['id="item_options-option1"', 'id="item_options-option2"', 'id="item_options-option3"'])
+            // option1: 0, option2: 1, option3: 0
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:is' => 'I Hate Flutes']))
+            ->assertSeeHtmlInOrder(['id="item_options-option2"', 'id="item_options-option1"', 'id="item_options-option3"'])
+            ->assertDispatched('counts-updated', fn ($name, $params) => $params['order'] === ['option2', 'option1', 'option3']);
+    }
+
+    #[Test]
     public function it_sorts_filter_values_by_label_when_sorting_by_count_without_counts()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', false);

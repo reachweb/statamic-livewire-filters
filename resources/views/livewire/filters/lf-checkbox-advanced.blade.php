@@ -25,7 +25,7 @@
         },
         getFilteredOptions(query) {
             this.options = this.order.map((value) => [String(value), this.allOptions[value]]).filter(([value, label]) =>
-                label.toLowerCase().includes(query.toLowerCase())
+                String(label ?? '').toLowerCase().includes(query.toLowerCase())
             )
             if (this.options.length === 0) {
                 this.$refs.noResultsMessage?.classList.remove('hidden')
@@ -49,7 +49,7 @@
         },
     }" 
     x-init="getFilteredOptions(''); $watch('selectedOptions', () => updateSelectedLabels());"
-    x-on:counts-updated="counts = Object.values($event.detail)[0]; order = $event.detail.order; getFilteredOptions($refs.searchField?.value ?? '');"
+    x-on:counts-updated="counts = Object.values($event.detail)[0]; if ($event.detail.order) { order = $event.detail.order; getFilteredOptions($refs.searchField?.value ?? '') }"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selectedOptions"
     wire:model.live="selected"

@@ -86,6 +86,11 @@ trait IsSortable
         });
 
         $this->statamic_field['options'] = $options;
+
+        // filterOptions() renders a custom `options` prop instead of the field's options
+        if ($this->hasCustomOptions()) {
+            $this->options = $options;
+        }
     }
 
     protected function sortOptionsByKey($sortDirection): void
