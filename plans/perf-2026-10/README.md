@@ -35,6 +35,7 @@ under "Conflict hotspots" — the plan text, not the diff, is the contract.
 | 013 | Skip the `entries-updated` dispatch on page-change requests when nothing changed | P3 | S | LOW | 009 | TODO |
 | 014 | Append-only load more for the Antlers view via keyed `wire:ignore` page shells (alternative to Plan 006) | P2 | M | MED | decision vs Plan 006 | TODO |
 | 015 | Document Stache index declarations for filtered and sorted fields | P3 | S | LOW | — | TODO |
+| 016 | Facet engine: register facets with the collection and batch their values per filter state (Eloquent) | P2 | M | MED | 008, 010 | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
