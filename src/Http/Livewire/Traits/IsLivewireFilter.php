@@ -45,6 +45,13 @@ trait IsLivewireFilter
         }
     }
 
+    // A client property update can change what the view prints (including the error bag when
+    // validation then fails), so mark it before any `updated*` hook or `validate()` runs.
+    public function updatingIsLivewireFilter($path, $value): void
+    {
+        $this->markFilterStateChanged();
+    }
+
     public function renderedIsLivewireFilter($view, $html): void
     {
         if (! $this->clientRendered && $this->htmlRootHasWireIgnore((string) $html)) {

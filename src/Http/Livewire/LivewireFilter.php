@@ -15,6 +15,12 @@ use Livewire\Component;
  * applyPreset() assume a `$selected` property. A filter without one, like
  * LfDualRangeFilter with `selectedMin`/`selectedMax`, must override clear(),
  * payload() and applyPreset().
+ *
+ * Listeners skip the render when nothing the view prints changed in the request.
+ * An override of clear(), the owning branch of clearOption(), or any other handler
+ * that changes rendered state outside a client property update must call
+ * markFilterStateChanged(), or a no-op event pooled into the same request will
+ * suppress its render.
  */
 abstract class LivewireFilter extends Component implements FilterContract
 {

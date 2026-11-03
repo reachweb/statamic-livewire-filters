@@ -299,7 +299,8 @@ class HandleEntriesCountTest extends TestCase
             Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
                 ->dispatch('params-updated', ...$arguments)
                 ->assertNotDispatched('counts-updated')
-                ->assertSet('statamic_field.counts', ['option1' => null, 'option2' => null]);
+                ->assertSet('statamic_field.counts', ['option1' => null, 'option2' => null])
+                ->tap(fn ($component) => $this->assertArrayNotHasKey('html', $component->effects, 'an ignored event must not re-render'));
         }
     }
 

@@ -285,6 +285,12 @@ class RenderWasteRegressionTest extends TestCase
 
         $component->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars', 'ac:is' => 'yes']))->assertSet('dynamicMax', 3);
         $this->assertRendered($component, 'narrowed bounds');
+
+        $component->dispatch('params-updated', ['from' => 'cars'], RangeBoundsQuery::encode('cars', ['from' => 'cars'], 'col', 1, []))->assertSet('dynamicMax', 3);
+        $this->assertRenderSkipped($component, 'stale revision');
+
+        $component->dispatch('params-updated', ['from' => 'cars'], 'forged-token')->assertSet('dynamicMax', 3);
+        $this->assertRenderSkipped($component, 'invalid encrypted query');
     }
 
     // ----------------------------------------------------------------- D#4: foreign clear-option
@@ -364,6 +370,21 @@ class RenderWasteRegressionTest extends TestCase
         );
 
         $component->assertDispatched('filter-updated')->assertSet('selected', ['red']);
+        $this->assertRendered($component);
+    }
+
+    #[Test]
+    public function a_pooled_request_renders_the_validation_error_of_a_rejected_selection_with_a_foreign_clear_option()
+    {
+        Config::set('statamic-livewire-filters.validate_filter_values', true);
+        $this->useFixtureViews('render-waste-published');
+
+        $component = Livewire::test(...$this->filters()['checkbox'])->update(
+            calls: [$this->dispatchCall('clear-option', [$this->foreignTag()])],
+            updates: ['selected' => ['nope']],
+        );
+
+        $component->assertHasErrors('selected')->assertNotDispatched('filter-updated')->assertSeeHtml('<p class="err">');
         $this->assertRendered($component);
     }
 
