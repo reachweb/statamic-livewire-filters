@@ -2,6 +2,8 @@
 
 namespace Reach\StatamicLivewireFilters\Support;
 
+use Illuminate\Support\Str;
+
 class CustomQueryString
 {
     public static function livewireQueryStringEnabled(): bool
@@ -30,6 +32,50 @@ class CustomQueryString
     public static function enabled(): bool
     {
         return static::prefix() !== false;
+    }
+
+    /**
+     * The filter params the current request carries in its URL, as the collection
+     * reads them: Livewire's `?params[...]` query, or the custom query string
+     * segments that HandleFiltersQueryString merged into the request. Filters read
+     * these at mount so their first render already shows the URL's selection.
+     * Blocked params are dropped as the collection drops them; one a tag re-permits
+     * with `allowed_filters` still reaches its filter through `preset-params`.
+     *
+     * @return array<string, string>
+     */
+    public static function urlParams(): array
+    {
+        if (static::livewireQueryStringEnabled()) {
+            $params = request()->query('params');
+            $params = is_array($params) ? array_filter($params, 'is_string') : [];
+        } else {
+            $params = static::enabled() ? request()->input('params') : null;
+            $params = is_array($params)
+                ? static::sanitize(array_filter($params, fn ($value) => is_string($value) && strlen($value) <= 255))
+                : [];
+        }
+
+        return BlockedQueryParams::strip($params);
+    }
+
+    /**
+     * @param  array<string, string>  $params
+     * @return array<string, string>
+     */
+    public static function sanitize(array $params): array
+    {
+        return collect($params)
+            ->map(function ($value) {
+                $value = htmlspecialchars($value);
+                $value = strip_tags($value);
+                $value = Str::before($value, '?');
+
+                // Additional sanitization
+                return preg_replace('/[<>\'";]/', '', $value);
+            })
+            ->filter()
+            ->all();
     }
 
     /**

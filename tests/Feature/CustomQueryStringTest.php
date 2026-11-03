@@ -160,6 +160,57 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function filters_render_the_url_selection_on_page_load_and_only_tag_presets_are_dispatched()
+    {
+        \MarcoRieser\Livewire\Tags\Livewire::register();
+
+        $this->withStandardFakeViews();
+        $this->app['view']->addNamespace('statamic-livewire-filters', __DIR__.'/../../resources/views');
+
+        // The filter renders before the collection, so it cannot rely on the collection's state.
+        $this->viewShouldReturnRaw('default', '{{ livewire:lf-select-filter blueprint="pages.pages" field="item_options" condition="is" }}'
+            .'{{ livewire-collection:pages title:contains="I Love" }}');
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        $html = $this->get('/filters/item_options/option2')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/value="option2"\s+selected/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value=""\s+selected/', $html);
+        $this->assertStringContainsString('I Love Drums', $html);
+        $this->assertStringNotContainsString('I Love Guitars', $html);
+
+        // The URL's param is already applied; only the tag's own preset still needs the event.
+        $presets = collect($this->dispatchesIn($html))->where('name', 'preset-params')->values();
+        $this->assertCount(1, $presets);
+        $this->assertSame(['title:contains' => 'I Love'], $presets[0]['params'][0]);
+    }
+
+    #[Test]
+    public function the_collection_dispatches_no_preset_params_when_every_filter_param_comes_from_the_url()
+    {
+        $this->withStandardFakeViews();
+
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection:pages limit="5" }}');
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        $html = $this->get('/filters/item_options/option2/title/Drums')->assertOk()->getContent();
+
+        $this->assertStringContainsString('I Love Drums', $html);
+        $this->assertSame([], collect($this->dispatchesIn($html))->where('name', 'preset-params')->all());
+    }
+
+    protected function dispatchesIn(string $html): array
+    {
+        preg_match_all('/wire:effects="([^"]*)"/', $html, $matches);
+
+        return collect($matches[1])
+            ->flatMap(fn ($effects) => json_decode(htmlspecialchars_decode($effects, ENT_QUOTES), true)['dispatches'] ?? [])
+            ->all();
+    }
+
+    #[Test]
     public function it_dispatched_the_update_url_event_with_the_correct_url()
     {
         $params = [

@@ -10,8 +10,10 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
  *  - `clear-option` with a tag `{field, value, condition}` from LfTags: drop
  *    that value when `field` matches; handled by clearOption().
  *  - `preset-params` with the collection's params keyed like getParamKey(),
- *    sent once when they come from the collection tag or the URL: restore the
- *    selection; handled by setPresetValues().
+ *    sent once at mount for params the URL doesn't carry, such as tag presets:
+ *    restore the selection; handled by setPresetValues(). URL params are
+ *    applied at mount instead (IsLivewireFilter calls setPresetValues() with
+ *    CustomQueryString::urlParams()), so the first render shows them.
  *  - `params-updated` with `(params, boundsQuery)`: only filters that show
  *    counts or dynamic bounds listen (HandleEntriesCount, HandleFieldBounds).
  *    They ignore the plain `params`, which a client controls, and read the

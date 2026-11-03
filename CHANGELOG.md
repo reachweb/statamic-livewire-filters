@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Filters and `lf-sort` now read the URL's filter params when they mount, in both the custom query string and the Livewire query string modes, so the first render already shows the URL's selection: checkboxes and radios are `checked`, select options `selected`, and text, date and range inputs carry their `value`. Before, every control rendered empty and waited for a `preset-params` event in a follow-up request, so the page briefly showed unchecked controls, and `{{ nocache }}` regions returned empty controls. The collection now sends `preset-params` only for params the URL doesn't carry, such as presets set on the `livewire-collection` tag, and only for filter keys (`field:condition` style) and `sort`. A custom filter that relied on `preset-params` for a URL param should read `CustomQueryString::urlParams()` at mount; those using the `IsLivewireFilter` trait with a `setPresetValues()` method get this automatically. Published filter views keep working and still skip the follow-up request, but they only show the selection once Livewire starts unless you copy the new `@checked`, `@selected` and `value` attributes into them.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

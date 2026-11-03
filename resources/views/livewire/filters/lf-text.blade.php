@@ -9,6 +9,7 @@
                 placeholder="{{ $placeholder }}"
                 @endif
                 wire:model.live.debounce.300ms="selected"
+                value="{{ $selected }}"
             >
         </div>
     </div>

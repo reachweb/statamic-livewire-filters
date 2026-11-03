@@ -45,9 +45,15 @@ class LfDualRangeFilter extends LivewireFilter
     /**
      * The collection never sees the field type, so the year slider carries its
      * date comparisons in the modifier. Runs after mount and on every hydrate,
-     * so snapshots taken before this rule existed pick it up too.
+     * so snapshots taken before this rule existed pick it up too. applyPreset()
+     * also calls it, since the URL preset is applied at mount, before booted.
      */
     public function booted()
+    {
+        $this->useDateComparisons();
+    }
+
+    protected function useDateComparisons(): void
     {
         if ($this->statamic_field['type'] === 'date') {
             $this->modifier = 'is_after|is_before';
@@ -153,6 +159,7 @@ class LfDualRangeFilter extends LivewireFilter
 
     protected function applyPreset(array $params): void
     {
+        $this->useDateComparisons();
         $paramKeys = $this->getParamKey();
         if (isset($params[$paramKeys['min']])) {
             $this->selectedMin = $this->sliderValueFromParam($params[$paramKeys['min']]) ?? $this->min;

@@ -145,6 +145,54 @@ class LfSelectFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_the_livewire_query_string_selection_selected_on_first_render()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $html = Livewire::withQueryParams(['params' => ['item_options:is' => 'option2']])
+            ->test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', 'option2')
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value="option2"\s+selected/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value=""\s+selected/', $html);
+    }
+
+    #[Test]
+    public function it_renders_the_custom_query_string_selection_selected_on_first_render()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+
+        // Segment values are sanitized exactly as the collection sanitizes them.
+        $html = Livewire::withQueryParams(['params' => ['item_options:is' => 'option3?utm=1', 'title:is' => 'x']])
+            ->test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', 'option3')
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value="option3"\s+selected/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value=""\s+selected/', $html);
+    }
+
+    #[Test]
+    public function it_does_not_render_a_blocked_url_param_the_collection_would_drop()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+        Config::set('statamic-livewire-filters.blocked_query_params', ['item_options']);
+
+        Livewire::withQueryParams(['params' => ['item_options:is' => 'option2']])
+            ->test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', '');
+    }
+
+    #[Test]
+    public function it_ignores_url_params_when_no_url_mode_is_enabled()
+    {
+        Livewire::withQueryParams(['params' => ['item_options:is' => 'option2']])
+            ->test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', '');
+    }
+
+    #[Test]
     public function it_clears_the_value_when_clear_is_called()
     {
         Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'collection' => 'pages', 'blueprint' => 'pages.pages', 'condition' => 'is'])

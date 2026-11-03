@@ -52,17 +52,7 @@ trait HandleParams
                 'params.*' => 'string|max:255',
             ])['params'] ?? [];
 
-            return collect($params)
-                ->map(function ($value) {
-                    $value = htmlspecialchars($value);
-                    $value = strip_tags($value);
-                    $value = Str::before($value, '?');
-
-                    // Additional sanitization
-                    return preg_replace('/[<>\'";]/', '', $value);
-                })
-                ->filter()
-                ->all();
+            return CustomQueryString::sanitize($params);
         }
 
         return false;
@@ -445,13 +435,23 @@ trait HandleParams
         return is_array($payload) ? implode('|', $payload) : $payload;
     }
 
+    /**
+     * Filters and LfSort read the URL's params themselves at mount, so they render
+     * the selection on first paint. Only the filter params they could not read there
+     * (set on the tag, or a URL value the collection replaced) still go out in
+     * `preset-params`, which costs a follow-up request. Tag options without a
+     * `field:condition` key, such as `limit`, have no filter to restore.
+     */
     protected function handlePresetParams()
     {
-        $params = collect($this->params);
-        $collectionKeys = ['from', 'in', 'folder', 'use', 'collection'];
-        $restOfParams = $params->except($collectionKeys);
-        if ($restOfParams->isNotEmpty()) {
-            $this->dispatch('preset-params', $restOfParams->all());
+        $urlParams = CustomQueryString::urlParams();
+
+        $presets = collect($this->params)
+            ->filter(fn ($value, $key) => is_string($key) && ($key === 'sort' || str_contains($key, ':')))
+            ->reject(fn ($value, $key) => array_key_exists($key, $urlParams) && $urlParams[$key] === $value);
+
+        if ($presets->isNotEmpty()) {
+            $this->dispatch('preset-params', $presets->all());
         }
     }
 
