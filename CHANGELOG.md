@@ -6,6 +6,11 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- A `{{ livewire-filters:seo }}` tag for the layout `<head>` that outputs `<link rel="canonical">` to the base listing page and `<meta name="robots" content="noindex,follow">` on filtered pages and pages above 1. Filters listed in the new `seo_indexable_filters` config keep single-value URLs indexable with a self canonical.
+- In custom query-string mode, all filter URLs of a page share one static cache entry, so the tag only outputs page-dependent tags there. Turn on the new `seo_filter_headers` config to send `X-Robots-Tag` and canonical `Link` headers for filter URLs instead. The headers are added after the half measure cache stores the response, so they never leak into the cached page.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

@@ -168,6 +168,29 @@ Add the URL handler component to your layout:
 </code-snippet>
 @endverbatim
 
+Add SEO head tags for filtered listings to the layout `<head>`:
+
+@verbatim
+<code-snippet name="SEO tags" lang="antlers">
+{{ livewire-filters:seo }}
+</code-snippet>
+@endverbatim
+
+@verbatim
+<code-snippet name="SEO config" lang="php">
+// config/statamic-livewire-filters.php
+// Filter keys (custom query string alias, params key or field handle) whose single-value URLs stay indexable
+'seo_indexable_filters' => ['brand'],
+// Custom query string mode: send the filter signals as headers
+'seo_filter_headers' => true,
+</code-snippet>
+@endverbatim
+
+- Filtered pages (any filter, including `sort`) and pages above 1 get `noindex,follow` and a canonical to the base page, without filter segments or the `params[...]` query.
+- A first page whose filters are all single-valued and listed in `seo_indexable_filters` stays indexable with a self canonical.
+- Livewire query string mode and no URL mode: the tag outputs `<link rel="canonical">` and `<meta name="robots">`.
+- Custom query string mode: every filter URL of a page shares the base page's static cache entry, so the tag only outputs the tags for `?page` above 1, which is cached separately. Filter URLs get `X-Robots-Tag: noindex, follow` and `Link: <url>; rel="canonical"` headers instead, when `seo_filter_headers` is on. Headers aren't stored in the cached page, so they stay correct with half and full static caching.
+
 ### Hooks
 
 Modify entries data before display:

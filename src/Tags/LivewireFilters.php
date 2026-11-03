@@ -2,6 +2,8 @@
 
 namespace Reach\StatamicLivewireFilters\Tags;
 
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
+use Reach\StatamicLivewireFilters\Support\Seo;
 use Statamic\Tags\Tags;
 
 class LivewireFilters extends Tags
@@ -36,6 +38,42 @@ class LivewireFilters extends Tags
     })();
 </script>
 HTML;
+    }
+
+    /**
+     * Canonical and robots tags for filtered listing pages.
+     */
+    public function seo(): string
+    {
+        $request = request();
+        $page = Seo::page($request);
+        $noindex = '<meta name="robots" content="noindex,follow">';
+
+        // Every custom query string filter URL shares the base page's static cache
+        // entry, so only page-dependent tags are safe here (the page query keeps its
+        // own entry). Filter signals are sent as headers, see `seo_filter_headers`.
+        if (CustomQueryString::enabled()) {
+            return $page > 1 ? $this->canonical($request->url())."\n".$noindex : '';
+        }
+
+        $urlParams = Seo::urlParams($request);
+        $filters = Seo::filters($urlParams);
+        $indexableFilters = Seo::indexableFilters($filters, $urlParams);
+
+        $tags = [$this->canonical($indexableFilters
+            ? $request->url().'?'.http_build_query(['params' => $urlParams])
+            : $request->url())];
+
+        if (($filters !== [] && ! $indexableFilters) || $page > 1) {
+            $tags[] = $noindex;
+        }
+
+        return implode("\n", $tags);
+    }
+
+    protected function canonical(string $url): string
+    {
+        return '<link rel="canonical" href="'.e($url).'">';
     }
 
     public function loadMore(): string
