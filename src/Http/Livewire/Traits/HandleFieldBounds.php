@@ -47,6 +47,16 @@ trait HandleFieldBounds
 
     abstract protected function selectionEventPayload(): array;
 
+    public function mountHandleFieldBounds(): void
+    {
+        $this->registerFacet();
+    }
+
+    protected function facetFeatureEnabled(): bool
+    {
+        return (bool) config('statamic-livewire-filters.enable_dynamic_range_bounds');
+    }
+
     #[On('params-updated')]
     public function updateBounds($params, $boundsQuery = null): void
     {
@@ -77,6 +87,8 @@ trait HandleFieldBounds
         }
 
         $viewStateBefore = $this->boundsViewState();
+
+        $this->prefetchFacets($query);
 
         $params = $query['params'];
         $fieldHandle = $this->resolveCountFieldHandle();

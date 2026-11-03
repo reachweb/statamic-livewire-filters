@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -225,16 +226,54 @@ class CountEntriesTest extends TestCase
         $this->assertSame(['red', ['a', 'b'], null, 5], $countEntries->pluck('color')->all());
     }
 
+    #[Test]
+    public function it_plucks_several_json_fields_from_one_eloquent_query_like_plucking_each()
+    {
+        $countEntries = Mockery::mock(CountEntries::class, [Parameters::make(['from' => 'pages'], Context::make([]))])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $countEntries->shouldReceive('query')->andReturnUsing(fn () => $this->eloquentEntriesQuery());
+        $countEntries->shouldReceive('isMultisiteCollection')->andReturnFalse();
+
+        $this->eloquentEntriesQuery();
+        $queries = [];
+        DB::connection('lf_eloquent')->listen(function ($query) use (&$queries) {
+            if (str_contains($query->sql, 'from "entries"')) {
+                $queries[] = $query->sql;
+            }
+        });
+
+        $values = $countEntries->pluckMany(['size', 'color']);
+
+        $this->assertCount(1, $queries);
+        $this->assertStringNotContainsString('order by', strtolower($queries[0]));
+        $this->assertSame([3, null, 1.5, 'xl'], $values['size']->all());
+        $this->assertSame(['red', ['a', 'b'], null, 5], $values['color']->all());
+        $this->assertEquals($countEntries->pluck('size'), $values['size']);
+        $this->assertEquals($countEntries->pluck('color'), $values['color']);
+    }
+
+    #[Test]
+    public function it_leaves_batched_plucks_to_the_caller_on_the_stache()
+    {
+        $this->assertNull((new CountEntries(Parameters::make(['from' => 'pages'], Context::make([]))))->pluckMany(['item_options', 'title']));
+    }
+
     /** An in-memory entries table behind Statamic's Eloquent query builder, as the Eloquent driver uses it. */
     protected function eloquentEntriesQuery(): EloquentQueryBuilder
     {
         config(['database.connections.lf_eloquent' => ['driver' => 'sqlite', 'database' => ':memory:']]);
 
-        Schema::connection('lf_eloquent')->create('entries', function ($table) {
-            $table->string('id');
-            $table->string('title');
-            $table->json('data');
-        });
+        $seed = ! Schema::connection('lf_eloquent')->hasTable('entries');
+
+        if ($seed) {
+            Schema::connection('lf_eloquent')->create('entries', function ($table) {
+                $table->string('id');
+                $table->string('title');
+                $table->json('data');
+            });
+        }
 
         $model = new class extends Model
         {
@@ -247,7 +286,9 @@ class CountEntriesTest extends TestCase
             protected $guarded = [];
         };
 
-        foreach ([['a', 'A', ['color' => 'red']], ['b', 'B', ['color' => ['a', 'b']]], ['c', 'C', []], ['d', 'D', ['color' => 5]]] as [$id, $title, $data]) {
+        $rows = [['a', 'A', ['color' => 'red', 'size' => 3]], ['b', 'B', ['color' => ['a', 'b']]], ['c', 'C', ['size' => 1.5]], ['d', 'D', ['color' => 5, 'size' => 'xl']]];
+
+        foreach ($seed ? $rows : [] as [$id, $title, $data]) {
             $model->newQuery()->insert(['id' => $id, 'title' => $title, 'data' => json_encode($data)]);
         }
 

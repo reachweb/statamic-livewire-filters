@@ -11,6 +11,16 @@ trait HandleEntriesCount
 {
     use HandleFieldValuesQuery;
 
+    public function mountHandleEntriesCount(): void
+    {
+        $this->registerFacet();
+    }
+
+    protected function facetFeatureEnabled(): bool
+    {
+        return (bool) config('statamic-livewire-filters.enable_filter_values_count');
+    }
+
     #[Computed]
     public function counts()
     {
@@ -40,14 +50,17 @@ trait HandleEntriesCount
             return;
         }
 
-        $params = RangeBoundsQuery::paramsForCollection($boundsQuery, $this->collection);
+        $query = RangeBoundsQuery::decodeForCollection($boundsQuery, $this->collection);
 
-        if ($params === null) {
+        if ($query === null) {
             $this->skipRenderIfFilterStateUnchanged();
 
             return;
         }
 
+        $this->prefetchFacets($query);
+
+        $params = $query['params'];
         $fieldHandle = $this->resolveCountFieldHandle();
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);

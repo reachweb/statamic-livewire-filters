@@ -7,6 +7,7 @@ use Illuminate\Support\Collection;
 use Statamic\Facades\Site;
 use Statamic\Facades\Stache;
 use Statamic\Query\EloquentQueryBuilder;
+use Statamic\Query\ResolveValue;
 use Statamic\Stache\Query\EntryQueryBuilder as StacheEntryQueryBuilder;
 use Statamic\Tags\Collection\Entries as StatamicEntries;
 use Statamic\Tags\Collection\NoResultsExpected;
@@ -108,26 +109,75 @@ class CountEntries extends StatamicEntries
         return $query;
     }
 
+    /**
+     * Facet engine, Eloquent only: the values of several fields from one query, keyed
+     * by column, equal to what pluck() returns for each. Null for other drivers or
+     * when the multi-column select fails, so the caller plucks field by field.
+     *
+     * @param  array<int, string>  $columns
+     * @return array<string, Collection>|null
+     */
+    public function pluckMany(array $columns): ?array
+    {
+        try {
+            $query = $this->countQuery();
+        } catch (NoResultsExpected $exception) {
+            return array_fill_keys($columns, collect());
+        }
+
+        if (! $query instanceof EloquentQueryBuilder) {
+            return null;
+        }
+
+        // Localized entries inherit values from their origin: hydrate once, resolve per field.
+        if ($this->isMultisiteCollection()) {
+            $items = $query->get();
+            $resolver = new ResolveValue;
+
+            return collect($columns)
+                ->mapWithKeys(fn ($column) => [$column => $items->map(fn ($item) => $resolver($item, $column))->values()])
+                ->all();
+        }
+
+        try {
+            $base = $query->toBase();
+
+            // Counts and bounds are order-independent unless a limit or offset selects the rows.
+            if ($base->limit === null && $base->offset === null) {
+                $base->reorder();
+            }
+
+            $rows = $base->select(collect($columns)->values()->map(fn ($column, $i) => "data->{$column} as facet_{$i}")->all())->get();
+        } catch (QueryException $exception) {
+            return null;
+        }
+
+        return collect($columns)->values()
+            ->mapWithKeys(fn ($column, $i) => [$column => $rows->pluck("facet_{$i}")->map(self::decodeJsonValue(...))])
+            ->all();
+    }
+
     protected function eloquentPluck(EloquentQueryBuilder $query, string $column): Collection
     {
         try {
             // Without an alias the builder reads the row property "data->{$column}", which doesn't exist.
-            $results = $query->toBase()->pluck("data->{$column} as lf_value");
-
-            // JSON-stored arrays come back as strings -- decode them
-            return $results->map(function ($value) {
-                if (is_string($value) && isset($value[0]) && ($value[0] === '[' || $value[0] === '{')) {
-                    $decoded = json_decode($value, true);
-
-                    return is_array($decoded) ? $decoded : $value;
-                }
-
-                return $value;
-            });
+            return $query->toBase()->pluck("data->{$column} as lf_value")->map(self::decodeJsonValue(...));
         } catch (QueryException $e) {
             // Fall back to standard pluck if raw query fails
             return $query->pluck($column);
         }
+    }
+
+    /** JSON-stored arrays come back as strings -- decode them. */
+    protected static function decodeJsonValue($value)
+    {
+        if (is_string($value) && isset($value[0]) && ($value[0] === '[' || $value[0] === '{')) {
+            $decoded = json_decode($value, true);
+
+            return is_array($decoded) ? $decoded : $value;
+        }
+
+        return $value;
     }
 
     protected function isMultisiteCollection(): bool

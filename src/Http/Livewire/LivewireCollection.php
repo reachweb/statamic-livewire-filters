@@ -6,7 +6,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
+use Reach\StatamicLivewireFilters\Support\FacetSpec;
 use Reach\StatamicLivewireFilters\Support\Nocache;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
@@ -44,6 +46,10 @@ class LivewireCollection extends Component
 
     #[Locked]
     public array $clearAllExemptParamKeys = [];
+
+    /** Facet engine: the [field, scope] specs of the faceted filters, sent in the encrypted query. */
+    #[Locked]
+    public array $facets = [];
 
     #[Locked]
     public array $clearAllExemptScopes = [];
@@ -100,9 +106,34 @@ class LivewireCollection extends Component
 
         $this->captureClearAllExemptParams($params, $paramsBeforeHooks);
 
+        if (config('statamic-livewire-filters.enable_facet_engine')) {
+            $this->facets = app(CountQueryPool::class)->collectionMounted($this->collections);
+        }
+
         // Dispatched after the init hooks and trust captures so the initial
         // counts/bounds/tags payloads match what the entries query will use.
         $this->dispatchParamsUpdated();
+    }
+
+    /**
+     * Facet engine: a filter mounted after this component in the same request. The
+     * spec only decides which queries get batched; values reach a filter only for its
+     * own locked field, so a forged spec costs work, bounded by the cap.
+     */
+    #[On('register-facet')]
+    public function registerFacet($field, $scope = null, $collection = null): void
+    {
+        $this->skipRenderIfCollectionStateUnchanged();
+
+        $spec = FacetSpec::from($field, $scope);
+
+        if (! config('statamic-livewire-filters.enable_facet_engine') || $spec === null
+            || ! is_string($collection) || ! CountQueryPool::queries($this->collections, $collection)
+            || in_array($spec, $this->facets, true) || count($this->facets) >= CountQueryPool::MAX_FACETS) {
+            return;
+        }
+
+        $this->facets[] = $spec;
     }
 
     protected function resolveCurrentPath(): string

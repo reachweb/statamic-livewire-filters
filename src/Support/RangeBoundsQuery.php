@@ -8,16 +8,26 @@ use JsonException;
 
 class RangeBoundsQuery
 {
-    public static function encode($collections, array $params, ?string $source = null, int $revision = 0, array $selections = []): string
+    /**
+     * @param  array<int, array{0: string, 1: ?string}>  $facets  the facet specs registered with the collection (facet engine)
+     */
+    public static function encode($collections, array $params, ?string $source = null, int $revision = 0, array $selections = [], array $facets = []): string
     {
-        return Crypt::encryptString(json_encode([
+        $query = [
             'purpose' => 'range-bounds',
             'collections' => $collections,
             'params' => $params,
             'source' => $source,
             'revision' => $revision,
             'selections' => $selections,
-        ], JSON_THROW_ON_ERROR));
+        ];
+
+        // The token rides on every listener's call, so it only grows when facets are registered.
+        if ($facets !== []) {
+            $query['facets'] = $facets;
+        }
+
+        return Crypt::encryptString(json_encode($query, JSON_THROW_ON_ERROR));
     }
 
     public static function paramsForCollection($token, string $collection): ?array
@@ -69,11 +79,24 @@ class RangeBoundsQuery
             }
         }
 
-        return [
+        $facets = collect(is_array($query['facets'] ?? null) ? $query['facets'] : [])
+            ->map(fn ($spec) => is_array($spec) ? FacetSpec::from($spec[0] ?? null, $spec[1] ?? null) : null)
+            ->filter()
+            ->values()
+            ->all();
+
+        $decoded = [
             'params' => array_merge($query['params'], ['from' => $collections]),
             'source' => $source,
             'revision' => $source === null ? 0 : $revision,
             'selections' => $selections,
         ];
+
+        // Present only when the collection registered facets (facet engine).
+        if ($facets !== []) {
+            $decoded['facets'] = $facets;
+        }
+
+        return $decoded;
     }
 }

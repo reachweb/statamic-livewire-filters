@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- `enable_facet_engine` config option, off by default. With it on, faceted filters register their field with the collection, and the counts and bounds of every filter that shares a filter state are read in one query instead of one query per filter. This pays off on the Eloquent driver: with 8 filters on a 5,000-entry collection, the queries per interaction drop from 8–11 to 4–6 and each interaction gets 15–33% faster. The Stache already shares one pass per filter state, so it sees no change. Counts, bounds, views and events are the same either way.
+
 ### Changed
 
 - Faceted counts and dynamic range bounds now find the matching entries once per filter state per request and read each field straight from the Stache index, instead of running one sorted query per filter. On a 5,000-entry collection with 8 filters, the counts request after page load drops from about 1 s to 300 ms, and the requests after filter changes get about 25% faster overall (less when many filters are active). Counts and bounds are the same as before. The Eloquent driver is unchanged.
@@ -13,6 +17,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 - With `enable_filter_values_count` off, filter snapshots no longer carry a placeholder `counts` array, which made up nearly half of a large filter's request. `$this->counts` in views returns the same empty counts as before. A custom view that reads `$statamic_field['counts']` directly must switch to `$this->counts`.
 - Filter option lists are no longer stored in the cache store on every page view, so `lw_computed` cache files stop piling up. On drivers other than the Stache, `LfTags` still caches its resolved options for the life of the component. Term and entry option labels are now read from the Stache indexes instead of loading every term and entry, which makes mounting a filter over a large taxonomy or collection several times faster.
 - Filters no longer send HTML back for renders the browser discards or doesn't need: views with a bare `wire:ignore` on their root (the advanced checkbox and select views), `params-updated` events when counts or bounds are disabled or come back unchanged, and `clear-option` events for another field's tag. On the demo site this cuts the Livewire response bytes of a typical filtering session by 15–25% (gzipped), with every static caching strategy. Data, events, and published views that read `$selected` server-side behave as before. A custom view with a bare `wire:ignore` root gets no HTML after its first render, so it must update itself from `$wire` or browser events.
+
+### Fixed
+
+- Faceted counts and dynamic range bounds no longer fail on the Eloquent driver with `Undefined property: stdClass::$data->...`. The JSON field was plucked without an alias, so every count or bounds update after page load threw.
 
 ## [4.6.1] - 2026-11-02
 

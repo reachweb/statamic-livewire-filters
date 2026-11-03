@@ -2,10 +2,9 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
-use Reach\StatamicLivewireFilters\Support\ParamKey;
-use Statamic\Facades\Collection;
-use Statamic\Support\Arr;
+use Reach\StatamicLivewireFilters\Support\FacetSpec;
 
 /**
  * Faceted-query helpers shared by HandleEntriesCount and HandleFieldBounds;
@@ -22,47 +21,59 @@ trait HandleFieldValuesQuery
 
     protected function removeCurrentFieldFromParams($params, $fieldHandle)
     {
-        $baseParams = [];
+        return FacetSpec::baseParams($params, $fieldHandle, $this->facetScope());
+    }
 
-        // A scope named like this field makes the prefix ambiguous ({scope}:{field});
-        // keeping ambiguous keys can only narrow the result, never ignore a filter
-        $fieldHandleCollidesWithScope = in_array($fieldHandle, $this->activeScopeNames($params), true);
+    protected function facetScope(): ?string
+    {
+        return $this->condition === 'query_scope' ? $this->modifier : null;
+    }
 
-        foreach ($params as $key => $value) {
-            if (! $fieldHandleCollidesWithScope && str_starts_with($key, $fieldHandle.':')) {
-                continue;
-            }
-
-            if (str_starts_with($key, 'taxonomy:'.$fieldHandle)) {
-                continue;
-            }
-
-            if ($this->condition === 'query_scope' && $key === ParamKey::build($fieldHandle, 'query_scope', $this->modifier)) {
-                continue;
-            }
-
-            $baseParams[$key] = $value;
+    /**
+     * Facet engine: tells the collection this filter's facet so its queries batch it
+     * with the other facets sharing a filter state. Called once, at mount.
+     */
+    protected function registerFacet(): void
+    {
+        if (! config('statamic-livewire-filters.enable_facet_engine') || ! $this->facetFeatureEnabled()) {
+            return;
         }
 
-        // Drop the scope registration when no remaining params use it
-        if ($this->condition === 'query_scope' && isset($baseParams['query_scope'])) {
-            $hasRemainingParams = collect($baseParams)->keys()->contains(
-                fn ($key) => str_starts_with($key, $this->modifier.':')
-            );
-
-            if (! $hasRemainingParams) {
-                $scopes = explode('|', $baseParams['query_scope']);
-                $scopes = array_filter($scopes, fn ($scope) => $scope !== $this->modifier);
-
-                if (empty($scopes)) {
-                    unset($baseParams['query_scope']);
-                } else {
-                    $baseParams['query_scope'] = implode('|', $scopes);
-                }
-            }
+        if (! $spec = FacetSpec::from($this->resolveCountFieldHandle(), $this->facetScope())) {
+            return;
         }
 
-        return $baseParams;
+        $pool = app(CountQueryPool::class);
+
+        // A collection mounted later in this request reads the pool; one mounted earlier
+        // has dehydrated already and learns the facet from the event, which travels in
+        // the page load's first fan-out request.
+        $pool->registerFacet($this->collection, $spec);
+
+        if ($pool->collectionMountedFor($this->collection)) {
+            $this->dispatch('register-facet', field: $spec[0], scope: $spec[1], collection: $this->collection)
+                ->to(LivewireCollection::class);
+        }
+    }
+
+    /**
+     * Facet engine: batches the values of every facet the token carries, plus this
+     * one, before this component reads its own.
+     */
+    protected function prefetchFacets(array $query): void
+    {
+        if (! config('statamic-livewire-filters.enable_facet_engine')) {
+            return;
+        }
+
+        $specs = $query['facets'] ?? [];
+
+        // Listeners whose spec the token carries share one memoized prefetch.
+        if (($own = FacetSpec::from($this->resolveCountFieldHandle(), $this->facetScope())) && ! in_array($own, $specs, true)) {
+            $specs[] = $own;
+        }
+
+        app(CountQueryPool::class)->prefetch($query['params'], $specs);
     }
 
     /**
@@ -83,32 +94,6 @@ trait HandleFieldValuesQuery
      */
     protected function collectionsWithField(string|array $collections, string $fieldHandle): array
     {
-        $handles = $collections === '*'
-            ? Collection::handles()->all()
-            : (is_string($collections) ? explode('|', $collections) : $collections);
-
-        $handles = collect($handles)
-            ->unique()
-            ->filter(fn ($handle) => Collection::find($handle)?->entryBlueprints()
-                ->contains(fn ($blueprint) => $blueprint->hasField($fieldHandle)))
-            ->sort()
-            ->values()
-            ->all();
-
-        return $handles ?: [$this->collection];
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    protected function activeScopeNames($params): array
-    {
-        $scopes = Arr::getFirst($params, ['query_scope', 'filter']);
-
-        if (! is_string($scopes)) {
-            return [];
-        }
-
-        return explode('|', $scopes);
+        return FacetSpec::collectionsWithField($collections, $fieldHandle) ?: [$this->collection];
     }
 }
