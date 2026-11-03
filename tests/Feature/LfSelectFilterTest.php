@@ -185,6 +185,28 @@ class LfSelectFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_a_multibyte_url_value_the_collection_accepts()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+
+        // 200 characters but 400 bytes: within the collection's max:255 rule.
+        $value = str_repeat('α', 200);
+
+        Livewire::withQueryParams(['params' => ['item_options:is' => $value]])
+            ->test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', $value);
+    }
+
+    #[Test]
+    public function a_tampered_non_scalar_selection_still_renders()
+    {
+        Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', ['option1'])
+            ->assertHasErrors('selected')
+            ->assertSee('Option 1');
+    }
+
+    #[Test]
     public function it_ignores_url_params_when_no_url_mode_is_enabled()
     {
         Livewire::withQueryParams(['params' => ['item_options:is' => 'option2']])

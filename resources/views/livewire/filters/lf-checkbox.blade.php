@@ -8,7 +8,7 @@
                 id="{{ $field }}-{{ $value }}"
                 wire:model.live="selected"
                 value="{{ $value }}"
-                @checked(in_array((string) $value, array_map('strval', $selected), true))
+                @checked(in_array((string) $value, array_map('strval', array_filter($selected, 'is_scalar')), true))
             >
             <label
                 for="{{ $field }}-{{ $value }}"

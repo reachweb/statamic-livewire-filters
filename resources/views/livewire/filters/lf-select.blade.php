@@ -7,7 +7,7 @@
         <option value="" @selected($selected === '')>{{ $this->placeholder !== '' ? $this->placeholder : __('statamic-livewire-filters::ui.all') }}</option>
         @foreach ($this->filter_options as $value => $label)
             <option 
-                value="{{ $value }}" @selected((string) $value === (string) $selected)>
+                value="{{ $value }}" @selected(is_scalar($selected) && (string) $value === (string) $selected)>
                 {{ $label }}
                 @if ($this->counts[$value] !== null)
                 <span class="text-gray-500 ml-1">({{ $this->counts[$value] }})</span>

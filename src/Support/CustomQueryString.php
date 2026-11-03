@@ -52,7 +52,7 @@ class CustomQueryString
         } else {
             $params = static::enabled() ? request()->input('params') : null;
             $params = is_array($params)
-                ? static::sanitize(array_filter($params, fn ($value) => is_string($value) && strlen($value) <= 255))
+                ? static::sanitize(array_filter($params, fn ($value) => is_string($value) && mb_strlen($value) <= 255))
                 : [];
         }
 
