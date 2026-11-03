@@ -318,7 +318,7 @@ class ClearAllRelayTest extends TestCase
 
     /**
      * Two collections on a page: the event only lists the sender's kept keys, so a collection
-     * that kept another key re-sends it bare and the managing filter relays to clear it.
+     * that kept another key re-sends the list with it added, and only the managing filter relays.
      */
     #[Test]
     public function clear_all_still_clears_a_kept_param_of_another_collection()
@@ -327,6 +327,8 @@ class ClearAllRelayTest extends TestCase
         $other = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red']]);
         $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
             ->set('selected', ['red']);
+        $unrelated = Livewire::test(LfRangeFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'condition' => 'gte', 'min' => 4, 'max' => 6])
+            ->set('selected', 5);
 
         $sender->call('clearAll');
         $kept = $this->clearAllEventParams($sender);
@@ -335,13 +337,32 @@ class ClearAllRelayTest extends TestCase
 
         $other->dispatch('clear-all-filters', ...$kept)
             ->assertSet('params', ['taxonomy:colors:any' => 'red'])
-            ->assertDispatched('clear-all-filters', fn ($event, $params) => $params === []);
+            ->assertDispatched('clear-all-filters', fn ($event, $params) => $params === [['taxonomy:colors:any']]);
+        $resent = $this->clearAllEventParams($other);
 
-        // The re-sent bare event: the filter relays, and nobody re-sends again.
-        $filter->dispatch('clear-all-filters')->assertDispatched('clear-filter', field: 'colors');
-        $other->dispatch('clear-all-filters')->assertNotDispatched('clear-all-filters');
+        // Only the filter managing the added key relays, and nobody re-sends again.
+        $filter->dispatch('clear-all-filters', ...$resent)->assertDispatched('clear-filter', field: 'colors');
+        $unrelated->dispatch('clear-all-filters', ...$resent)->assertNotDispatched('clear-filter');
+        $sender->dispatch('clear-all-filters', ...$resent)->assertNotDispatched('clear-all-filters');
+        $other->dispatch('clear-all-filters', ...$resent)->assertNotDispatched('clear-all-filters');
         $this->forwardToCollection($filter, $other, 'clear-filter');
         $other->assertSet('params', [])->assertSet('entriesCount', 2);
+    }
+
+    /** Each collection keeps a key the other doesn't list; the growing list stops the re-sends. */
+    #[Test]
+    public function collections_that_each_kept_a_different_key_stop_re_sending()
+    {
+        $first = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red']]);
+        $second = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes', 'max_items:gte' => 5]]);
+
+        $first->call('clearAll');
+        $second->dispatch('clear-all-filters', ...$this->clearAllEventParams($first));
+        $resent = $this->clearAllEventParams($second);
+
+        $this->assertEqualsCanonicalizing([['taxonomy:colors:any', 'max_items:gte']], $resent);
+        $first->dispatch('clear-all-filters', ...$resent)->assertNotDispatched('clear-all-filters');
+        $second->dispatch('clear-all-filters', ...$resent)->assertNotDispatched('clear-all-filters');
     }
 }
 
