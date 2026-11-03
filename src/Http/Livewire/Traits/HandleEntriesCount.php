@@ -59,6 +59,12 @@ trait HandleEntriesCount
             return;
         }
 
+        if ($buckets = $this->rangeBuckets()) {
+            $this->countFieldValuesIntoBuckets($fieldValues, $buckets);
+
+            return;
+        }
+
         $singleTaxonomyPrefix = $this->singleTaxonomyPrefix();
 
         foreach ($fieldValues as $fieldValue) {
@@ -72,6 +78,47 @@ trait HandleEntriesCount
 
                 if (is_scalar($value) && isset($this->statamic_field['counts'][$value])) {
                     $this->statamic_field['counts'][$value]++;
+                }
+            }
+        }
+    }
+
+    /**
+     * Range list filters override this with their buckets, keyed by option.
+     *
+     * @return array<string, array{min: ?string, max: ?string}>
+     */
+    protected function rangeBuckets(): array
+    {
+        return [];
+    }
+
+    /**
+     * Buckets may overlap (`0-100|100-200` with gte/lte both hold 100), so a value
+     * counts toward every bucket whose comparisons it passes, like the entries query.
+     */
+    protected function countFieldValuesIntoBuckets($fieldValues, array $buckets): void
+    {
+        [$minComparison, $maxComparison] = $this->modifier === null || $this->modifier === 'any'
+            ? ['gte', 'lte']
+            : explode('|', $this->modifier);
+
+        $passes = fn ($value, $comparison, $bound) => match ($comparison) {
+            'gt' => $value > $bound,
+            'gte' => $value >= $bound,
+            'lt' => $value < $bound,
+            'lte' => $value <= $bound,
+        };
+
+        foreach ($fieldValues as $value) {
+            if (! is_numeric($value)) {
+                continue;
+            }
+
+            foreach ($buckets as $key => $bucket) {
+                if (($bucket['min'] === null || $passes((float) $value, $minComparison, (float) $bucket['min']))
+                    && ($bucket['max'] === null || $passes((float) $value, $maxComparison, (float) $bucket['max']))) {
+                    $this->statamic_field['counts'][$key]++;
                 }
             }
         }

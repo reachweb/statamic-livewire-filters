@@ -875,6 +875,16 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function an_open_ended_dual_range_payload_removes_the_missing_bound()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '0', 'max' => '100'], modifier: 'any')
+            ->assertSet('params', ['price:gte' => '0', 'price:lte' => '100'])
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '200', 'max' => null], modifier: 'any')
+            ->assertSet('params', ['price:gte' => '200']);
+    }
+
+    #[Test]
     public function it_treats_a_second_removal_of_the_same_tag_as_a_render_free_no_op()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])

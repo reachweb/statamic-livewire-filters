@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- Range list: `LfRadioFilter` takes a `buckets` parameter, such as `buckets="0-100|100-200|200-"`, and renders each bucket as a radio option ("Under 100", "100 to 200", "Over 200") with its entry count, plus an "All" option. A bucket filters the field with the `dual_range` condition's `gte`/`lte` pair (or the comparisons in `modifier`); an open side leaves that param out. The new view is `lf-range-list.blade.php`.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security
