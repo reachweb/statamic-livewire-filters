@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\Attributes\Test;
@@ -10,6 +13,7 @@ use Reach\StatamicLivewireFilters\Support\CountEntries;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
+use Statamic\Query\Builder;
 use Statamic\Query\EloquentQueryBuilder;
 use Statamic\Tags\Context;
 use Statamic\Tags\Parameters;
@@ -174,6 +178,132 @@ class CountEntriesTest extends TestCase
         $countEntries->shouldNotReceive('eloquentPluck');
 
         $this->assertSame(['inherited-option'], $countEntries->pluck('item_options')->all());
+    }
+
+    #[Test]
+    public function it_drops_the_ordering_unless_limit_or_offset_select_the_rows()
+    {
+        $this->assertSame([], $this->orderBysOf(['from' => 'pages']));
+        $this->assertSame([], $this->orderBysOf(['from' => 'pages', 'sort' => 'title:desc']));
+        $this->assertNotEmpty($this->orderBysOf(['from' => 'pages', 'limit' => 2]));
+        $this->assertNotEmpty($this->orderBysOf(['from' => 'pages', 'offset' => 1]));
+        $this->assertSame(2, (new \ReflectionProperty(Builder::class, 'limit'))->getValue($this->countQueryFor(['from' => 'pages', 'limit' => 2])));
+    }
+
+    #[Test]
+    public function it_plucks_the_same_values_with_and_without_a_sort_and_keeps_limited_subsets_ordered()
+    {
+        $pluck = fn (array $params, string $column) => (new CountEntries(Parameters::make($params, Context::make([]))))->pluck($column)->all();
+
+        $this->assertEqualsCanonicalizing(['Entry A', 'Entry B', 'Entry C'], $pluck(['from' => 'pages', 'sort' => 'random'], 'title'));
+        $this->assertEqualsCanonicalizing(['Entry A', 'Entry B', 'Entry C'], $pluck(['from' => 'pages', 'sort' => 'title:desc'], 'title'));
+        $this->assertEqualsCanonicalizing(['Entry C', 'Entry B'], $pluck(['from' => 'pages', 'sort' => 'title:desc', 'limit' => 2], 'title'));
+        $this->assertEqualsCanonicalizing(['Entry B', 'Entry C'], $pluck(['from' => 'pages', 'sort' => 'title:asc', 'limit' => 2, 'offset' => 1], 'title'));
+    }
+
+    protected function orderBysOf(array $params): array
+    {
+        return (new \ReflectionProperty(Builder::class, 'orderBys'))->getValue($this->countQueryFor($params));
+    }
+
+    protected function countQueryFor(array $params)
+    {
+        $entries = new CountEntries(Parameters::make($params, Context::make([])));
+
+        return (fn () => $this->countQuery())->call($entries);
+    }
+
+    #[Test]
+    public function it_plucks_json_field_values_from_a_real_eloquent_query()
+    {
+        $countEntries = Mockery::mock(CountEntries::class, [Parameters::make(['from' => 'pages'], Context::make([]))])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $countEntries->shouldReceive('query')->andReturn($this->eloquentEntriesQuery());
+        $countEntries->shouldReceive('isMultisiteCollection')->andReturnFalse();
+
+        $this->assertSame(['red', ['a', 'b'], null, 5], $countEntries->pluck('color')->all());
+    }
+
+    #[Test]
+    public function it_plucks_several_json_fields_from_one_eloquent_query_like_plucking_each()
+    {
+        $countEntries = Mockery::mock(CountEntries::class, [Parameters::make(['from' => 'pages'], Context::make([]))])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $countEntries->shouldReceive('query')->andReturnUsing(fn () => $this->eloquentEntriesQuery());
+        $countEntries->shouldReceive('isMultisiteCollection')->andReturnFalse();
+
+        $this->eloquentEntriesQuery();
+        $queries = [];
+        DB::connection('lf_eloquent')->listen(function ($query) use (&$queries) {
+            if (str_contains($query->sql, 'from "entries"')) {
+                $queries[] = $query->sql;
+            }
+        });
+
+        $values = $countEntries->pluckMany(['size', 'color']);
+
+        $this->assertCount(1, $queries);
+        $this->assertStringNotContainsString('order by', strtolower($queries[0]));
+        $this->assertSame([3, null, 1.5, 'xl'], $values['size']->all());
+        $this->assertSame(['red', ['a', 'b'], null, 5], $values['color']->all());
+        $this->assertEquals($countEntries->pluck('size'), $values['size']);
+        $this->assertEquals($countEntries->pluck('color'), $values['color']);
+    }
+
+    #[Test]
+    public function it_leaves_batched_plucks_to_the_caller_on_the_stache()
+    {
+        $this->assertNull((new CountEntries(Parameters::make(['from' => 'pages'], Context::make([]))))->pluckMany(['item_options', 'title']));
+    }
+
+    /** An in-memory entries table behind Statamic's Eloquent query builder, as the Eloquent driver uses it. */
+    protected function eloquentEntriesQuery(): EloquentQueryBuilder
+    {
+        config(['database.connections.lf_eloquent' => ['driver' => 'sqlite', 'database' => ':memory:']]);
+
+        $seed = ! Schema::connection('lf_eloquent')->hasTable('entries');
+
+        if ($seed) {
+            Schema::connection('lf_eloquent')->create('entries', function ($table) {
+                $table->string('id');
+                $table->string('title');
+                $table->json('data');
+            });
+        }
+
+        $model = new class extends Model
+        {
+            protected $connection = 'lf_eloquent';
+
+            protected $table = 'entries';
+
+            public $timestamps = false;
+
+            protected $guarded = [];
+        };
+
+        $rows = [['a', 'A', ['color' => 'red', 'size' => 3]], ['b', 'B', ['color' => ['a', 'b']]], ['c', 'C', ['size' => 1.5]], ['d', 'D', ['color' => 5, 'size' => 'xl']]];
+
+        foreach ($seed ? $rows : [] as [$id, $title, $data]) {
+            $model->newQuery()->insert(['id' => $id, 'title' => $title, 'data' => json_encode($data)]);
+        }
+
+        return new class($model->newQuery()->orderBy('title')) extends EloquentQueryBuilder
+        {
+            protected function transform($items, $columns = ['*'])
+            {
+                return $items;
+            }
+
+            protected function column($column)
+            {
+                return $column;
+            }
+        };
     }
 
     protected function makeEntry($collection, $slug)

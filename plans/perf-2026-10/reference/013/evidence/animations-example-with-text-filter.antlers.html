@@ -1,0 +1,67 @@
+{{ partial:examples/layout }}
+
+<div class="bg-white p-4 lg:p-6 shadow my-8 xl:my-12 not-prose" id="livewire-collection">
+    {{ nocache }}
+    <div class="grid grid-cols-12 gap-3 lg:gap-5 2xl:gap-12 mb-4 xl:mb-8">
+        <div class="col-span-12 lg:col-span-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 items-center gap-3 lg:gap-5">
+                <div>
+                    {{ livewire:lf-text-filter blueprint="cars.car" field="title" condition="contains" placeholder="Search cars..." }}
+                </div>
+                <div>
+                    {{ livewire:lf-checkbox-filter
+                        blueprint="cars.car"
+                        field="car_brand"
+                        condition="taxonomy"
+                        view="lf-checkbox-advanced"
+                        searchable="true"
+                        placeholder="Car brand"
+                    }}
+                </div>
+                <div>
+                    {{ livewire:lf-checkbox-filter
+                        blueprint="cars.car"
+                        field="special_categories"
+                        condition="query_scope"
+                        modifier="multiselect"
+                        view="lf-checkbox-advanced"
+                        searchable="true"
+                        placeholder="Special categories"
+                    }}
+                </div>
+                <div>
+                    {{ livewire:lf-select-filter
+                        blueprint="cars.car"
+                        field="transmission"
+                        condition="is"
+                        view="lf-select-advanced"
+                        placeholder="Transmission"
+                    }}
+                </div>
+                <div>
+                    {{ livewire:lf-select-filter
+                        blueprint="cars.car"
+                        field="fuel_type"
+                        condition="is"
+                        view="lf-select-advanced"
+                        placeholder="Fuel type"
+                    }}
+                </div>
+            </div>
+        </div>
+        <div class="col-span-12 lg:col-span-2">
+            {{ livewire:lf-sort
+                blueprint="cars.car"
+                fields="seats|doors"
+            }}
+        </div>
+    </div>
+    <div class="@container">
+        <div>
+            {{ livewire-collection:cars paginate="12" scrollTo="#livewire-collection" view="animations" }}
+        </div>
+    </div>
+    {{ /nocache }}
+</div>
+
+{{ /partial:examples/layout }}

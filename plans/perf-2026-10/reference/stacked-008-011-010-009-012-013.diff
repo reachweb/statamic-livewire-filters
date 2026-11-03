@@ -1,0 +1,3954 @@
+--- a/src/Http/Livewire/LfCheckboxFilter.php
++++ b/src/Http/Livewire/LfCheckboxFilter.php
+@@ -23,7 +23,10 @@
+ 
+     public string $placeholder = '';
+ 
+-    #[Computed(persist: true)]
++    /** Set by the bundled view in the same commit that it dispatches filter-updated from the browser. */
++    public bool $syncedByView = false;
++
++    #[Computed]
+     public function filterOptions(): array
+     {
+         if ($this->options !== null && is_array($this->options)) {
+@@ -35,12 +38,30 @@
+         }
+     }
+ 
++    /**
++     * The bundled view dispatches filter-updated to the collection from the browser in
++     * the same request (one POST instead of two); it flags that commit so the relay is
++     * skipped here. A view without the flag (published before this) still relays.
++     */
+     public function updatedSelected()
+     {
+         if (config('statamic-livewire-filters.validate_filter_values')) {
+             $this->validate();
+         }
+ 
++        $this->markFilterStateChanged();
++
++        if ($this->syncedByView) {
++            $this->syncedByView = false;
++
++            return;
++        }
++
++        $this->dispatchFilterUpdated();
++    }
++
++    protected function dispatchFilterUpdated(): void
++    {
+         $this->dispatch('filter-updated',
+             field: $this->field,
+             condition: $this->condition,
+@@ -51,10 +72,14 @@
+     }
+ 
+     #[On('clear-all-filters')]
+-    public function clear()
++    public function clear(?array $keptParamKeys = null)
+     {
+         $this->selected = [];
+-        $this->clearFilters();
++        $this->markFilterStateChanged();
++
++        if ($this->clearAllNeedsRelay($keptParamKeys)) {
++            $this->clearFilters();
++        }
+     }
+ 
+     public function rules()
+@@ -67,12 +92,15 @@
+     #[On('clear-option')]
+     public function clearOption($tag)
+     {
+-        if ($tag['field'] === $this->field) {
+-            if (in_array($tag['value'], $this->selected)) {
+-                $this->selected = array_values(array_diff($this->selected, [$tag['value']]));
+-                $this->updatedSelected();
+-            }
++        if ($tag['field'] === $this->field && in_array($tag['value'], $this->selected)) {
++            $this->selected = array_values(array_diff($this->selected, [$tag['value']]));
++            $this->markFilterStateChanged();
++            $this->dispatchFilterUpdated();
++
++            return;
+         }
++
++        $this->skipRenderIfFilterStateUnchanged();
+     }
+ 
+     #[On('preset-params')]
+@@ -80,6 +108,7 @@
+     {
+         if (array_key_exists($this->getParamKey(), $params)) {
+             $this->selected = explode('|', $params[$this->getParamKey()]);
++            $this->markFilterStateChanged();
+         }
+     }
+ 
+--- a/src/Http/Livewire/LfCount.php
++++ b/src/Http/Livewire/LfCount.php
+@@ -2,7 +2,6 @@
+ 
+ namespace Reach\StatamicLivewireFilters\Http\Livewire;
+ 
+-use Livewire\Attributes\On;
+ use Livewire\Component;
+ 
+ class LfCount extends Component
+@@ -11,10 +10,36 @@
+ 
+     public $view = 'count';
+ 
+-    #[On('entries-updated')]
++    /**
++     * The bundled view updates itself from the browser event, so no round trip is
++     * needed; a customized view (custom `view=` or a published count.blade.php that
++     * predates this) keeps the server listener.
++     */
++    protected function getListeners()
++    {
++        return $this->countViewIsCustomized() ? ['entries-updated' => 'updatedCount'] : [];
++    }
++
+     public function updatedCount($count)
+     {
+         $this->count = $count;
++    }
++
++    protected function countViewIsCustomized(): bool
++    {
++        if ($this->view !== 'count') {
++            return true;
++        }
++
++        try {
++            $path = view()->getFinder()->find('statamic-livewire-filters::livewire.ui.count');
++        } catch (\Throwable $exception) {
++            return true;
++        }
++
++        $bundled = realpath(__DIR__.'/../../../resources/views');
++
++        return $bundled === false || ! str_starts_with(realpath($path) ?: $path, $bundled);
+     }
+ 
+     public function render()
+--- a/src/Http/Livewire/LfDateFilter.php
++++ b/src/Http/Livewire/LfDateFilter.php
+@@ -18,6 +18,8 @@
+ 
+     public function updatedSelected()
+     {
++        $this->markFilterStateChanged();
++
+         $this->dispatch('filter-updated',
+             field: $this->field,
+             condition: $this->condition,
+@@ -27,7 +29,7 @@
+             ->to(LivewireCollection::class);
+     }
+ 
+-    #[Computed(persist: true)]
++    #[Computed]
+     public function filterOptions()
+     {
+         $fieldOptions = collect($this->statamic_field);
+@@ -36,10 +38,14 @@
+     }
+ 
+     #[On('clear-all-filters')]
+-    public function clear()
++    public function clear(?array $keptParamKeys = null)
+     {
+         $this->selected = '';
+-        $this->clearFilters();
++        $this->markFilterStateChanged();
++
++        if ($this->clearAllNeedsRelay($keptParamKeys)) {
++            $this->clearFilters();
++        }
+     }
+ 
+     #[On('clear-option')]
+@@ -47,7 +53,11 @@
+     {
+         if ($tag['field'] === $this->field) {
+             $this->clear();
++
++            return;
+         }
++
++        $this->skipRenderIfFilterStateUnchanged();
+     }
+ 
+     #[On('preset-params')]
+@@ -55,6 +65,7 @@
+     {
+         if (array_key_exists($this->getParamKey(), $params)) {
+             $this->selected = $params[$this->getParamKey()];
++            $this->markFilterStateChanged();
+         }
+     }
+ 
+--- a/src/Http/Livewire/LfDualRangeFilter.php
++++ b/src/Http/Livewire/LfDualRangeFilter.php
+@@ -79,6 +79,8 @@
+ 
+     public function updatedSelectedMin($value)
+     {
++        $this->markFilterStateChanged();
++
+         // Ensure min doesn't exceed max - minRange
+         if ($value > $this->selectedMax - $this->minRange) {
+             $this->selectedMin = $this->selectedMax - $this->minRange;
+@@ -89,6 +91,8 @@
+ 
+     public function updatedSelectedMax($value)
+     {
++        $this->markFilterStateChanged();
++
+         // Ensure max doesn't go below min + minRange
+         if ($value < $this->selectedMin + $this->minRange) {
+             $this->selectedMax = $this->selectedMin + $this->minRange;
+@@ -98,28 +102,41 @@
+     }
+ 
+     #[On('clear-all-filters')]
+-    public function clear(): void
++    public function clear(?array $keptParamKeys = null): void
+     {
+         $this->selectedMin = $this->min;
+         $this->selectedMax = $this->max;
++        $this->markFilterStateChanged();
+ 
+-        $boundsSelection = $this->rememberBoundsSelection([]);
++        $relay = $this->clearAllNeedsRelay($keptParamKeys);
+ 
++        $boundsSelection = $relay ? $this->rememberBoundsSelection([]) : null;
++
++        if (! $relay) {
++            $this->pendingBoundsSelection = config('statamic-livewire-filters.enable_dynamic_range_bounds') ? [] : null;
++        }
++
+         $this->dispatch('dual-range-preset-values',
+             min: $this->selectedMin,
+             max: $this->selectedMax,
+         );
+ 
+-        $this->clearFilters($boundsSelection);
++        if ($relay) {
++            $this->clearFilters($boundsSelection);
++        }
+     }
+ 
+     #[On('clear-option')]
+     public function clearOption($tag)
+     {
+         if ($tag['field'] !== $this->field) {
++            $this->skipRenderIfFilterStateUnchanged();
++
+             return;
+         }
+ 
++        $this->markFilterStateChanged();
++
+         if ($tag['value'] == $this->selectedMin) {
+             $this->selectedMin = $this->min;
+         }
+@@ -138,6 +155,8 @@
+     #[On('preset-params')]
+     public function setPresetValues($params)
+     {
++        $this->markFilterStateChanged();
++
+         $paramKeys = $this->getParamKey();
+         if (isset($params[$paramKeys['min']])) {
+             $this->selectedMin = $params[$paramKeys['min']];
+--- a/src/Http/Livewire/LfRadioFilter.php
++++ b/src/Http/Livewire/LfRadioFilter.php
+@@ -19,7 +19,7 @@
+ 
+     public $selected = '';
+ 
+-    #[Computed(persist: true)]
++    #[Computed]
+     public function filterOptions(): array
+     {
+         if ($this->options !== null && is_array($this->options)) {
+@@ -37,6 +37,8 @@
+             $this->validate();
+         }
+ 
++        $this->markFilterStateChanged();
++
+         $this->dispatch('filter-updated',
+             field: $this->field,
+             condition: $this->condition,
+@@ -54,10 +56,14 @@
+     }
+ 
+     #[On('clear-all-filters')]
+-    public function clear()
++    public function clear(?array $keptParamKeys = null)
+     {
+         $this->selected = '';
+-        $this->clearFilters();
++        $this->markFilterStateChanged();
++
++        if ($this->clearAllNeedsRelay($keptParamKeys)) {
++            $this->clearFilters();
++        }
+     }
+ 
+     #[On('clear-option')]
+@@ -65,7 +71,11 @@
+     {
+         if ($tag['field'] === $this->field) {
+             $this->clear();
++
++            return;
+         }
++
++        $this->skipRenderIfFilterStateUnchanged();
+     }
+ 
+     #[On('preset-params')]
+@@ -73,6 +83,7 @@
+     {
+         if (array_key_exists($this->getParamKey(), $params)) {
+             $this->selected = $params[$this->getParamKey()];
++            $this->markFilterStateChanged();
+         }
+     }
+ 
+--- a/src/Http/Livewire/LfRangeFilter.php
++++ b/src/Http/Livewire/LfRangeFilter.php
+@@ -53,6 +53,7 @@
+ 
+     public function updatedSelected()
+     {
++        $this->markFilterStateChanged();
+         $this->dispatchEvent();
+     }
+ 
+@@ -61,14 +62,22 @@
+     {
+         if (array_key_exists($this->getParamKey(), $params)) {
+             $this->selected = $params[$this->getParamKey()];
++            $this->markFilterStateChanged();
+         }
+     }
+ 
+     #[On('clear-all-filters')]
+-    public function clear(): void
++    public function clear(?array $keptParamKeys = null): void
+     {
+         $this->selected = $this->default ?? $this->min;
++        $this->markFilterStateChanged();
+ 
++        if (! $this->clearAllNeedsRelay($keptParamKeys)) {
++            $this->pendingBoundsSelection = config('statamic-livewire-filters.enable_dynamic_range_bounds') ? [] : null;
++
++            return;
++        }
++
+         $this->clearFilters($this->rememberBoundsSelection([]));
+     }
+ 
+@@ -76,10 +85,13 @@
+     public function clearOption($tag)
+     {
+         if ($tag['field'] !== $this->field) {
++            $this->skipRenderIfFilterStateUnchanged();
++
+             return;
+         }
+ 
+         $this->selected = $this->default ?? $this->min;
++        $this->markFilterStateChanged();
+         $this->dispatchEvent();
+     }
+ 
+--- a/src/Http/Livewire/LfSort.php
++++ b/src/Http/Livewire/LfSort.php
+@@ -32,7 +32,7 @@
+         $this->fields = $fields;
+     }
+ 
+-    #[Computed(persist: true)]
++    #[Computed]
+     public function sortOptions()
+     {
+         return $this->getFieldNames()->flatMap(function ($item) {
+--- a/src/Http/Livewire/LfTags.php
++++ b/src/Http/Livewire/LfTags.php
+@@ -39,7 +39,7 @@
+         $this->tags = collect();
+     }
+ 
+-    #[Computed(persist: true)]
++    #[Computed]
+     public function statamicFields(): Collection
+     {
+         $statamicFields = collect();
+--- a/src/Http/Livewire/LfTextFilter.php
++++ b/src/Http/Livewire/LfTextFilter.php
+@@ -17,6 +17,8 @@
+ 
+     public function updatedSelected()
+     {
++        $this->markFilterStateChanged();
++
+         $this->dispatch('filter-updated',
+             field: $this->field,
+             condition: $this->condition,
+@@ -27,10 +29,14 @@
+     }
+ 
+     #[On('clear-all-filters')]
+-    public function clear()
++    public function clear(?array $keptParamKeys = null)
+     {
+         $this->selected = '';
+-        $this->clearFilters();
++        $this->markFilterStateChanged();
++
++        if ($this->clearAllNeedsRelay($keptParamKeys)) {
++            $this->clearFilters();
++        }
+     }
+ 
+     #[On('clear-option')]
+@@ -38,7 +44,11 @@
+     {
+         if ($tag['field'] === $this->field) {
+             $this->clear();
++
++            return;
+         }
++
++        $this->skipRenderIfFilterStateUnchanged();
+     }
+ 
+     #[On('preset-params')]
+@@ -46,6 +56,7 @@
+     {
+         if (array_key_exists($this->getParamKey(), $params)) {
+             $this->selected = $params[$this->getParamKey()];
++            $this->markFilterStateChanged();
+         }
+     }
+ 
+--- a/src/Http/Livewire/LfToggleFilter.php
++++ b/src/Http/Livewire/LfToggleFilter.php
+@@ -19,6 +19,8 @@
+ 
+     public function updatedSelected()
+     {
++        $this->markFilterStateChanged();
++
+         if ($this->selected) {
+             $this->dispatch('filter-updated',
+                 field: $this->field,
+@@ -33,10 +35,14 @@
+     }
+ 
+     #[On('clear-all-filters')]
+-    public function clear()
++    public function clear(?array $keptParamKeys = null)
+     {
+         $this->selected = false;
+-        $this->clearFilters();
++        $this->markFilterStateChanged();
++
++        if ($this->clearAllNeedsRelay($keptParamKeys)) {
++            $this->clearFilters();
++        }
+     }
+ 
+     #[On('clear-option')]
+@@ -44,13 +50,20 @@
+     {
+         if ($tag['field'] === $this->field) {
+             $this->selected = false;
++            $this->markFilterStateChanged();
+             $this->clearFilters();
++
++            return;
+         }
++
++        $this->skipRenderIfFilterStateUnchanged();
+     }
+ 
+     #[On('preset-params')]
+     public function setPresetValues($params)
+     {
++        $this->markFilterStateChanged();
++
+         $paramKey = $this->getParamKey();
+ 
+         // Handle dual_range condition which returns an array
+--- a/src/Http/Livewire/LivewireCollection.php
++++ b/src/Http/Livewire/LivewireCollection.php
+@@ -69,6 +69,15 @@
+     #[Locked]
+     public $scrollTo = null;
+ 
++    /** Request-scoped: a pagination action (gotoPage/nextPage/previousPage/loadMore) ran. */
++    protected bool $pageChangeRequested = false;
++
++    /** Request-scoped: a filter, sort or clear changed the collection state (any call order). */
++    protected bool $nonPageChangeRequested = false;
++
++    /** Request-scoped: whether this render changed the count or the active-filter count. */
++    protected bool $entriesStateChanged = true;
++
+     public function mount($params)
+     {
+         $this->currentPath = $this->resolveCurrentPath();
+@@ -99,7 +108,7 @@
+ 
+         // Dispatched after the init hooks and trust captures so the initial
+         // counts/bounds/tags payloads match what the entries query will use.
+-        $this->dispatchParamsUpdated();
++        $this->dispatchParamsUpdated(initial: true);
+     }
+ 
+     protected function resolveCurrentPath(): string
+@@ -211,6 +220,7 @@
+     protected function resetPagination()
+     {
+         $this->markCollectionStateChanged();
++        $this->nonPageChangeRequested = true;
+ 
+         if ($this->infiniteScroll) {
+             $this->paginate = $this->initialPaginate;
+@@ -220,12 +230,30 @@
+         }
+     }
+ 
++    /**
++     * The sweep removes every runtime param itself; the condition keys it had to
++     * keep (tag/init-hook authored) ride along positionally so only a filter that
++     * manages one of them still relays a clear-filter, and listeners that ignore
++     * the argument keep working.
++     */
+     public function clearAll()
+     {
+         $this->clearAllFilterParams();
+-        $this->dispatch('clear-all-filters');
++        $this->dispatch('clear-all-filters', $this->keptConditionParamKeys());
+     }
+ 
++    /**
++     * @return array<int, string>
++     */
++    protected function keptConditionParamKeys(): array
++    {
++        return collect($this->params)
++            ->keys()
++            ->filter(fn ($key) => is_string($key) && str_contains($key, ':'))
++            ->values()
++            ->all();
++    }
++
+     #[On('clear-all-filters')]
+     public function resetPaginationOnClearAll(): void
+     {
+@@ -250,11 +278,15 @@
+ 
+     public function render()
+     {
++        $previous = [$this->entriesCount, $this->activeFilters];
++
+         $entries = $this->entries();
+ 
+         $this->entriesCount = $this->countAllEntries($entries);
+         $this->activeFilters = $this->getParamsCount();
+ 
++        $this->entriesStateChanged = $previous !== [$this->entriesCount, $this->activeFilters];
++
+         return view('statamic-livewire-filters::livewire.'.$this->view)->with([
+             ...$entries,
+         ]);
+@@ -267,8 +299,18 @@
+         return view('statamic-livewire-filters::livewire.ui.'.$lazyPlaceholder);
+     }
+ 
++    /**
++     * `entries-updated` is also the "entries are on the page" signal for published
++     * views, so a filter, sort or clear always dispatches it even when the count and
++     * active-filter count did not change. Only a pure page change (numbered pages or
++     * load more) with both numbers unchanged skips it, saving the LfCount round trip.
++     */
+     public function rendered()
+     {
++        if ($this->pageChangeRequested && ! $this->nonPageChangeRequested && ! $this->entriesStateChanged) {
++            return;
++        }
++
+         $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->activeFilters);
+     }
+ }
+--- a/src/Http/Livewire/Traits/HandleEntriesCount.php
++++ b/src/Http/Livewire/Traits/HandleEntriesCount.php
+@@ -21,6 +21,10 @@
+             return array_fill_keys(array_keys($this->options), null);
+         }
+ 
++        if (isset($this->statamic_field['options']) && is_array($this->statamic_field['options'])) {
++            return array_fill_keys(array_keys($this->statamic_field['options']), null);
++        }
++
+         return [];
+     }
+ 
+@@ -38,6 +42,8 @@
+     public function updateCounts($params)
+     {
+         if (! config('statamic-livewire-filters.enable_filter_values_count')) {
++            $this->skipRenderIfFilterStateUnchanged();
++
+             return;
+         }
+ 
+@@ -45,7 +51,15 @@
+ 
+         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
+ 
++        $countsBefore = $this->statamic_field['counts'] ?? null;
++
+         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle);
++
++        if ($this->statamic_field['counts'] === $countsBefore) {
++            $this->skipRenderIfFilterStateUnchanged();
++        } else {
++            $this->markFilterStateChanged();
++        }
+ 
+         $this->dispatch('counts-updated', $this->counts());
+     }
+--- a/src/Http/Livewire/Traits/HandleFieldBounds.php
++++ b/src/Http/Livewire/Traits/HandleFieldBounds.php
+@@ -46,10 +46,12 @@
+ 
+     abstract protected function selectionEventPayload(): array;
+ 
+-    #[On('params-updated')]
++    #[On('bounds-updated')]
+     public function updateBounds($params, $boundsQuery = null): void
+     {
+         if (! config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
++            $this->skipRenderIfFilterStateUnchanged();
++
+             return;
+         }
+ 
+@@ -58,17 +60,23 @@
+         $query = RangeBoundsQuery::decodeForCollection($boundsQuery, $this->collection);
+ 
+         if ($query === null) {
++            $this->skipRenderIfFilterStateUnchanged();
++
+             return;
+         }
+ 
+         if ($query['source'] !== null) {
+             if ($query['revision'] < ($this->boundsQueryRevisions[$query['source']] ?? 0)) {
++                $this->skipRenderIfFilterStateUnchanged();
++
+                 return;
+             }
+ 
+             $this->boundsQueryRevisions[$query['source']] = $query['revision'];
+         }
+ 
++        $viewStateBefore = $this->boundsViewState();
++
+         $params = $query['params'];
+         $fieldHandle = $this->resolveCountFieldHandle();
+ 
+@@ -137,6 +145,12 @@
+             $selectionPayload = $this->selectionEventPayload();
+         }
+ 
++        if ($this->boundsViewState() === $viewStateBefore) {
++            $this->skipRenderIfFilterStateUnchanged();
++        } else {
++            $this->markFilterStateChanged();
++        }
++
+         $this->dispatch('range-bounds-updated', ...array_merge(
+             ['min' => $min, 'max' => $max],
+             $selectionPayload,
+@@ -144,6 +158,12 @@
+         ));
+     }
+ 
++    /** Everything the range views read server-side; the revision/extrema bookkeeping is not rendered. */
++    protected function boundsViewState(): array
++    {
++        return [$this->dynamicMin, $this->dynamicMax, $this->boundsDisabled, $this->selectionEventPayload()];
++    }
++
+     protected function rememberBoundsSelection(array $params): ?array
+     {
+         if (! config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+@@ -248,7 +268,12 @@
+             ->filter(fn ($value) => $value !== null && $value !== '');
+ 
+         if (($this->statamic_field['type'] ?? null) === 'date') {
++            // Stache indexes hold Carbon instances already; only Eloquent hands back strings
+             $values = $values->map(function ($value) {
++                if ($value instanceof \DateTimeInterface) {
++                    return $value->getTimestamp();
++                }
++
+                 try {
+                     return Carbon::parse($value)->timestamp;
+                 } catch (\Throwable $exception) {
+--- a/src/Http/Livewire/Traits/HandleFieldOptions.php
++++ b/src/Http/Livewire/Traits/HandleFieldOptions.php
+@@ -71,6 +71,10 @@
+ 
+     protected function addCountsArrayToConfig($field)
+     {
++        if (! config('statamic-livewire-filters.enable_filter_values_count')) {
++            return $field;
++        }
++
+         $field->setConfig(array_merge(
+             $field->config(),
+             ['counts' => array_fill_keys(array_keys($field->get('options')), null)]
+@@ -86,29 +90,16 @@
+ 
+     protected function addCustomOptionsToConfig($field)
+     {
+-        $options = collect($this->options);
+-        $field->setConfig(array_merge(
+-            $field->config(),
+-            [
+-                'options' => $this->options,
+-                'counts' => array_fill_keys($options->keys()->all(), null),
+-            ]
+-        ));
++        $field->setConfig(array_merge($field->config(), ['options' => $this->options]));
+ 
+-        return $field;
++        return $this->addCountsArrayToConfig($field);
+     }
+ 
+     protected function setFieldOptionsAndCounts($field, array $options)
+     {
+-        $field->setConfig(array_merge(
+-            $field->config(),
+-            [
+-                'options' => $options,
+-                'counts' => array_fill_keys(array_keys($options), null),
+-            ]
+-        ));
++        $field->setConfig(array_merge($field->config(), ['options' => $options]));
+ 
+-        return $field;
++        return $this->addCountsArrayToConfig($field);
+     }
+ 
+     protected function fieldOptionsCacheKey(string $type, $config): string
+--- a/src/Http/Livewire/Traits/HandleParams.php
++++ b/src/Http/Livewire/Traits/HandleParams.php
+@@ -775,30 +775,50 @@
+         $this->boundsSelectionRevisions[$selection['source']] = $selection['revision'];
+     }
+ 
+-    protected function dispatchParamsUpdated(): void
++    protected function dispatchParamsUpdated(bool $initial = false): void
+     {
+         $this->markCollectionStateChanged();
+ 
+-        if (config('statamic-livewire-filters.enable_filter_values_count')
+-            || config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
++        $countsEnabled = config('statamic-livewire-filters.enable_filter_values_count');
++        $boundsEnabled = config('statamic-livewire-filters.enable_dynamic_range_bounds');
++
++        if ($countsEnabled || $boundsEnabled) {
+             $params = $this->effectiveQueryParams();
+-            $arguments = [$params];
++        }
+ 
+-            if (config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+-                $arguments[] = RangeBoundsQuery::encode(
+-                    $this->collections,
+-                    $params,
+-                    $this->getId(),
+-                    ++$this->boundsQueryRevision,
+-                    $this->boundsSelectionRevisions,
+-                );
+-            }
++        if ($countsEnabled) {
++            $this->dispatch('params-updated', $params);
++        }
+ 
+-            $this->dispatch('params-updated', ...$arguments);
++        // The encrypted bounds query is only meaningful to range filters, so it rides
++        // on its own event instead of being repeated to every counts listener.
++        if ($boundsEnabled) {
++            $this->dispatch('bounds-updated', $params, RangeBoundsQuery::encode(
++                $this->collections,
++                $params,
++                $this->getId(),
++                ++$this->boundsQueryRevision,
++                $this->boundsSelectionRevisions,
++            ));
+         }
+ 
+-        // Dispatching to the tags component
++        // LfTags mounts empty, so the initial event is only needed when there is a tag to show.
++        if ($initial && ! $this->hasTaggableParams()) {
++            return;
++        }
++
+         $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
++    }
++
++    /**
++     * Mirrors LfTags::updateTags(): condition keys and the query_scope registry are taggable, sort is not.
++     */
++    protected function hasTaggableParams(): bool
++    {
++        return collect($this->params)
++            ->keys()
++            ->contains(fn ($key) => is_string($key) && $key !== 'sort'
++                && (str_contains($key, ':') || Str::startsWith($key, 'query_scope')));
+     }
+ 
+     protected function generateParamKey(string $field, string $condition, ?string $modifier = null): string|array
+--- a/src/Http/Livewire/Traits/HandleStatamicQueries.php
++++ b/src/Http/Livewire/Traits/HandleStatamicQueries.php
+@@ -2,6 +2,7 @@
+ 
+ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
+ 
++use Illuminate\Support\Str;
+ use Reach\StatamicLivewireFilters\Exceptions\BlueprintNotFoundException;
+ use Reach\StatamicLivewireFilters\Exceptions\FieldNotFoundException;
+ use Statamic\Facades\Blink;
+@@ -9,6 +10,8 @@
+ use Statamic\Facades\Entry;
+ use Statamic\Facades\Site;
+ use Statamic\Facades\Taxonomy;
++use Statamic\Stache\Query\EntryQueryBuilder;
++use Statamic\Stache\Query\TermQueryBuilder;
+ 
+ trait HandleStatamicQueries
+ {
+@@ -19,7 +22,16 @@
+         return Blink::once("statamic-livewire-filters.taxonomy-terms.{$siteHandle}.{$taxonomy_handle}", function () use ($taxonomy_handle, $siteHandle) {
+             $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
+ 
+-            return $taxonomy->queryTerms()->get()
++            $query = $taxonomy->queryTerms();
++
++            if ($query instanceof TermQueryBuilder) {
++                $indexSite = $taxonomy->sites()->contains($siteHandle) ? $siteHandle : $taxonomy->sites()->first();
++
++                return $query->where('site', $indexSite)->pluck('title', 'id')
++                    ->mapWithKeys(fn ($title, $id) => [Str::after($id, '::') => $title]);
++            }
++
++            return $query->get()
+                 ->unique(fn ($term) => $term->inDefaultLocale()->slug())
+                 ->mapWithKeys(function ($term) use ($siteHandle) {
+                     $default = $term->inDefaultLocale();
+@@ -43,10 +55,24 @@
+         );
+ 
+         return Blink::once($cacheKey, function () use ($collection_handle, $siteHandle, $useOriginId) {
+-            return Entry::query()
++            $query = fn () => Entry::query()
+                 ->where('collection', $collection_handle)
+                 ->where('site', $siteHandle)
+-                ->whereStatus('published')
++                ->whereStatus('published');
++
++            if ($query() instanceof EntryQueryBuilder) {
++                $titles = $query()->pluck('title', 'id');
++
++                if (! $useOriginId) {
++                    return $titles;
++                }
++
++                $origins = $query()->pluck('origin', 'id');
++
++                return $titles->mapWithKeys(fn ($title, $id) => [($origins[$id] ?? null) ?: $id => $title]);
++            }
++
++            return $query()
+                 ->get()
+                 ->mapWithKeys(function ($entry) use ($useOriginId) {
+                     if ($useOriginId) {
+--- a/src/Http/Livewire/Traits/IsLivewireFilter.php
++++ b/src/Http/Livewire/Traits/IsLivewireFilter.php
+@@ -27,6 +27,67 @@
+     #[Locked]
+     public $modifier = 'any';
+ 
++    /** Set once a render shows a bare `wire:ignore` on the root: the client morph discards every re-render, so none is sent. */
++    #[Locked]
++    public bool $clientRendered = false;
++
++    /** Request-scoped (never persisted): a handler in this request changed state the view may depend on. */
++    protected bool $filterStateChangedThisRequest = false;
++
++    public function hydrateIsLivewireFilter(): void
++    {
++        if ($this->clientRendered) {
++            $this->skipRender();
++        }
++    }
++
++    public function renderedIsLivewireFilter($view, $html): void
++    {
++        if (! $this->clientRendered && $this->htmlRootHasWireIgnore((string) $html)) {
++            $this->clientRendered = true;
++        }
++    }
++
++    /**
++     * Only the root start tag is inspected; quoted attribute values (Alpine x-data) are opaque,
++     * and `wire:ignore.self` / `wire:ignore.children` still morph, so only the bare name counts.
++     */
++    protected function htmlRootHasWireIgnore(string $html): bool
++    {
++        $attribute = '[^\s"\'=<>\/]+(?:\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s"\'=<>`]+))?';
++
++        if (! preg_match('/^\s*<[a-zA-Z][\w:-]*((?:\s+'.$attribute.')*)\s*\/?>/', $html, $tag)) {
++            return false;
++        }
++
++        preg_match_all('/\s('.$attribute.')/', $tag[1], $attributes);
++
++        return in_array('wire:ignore', array_map(fn ($a) => preg_split('/\s*=/', $a, 2)[0], $attributes[1]), true);
++    }
++
++    /**
++     * One pooled Livewire request can carry several event calls for this component (e.g. a
++     * foreign `clear-option` plus a real `params-updated`). skipRender() is component-wide for
++     * the request, so a no-op must never suppress the render of a real change handled in the
++     * same request, regardless of call order: the store reset clears a skip set by an earlier
++     * no-op, the flag guards later ones. Client-rendered roots never need the html.
++     */
++    protected function markFilterStateChanged(): void
++    {
++        $this->filterStateChangedThisRequest = true;
++
++        if (! $this->clientRendered) {
++            \Livewire\store($this)->set('skipRender', false);
++        }
++    }
++
++    protected function skipRenderIfFilterStateUnchanged(): void
++    {
++        if (! $this->filterStateChangedThisRequest) {
++            $this->skipRender();
++        }
++    }
++
+     public function mountIsLivewireFilter($blueprint)
+     {
+         [$collection, $blueprint] = explode('.', $blueprint);
+@@ -85,6 +146,25 @@
+     protected function processDictionaryField($field)
+     {
+         return $this->addDictionaryToOptions($field);
++    }
++
++    /**
++     * A bare clear-all-filters (LfTags, the per-filter button, user code) keeps the
++     * relay; one from the collection lists the keys it could not sweep, so only a
++     * filter managing one of them needs to relay.
++     *
++     * @param  array<int, string>|null  $keptParamKeys
++     */
++    protected function clearAllNeedsRelay(?array $keptParamKeys): bool
++    {
++        if ($keptParamKeys === null) {
++            return true;
++        }
++
++        $paramKey = $this->getParamKey();
++
++        return collect(is_array($paramKey) ? array_values($paramKey) : [$paramKey])
++            ->contains(fn ($key) => in_array($key, $keptParamKeys, true));
+     }
+ 
+     public function clearFilters($boundsSelection = null)
+--- a/src/Http/Livewire/Traits/WithPagination.php
++++ b/src/Http/Livewire/Traits/WithPagination.php
+@@ -4,8 +4,33 @@
+ 
+ trait WithPagination
+ {
+-    use \Livewire\WithPagination;
++    use \Livewire\WithPagination {
++        gotoPage as protected livewireGotoPage;
++        nextPage as protected livewireNextPage;
++        previousPage as protected livewirePreviousPage;
++    }
+ 
++    public function gotoPage($page, $pageName = 'page')
++    {
++        $this->pageChangeRequested = true;
++
++        $this->livewireGotoPage($page, $pageName);
++    }
++
++    public function nextPage($pageName = 'page')
++    {
++        $this->pageChangeRequested = true;
++
++        $this->livewireNextPage($pageName);
++    }
++
++    public function previousPage($pageName = 'page')
++    {
++        $this->pageChangeRequested = true;
++
++        $this->livewirePreviousPage($pageName);
++    }
++
+     public function withPagination($key, $paginator): array
+     {
+         $data = [
+@@ -29,6 +54,7 @@
+         }
+ 
+         $this->markCollectionStateChanged();
++        $this->pageChangeRequested = true;
+ 
+         $this->paginate = (int) $this->paginate + (int) $this->initialPaginate;
+     }
+--- a/src/Scopes/Multiselect.php
++++ b/src/Scopes/Multiselect.php
+@@ -3,14 +3,22 @@
+ namespace Reach\StatamicLivewireFilters\Scopes;
+ 
+ use Illuminate\Support\Str;
++use Statamic\Query\Builder;
+ use Statamic\Query\Scopes\Scope;
++use Statamic\Stache\Query\Builder as StacheBuilder;
+ 
+ class Multiselect extends Scope
+ {
+     /**
+      * Apply the scope.
+      *
+-     * @param  \Statamic\Query\Builder  $query
++     * On the Stache every `orWhereJsonContains` is a full index pass, so the
++     * selected values are matched with one `whereJsonOverlaps` pass instead
++     * (available since Statamic 5.64). A scalar-stored value counts as a
++     * one-element set there, which the nested form never matched. Eloquent
++     * keeps the nested OR form.
++     *
++     * @param  Builder  $query
+      * @param  array  $values
+      * @return void
+      */
+@@ -23,6 +31,12 @@
+ 
+             return [$newKey => explode('|', $value)];
+         })->each(function ($values, $field) use ($query) {
++            if ($query instanceof StacheBuilder && method_exists($query, 'whereJsonOverlaps')) {
++                $query->whereJsonOverlaps($field, array_values($values));
++
++                return;
++            }
++
+             $query->where(function ($query) use ($field, $values) {
+                 foreach ($values as $value) {
+                     $query->orWhereJsonContains($field, $value);
+--- a/src/Support/CountEntries.php
++++ b/src/Support/CountEntries.php
+@@ -5,7 +5,9 @@
+ use Illuminate\Database\QueryException;
+ use Illuminate\Support\Collection;
+ use Statamic\Facades\Site;
++use Statamic\Facades\Stache;
+ use Statamic\Query\EloquentQueryBuilder;
++use Statamic\Stache\Query\EntryQueryBuilder as StacheEntryQueryBuilder;
+ use Statamic\Tags\Collection\Entries as StatamicEntries;
+ use Statamic\Tags\Collection\NoResultsExpected;
+ 
+@@ -14,16 +16,8 @@
+     public function pluck(string $column): Collection
+     {
+         try {
+-            $query = $this->query();
++            $query = $this->countQuery();
+ 
+-            if ($limit = $this->params->int('limit')) {
+-                $query->limit($limit);
+-            }
+-
+-            if ($offset = $this->params->int('offset')) {
+-                $query->offset($offset);
+-            }
+-
+             // Eloquent optimization: pluck directly from the base query to avoid
+             // hydrating full Entry objects. Field values are in the JSON data column.
+             // Skip for multisite collections — localized entries inherit field
+@@ -37,6 +31,85 @@
+         } catch (NoResultsExpected $exception) {
+             return collect();
+         }
++    }
++
++    /**
++     * Stache only: the "collection::id" keys of the matching entries, so any number
++     * of fields can be read straight from their indexes without re-running the
++     * filter. Null when the driver cannot resolve keys without hydrating entries.
++     */
++    public function resolvedKeys(): ?Collection
++    {
++        try {
++            $query = $this->countQuery();
++        } catch (NoResultsExpected $exception) {
++            return collect();
++        }
++
++        if (! $query instanceof StacheEntryQueryBuilder) {
++            return null;
++        }
++
++        $ids = $query->pluck('id');
++
++        if ($this->collections->count() === 1) {
++            $handle = $this->collections->first()->handle();
++
++            return $ids->map(fn ($id) => "{$handle}::{$id}")->values();
++        }
++
++        // A keyed pluck would renumber numeric ids, so map each id back to its
++        // collection through the stores' own (already loaded) path indexes.
++        $owner = [];
++
++        foreach ($this->collections as $collection) {
++            foreach (Stache::store('entries')->store($collection->handle())->paths()->keys() as $id) {
++                $owner[$id] = $collection->handle();
++            }
++        }
++
++        $keys = $ids->map(fn ($id) => isset($owner[$id]) ? "{$owner[$id]}::{$id}" : null);
++
++        return $keys->contains(fn ($key) => $key === null) ? null : $keys->values();
++    }
++
++    /**
++     * Exactly what the Stache query builder's pluck() does once it holds the keys.
++     */
++    public static function valuesForKeys(Collection $keys, string $column): Collection
++    {
++        if ($keys->isEmpty()) {
++            return collect();
++        }
++
++        return Stache::store('entries')->getItemValues($keys, $column, null)->values();
++    }
++
++    /**
++     * Counts and bounds are order-independent, and the Stache pays for the
++     * collection's default sort with a full multisort of every matching key;
++     * keep the ordering only when limit/offset make it select the rows.
++     */
++    protected function countQuery()
++    {
++        $query = $this->query();
++
++        $limit = $this->params->int('limit');
++        $offset = $this->params->int('offset');
++
++        if (! $limit && ! $offset) {
++            return $query->reorder();
++        }
++
++        if ($limit) {
++            $query->limit($limit);
++        }
++
++        if ($offset) {
++            $query->offset($offset);
++        }
++
++        return $query;
+     }
+ 
+     protected function eloquentPluck(EloquentQueryBuilder $query, string $column): Collection
+--- a/src/Support/CountQueryPool.php
++++ b/src/Support/CountQueryPool.php
+@@ -10,23 +10,41 @@
+ {
+     protected array $fieldValuesCache = [];
+ 
++    protected array $keySetCache = [];
++
+     public function getFieldValues(string|array $collection, array $baseParams, string $fieldHandle): Collection
+     {
++        // $collection always wins the `from` merge below, so a `from` in the params
++        // must not split the caches between the counts and the bounds listeners.
++        unset($baseParams['from']);
++
+         $cacheKey = $this->cacheKey($collection, $baseParams, $fieldHandle);
+ 
+         if (isset($this->fieldValuesCache[$cacheKey])) {
+             return $this->fieldValuesCache[$cacheKey];
+         }
+ 
+-        $params = Parameters::make(
++        $entries = new CountEntries(Parameters::make(
+             array_merge($baseParams, ['from' => $collection]),
+             Context::make([])
+-        );
++        ));
+ 
+-        return $this->fieldValuesCache[$cacheKey] = (new CountEntries($params))->pluck($fieldHandle);
++        // Listeners sharing the same base params share one filter pass; each field
++        // then costs an index read instead of a query.
++        $keySetKey = $this->cacheKey($collection, $baseParams, null);
++
++        if (! array_key_exists($keySetKey, $this->keySetCache)) {
++            $this->keySetCache[$keySetKey] = $entries->resolvedKeys();
++        }
++
++        $keys = $this->keySetCache[$keySetKey];
++
++        return $this->fieldValuesCache[$cacheKey] = $keys === null
++            ? $entries->pluck($fieldHandle)
++            : CountEntries::valuesForKeys($keys, $fieldHandle);
+     }
+ 
+-    protected function cacheKey(string|array $collection, array $baseParams, string $fieldHandle): string
++    protected function cacheKey(string|array $collection, array $baseParams, ?string $fieldHandle): string
+     {
+         ksort($baseParams);
+ 
+--- a/resources/views/livewire/filters/lf-checkbox.blade.php
++++ b/resources/views/livewire/filters/lf-checkbox.blade.php
+@@ -8,6 +8,12 @@
+                 id="{{ $field }}-{{ $value }}"
+                 wire:model.live="selected"
+                 value="{{ $value }}"
++                x-on:change="$wire.syncedByView = true; $wire.$dispatchTo('livewire-collection', 'filter-updated', {
++                    field: @js($field),
++                    condition: @js($condition),
++                    payload: Array.from($el.closest('[wire\\:id]').querySelectorAll('input[type=checkbox]:checked')).map((i) => i.value),
++                    modifier: @js($modifier),
++                })"
+             >
+             <label
+                 for="{{ $field }}-{{ $value }}"
+--- a/resources/views/livewire/ui/count.blade.php
++++ b/resources/views/livewire/ui/count.blade.php
+@@ -1,8 +1,10 @@
+-<div>
+-    @if ($count > 0)
+-    <span>
+-        {{ $count }} {{ trans_choice('statamic-livewire-filters::ui.entries', $count) }}
+-    </span>
+-    @endif
++<div
++    x-data="{
++        count: @js((int) $count),
++        one: @js(trans_choice('statamic-livewire-filters::ui.entries', 1)),
++        many: @js(trans_choice('statamic-livewire-filters::ui.entries', 2)),
++    }"
++    x-on:entries-updated.window="count = Number($event.detail.count)"
++>
++    <span x-show="count > 0" x-text="count + ' ' + (count === 1 ? one : many)">@if ($count > 0){{ $count }} {{ trans_choice('statamic-livewire-filters::ui.entries', $count) }}@endif</span>
+ </div>
+-
+--- a/tests/Feature/ClearAllRelayTest.php
++++ b/tests/Feature/ClearAllRelayTest.php
+@@ -0,0 +1,230 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
++use Illuminate\Support\Facades\Config;
++use Livewire\Livewire;
++use PHPUnit\Framework\Attributes\DataProvider;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++
++/**
++ * Browser-faithful clear-all flows: a filter AND the collection both hear the
++ * event, and whatever the filter dispatches to the collection is forwarded.
++ * Mirrors the demo /preset page: tag-authored `taxonomy:car_brand:any` plus an
++ * lf-checkbox-filter on the same field.
++ */
++class ClearAllRelayTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        Facades\Taxonomy::make('colors')->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('black')->data(['title' => 'Black'])->save();
++        Facades\Collection::make('clothes')->taxonomies(['colors'])->save();
++
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'title', 'field' => ['type' => 'text', 'display' => 'Title']],
++            ['handle' => 'colors', 'field' => ['type' => 'terms', 'taxonomies' => ['colors']]],
++            ['handle' => 'max_items', 'field' => ['type' => 'integer', 'display' => 'Max']],
++        ]]]])->setHandle('clothes')->setNamespace('collections.clothes')->save();
++
++        EntryFactory::collection('clothes')->slug('red-shirt')->data(['title' => 'Red Shirt', 'colors' => ['red'], 'max_items' => 4])->create();
++        EntryFactory::collection('clothes')->slug('black-shirt')->data(['title' => 'Black Shirt', 'colors' => ['black'], 'max_items' => 6])->create();
++    }
++
++    protected function forwardToCollection($filter, $collection, string $event): int
++    {
++        $relays = collect($filter->effects['dispatches'] ?? [])->where('name', $event);
++
++        foreach ($relays as $relay) {
++            $collection->dispatch($event, ...$relay['params']);
++        }
++
++        return $relays->count();
++    }
++
++    /**
++     * Range filters read bounds from `bounds-updated` once the collection dispatches
++     * it separately (Plan 009 step 4); until that step lands they read `params-updated`.
++     */
++    protected function boundsEventParams($collection): array
++    {
++        $dispatches = collect($collection->effects['dispatches'] ?? []);
++        $event = $dispatches->firstWhere('name', 'bounds-updated') ?? $dispatches->firstWhere('name', 'params-updated');
++
++        return $event['params'];
++    }
++
++    protected function boundsEventName($collection): string
++    {
++        return collect($collection->effects['dispatches'] ?? [])->firstWhere('name', 'bounds-updated') ? 'bounds-updated' : 'params-updated';
++    }
++
++    protected function clearAllEventParams($collection): array
++    {
++        $event = collect($collection->effects['dispatches'] ?? [])->firstWhere('name', 'clear-all-filters');
++
++        return $event['params'] ?? [];
++    }
++
++    public static function clearAllPaths(): array
++    {
++        return [
++            'collection.clearAll() button (/advanced)' => ['collection'],
++            'LfTags clear-all-filters event (/preset, /basic)' => ['tags'],
++        ];
++    }
++
++    /**
++     * A tag-authored param that a filter manages must still clear: the sweep
++     * exempts it, so the filter's relay is what removes it.
++     */
++    #[Test]
++    #[DataProvider('clearAllPaths')]
++    public function clear_all_clears_a_tag_authored_param_that_a_filter_manages(string $path)
++    {
++        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red']])
++            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
++            ->assertSet('clearAllExemptParamKeys', ['taxonomy:colors:any'])
++            ->assertSet('entriesCount', 1);
++
++        $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy']);
++        $preset = collect($collection->effects['dispatches'])->firstWhere('name', 'preset-params');
++        $filter->dispatch('preset-params', ...$preset['params'])->assertSet('selected', ['red']);
++
++        if ($path === 'collection') {
++            $collection->call('clearAll');
++            $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection));
++        } else {
++            $collection->dispatch('clear-all-filters');
++            $filter->dispatch('clear-all-filters');
++        }
++
++        $filter->assertSet('selected', []);
++        $this->forwardToCollection($filter, $collection, 'clear-filter');
++
++        $collection->assertSet('params', [])->assertSet('entriesCount', 2);
++    }
++
++    /**
++     * Init-hook-authored params are exempt from the sweep too; a filter managing one still clears it.
++     */
++    #[Test]
++    public function clear_all_clears_an_init_hook_authored_param_that_a_filter_manages()
++    {
++        LivewireCollection::hook('init', function ($payload, $next) {
++            $this->params['taxonomy:colors:any'] = 'red';
++
++            return $next($payload);
++        });
++
++        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']])
++            ->assertSet('clearAllExemptParamKeys', ['taxonomy:colors:any'])
++            ->assertSet('entriesCount', 1);
++        $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
++            ->set('selected', ['red']);
++
++        $collection->call('clearAll')->assertSet('params', ['taxonomy:colors:any' => 'red']);
++        $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertSet('selected', []);
++        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'clear-filter'));
++
++        $collection->assertSet('params', [])->assertSet('entriesCount', 2);
++    }
++
++    /**
++     * The round-trip saving: with nothing the collection could not sweep itself,
++     * the filters relay nothing (the 3rd POST of /advanced clear-all disappears).
++     */
++    #[Test]
++    public function clear_all_from_the_collection_needs_no_relay_for_runtime_params()
++    {
++        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
++        $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
++            ->set('selected', ['red']);
++        $this->forwardToCollection($filter, $collection, 'filter-updated');
++        $collection->assertSet('params', ['taxonomy:colors:any' => 'red'])->assertSet('entriesCount', 1);
++
++        $collection->call('clearAll')->assertSet('params', [])->assertSet('entriesCount', 2);
++        $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertSet('selected', []);
++
++        $this->assertSame(0, $this->forwardToCollection($filter, $collection, 'clear-filter'), 'no clear-filter relay expected');
++    }
++
++    #[Test]
++    public function the_per_filter_clear_button_still_relays()
++    {
++        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
++            ->set('selected', ['red'])
++            ->call('clear')
++            ->assertSet('selected', [])
++            ->assertDispatched('clear-filter', field: 'colors', condition: 'taxonomy');
++    }
++
++    public static function rangeCases(): array
++    {
++        return [
++            'single range, older event first' => [false, false],
++            'dual range, older event first' => [true, false],
++            'single range, newer event first' => [false, true],
++            'dual range, newer event first' => [true, true],
++        ];
++    }
++
++    /**
++     * Through the real collection.clearAll() path (no relay): an older bounds
++     * event carrying the active selection arrives after clear-all and must not
++     * snap the slider back to it.
++     */
++    #[Test]
++    #[DataProvider('rangeCases')]
++    public function a_stale_active_bounds_event_after_clear_all_does_not_snap_back(bool $dualRange, bool $newerFirst)
++    {
++        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
++
++        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
++        $args = $dualRange
++            ? ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'min' => 4, 'max' => 6, 'minRange' => 1]
++            : ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'condition' => 'gte', 'min' => 4, 'max' => 6];
++        $filter = Livewire::test($dualRange ? LfDualRangeFilter::class : LfRangeFilter::class, $args)
++            ->set($dualRange ? 'selectedMin' : 'selected', 5);
++
++        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'filter-updated'));
++        $olderEvent = $this->boundsEventParams($collection);
++
++        $collection->call('clearAll')->assertSet('params', []);
++        $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))
++            ->assertSet($dualRange ? 'selectedMin' : 'selected', 4);
++        $this->assertSame(0, $this->forwardToCollection($filter, $collection, 'clear-filter'), 'no relay expected');
++        $currentEvent = $this->boundsEventParams($collection);
++
++        $order = $newerFirst ? [$currentEvent, $olderEvent] : [$olderEvent, $currentEvent];
++
++        foreach ($order as $event) {
++            $filter->dispatch($this->boundsEventName($collection), ...$event)
++                ->assertSet($dualRange ? 'selectedMin' : 'selected', 4)
++                ->assertSet('dynamicMin', 4)
++                ->assertSet('dynamicMax', 6)
++                ->assertNotDispatched('filter-updated');
++        }
++
++        // A fresh selection after the clear still round-trips and acknowledges.
++        $filter->set($dualRange ? 'selectedMin' : 'selected', 5);
++        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'filter-updated'));
++        $ack = $this->boundsEventParams($collection);
++        $filter->dispatch($this->boundsEventName($collection), ...$ack)
++            ->assertSet($dualRange ? 'selectedMin' : 'selected', 5)
++            ->assertSet('pendingBoundsSelection', null);
++    }
++}
+--- a/tests/Feature/ClientDispatchedCheckboxTest.php
++++ b/tests/Feature/ClientDispatchedCheckboxTest.php
+@@ -0,0 +1,99 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Illuminate\Support\Facades\Config;
++use Livewire\Livewire;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++
++/**
++ * The bundled checkbox view dispatches filter-updated to the collection from the
++ * browser and flags the commit with `syncedByView`; a view without the flag
++ * (published before this change) must still get the server relay.
++ */
++class ClientDispatchedCheckboxTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        Facades\Collection::make('pages')->save();
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'item_options', 'field' => ['type' => 'checkboxes', 'display' => 'Options', 'options' => [
++                ['key' => 'option1', 'value' => 'Option 1'],
++                ['key' => 'option2', 'value' => 'Option 2'],
++            ]]],
++        ]]]])->setHandle('pages')->setNamespace('collections.pages')->save();
++    }
++
++    protected function filter()
++    {
++        return Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is']);
++    }
++
++    #[Test]
++    public function a_commit_flagged_by_the_view_skips_the_server_relay_and_resets_the_flag()
++    {
++        $this->filter()
++            ->set('syncedByView', true)
++            ->set('selected', ['option1'])
++            ->assertNotDispatched('filter-updated')
++            ->assertSet('syncedByView', false)
++            ->assertSet('selected', ['option1']);
++    }
++
++    #[Test]
++    public function an_unflagged_commit_still_relays_for_views_without_the_client_dispatch()
++    {
++        $this->filter()
++            ->set('selected', ['option1'])
++            ->assertDispatched('filter-updated', field: 'item_options', condition: 'is', payload: ['option1']);
++    }
++
++    #[Test]
++    public function the_flag_only_covers_one_commit()
++    {
++        $this->filter()
++            ->set('syncedByView', true)
++            ->set('selected', ['option1'])
++            ->assertNotDispatched('filter-updated')
++            ->set('selected', ['option1', 'option2'])
++            ->assertDispatched('filter-updated', payload: ['option1', 'option2']);
++    }
++
++    #[Test]
++    public function validation_still_runs_on_a_flagged_commit()
++    {
++        Config::set('statamic-livewire-filters.validate_filter_values', true);
++
++        $this->filter()
++            ->set('syncedByView', true)
++            ->set('selected', ['not-an-option'])
++            ->assertHasErrors('selected')
++            ->assertNotDispatched('filter-updated');
++    }
++
++    #[Test]
++    public function the_bundled_view_dispatches_to_the_collection_from_the_browser()
++    {
++        $this->filter()
++            ->assertSeeHtml('syncedByView = true')
++            ->assertSeeHtml("\$dispatchTo('livewire-collection', 'filter-updated'");
++    }
++
++    #[Test]
++    public function clearing_an_option_from_tags_still_relays()
++    {
++        $this->filter()
++            ->set('selected', ['option1', 'option2'])
++            ->dispatch('clear-option', ['field' => 'item_options', 'value' => 'option1'])
++            ->assertSet('selected', ['option2'])
++            ->assertDispatched('filter-updated', payload: ['option2']);
++    }
++}
+--- a/tests/Feature/CountEntriesTest.php
++++ b/tests/Feature/CountEntriesTest.php
+@@ -10,6 +10,7 @@
+ use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
+ use Reach\StatamicLivewireFilters\Tests\TestCase;
+ use Statamic\Facades;
++use Statamic\Query\Builder;
+ use Statamic\Query\EloquentQueryBuilder;
+ use Statamic\Tags\Context;
+ use Statamic\Tags\Parameters;
+@@ -118,6 +119,7 @@
+     {
+         $params = Parameters::make(['from' => 'pages'], Context::make([]));
+         $builder = Mockery::mock(EloquentQueryBuilder::class);
++        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
+ 
+         $countEntries = Mockery::mock(CountEntries::class, [$params])
+             ->makePartial()
+@@ -137,6 +139,7 @@
+     {
+         $params = Parameters::make(['from' => 'pages'], Context::make([]));
+         $builder = Mockery::mock(EloquentQueryBuilder::class);
++        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
+         $builder->shouldReceive('pluck')->once()->with('item_options')->andReturn(collect(['option1']));
+ 
+         $countEntries = Mockery::mock(CountEntries::class, [$params])
+@@ -165,6 +168,7 @@
+ 
+         $params = Parameters::make(['from' => 'pages|localized'], Context::make([]));
+         $builder = Mockery::mock(EloquentQueryBuilder::class);
++        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
+         $builder->shouldReceive('pluck')->once()->with('item_options')->andReturn(collect(['inherited-option']));
+ 
+         $countEntries = Mockery::mock(CountEntries::class, [$params])
+@@ -174,6 +178,39 @@
+         $countEntries->shouldNotReceive('eloquentPluck');
+ 
+         $this->assertSame(['inherited-option'], $countEntries->pluck('item_options')->all());
++    }
++
++    #[Test]
++    public function it_drops_the_ordering_unless_limit_or_offset_select_the_rows()
++    {
++        $this->assertSame([], $this->orderBysOf(['from' => 'pages']));
++        $this->assertSame([], $this->orderBysOf(['from' => 'pages', 'sort' => 'title:desc']));
++        $this->assertNotEmpty($this->orderBysOf(['from' => 'pages', 'limit' => 2]));
++        $this->assertNotEmpty($this->orderBysOf(['from' => 'pages', 'offset' => 1]));
++        $this->assertSame(2, (new \ReflectionProperty(Builder::class, 'limit'))->getValue($this->countQueryFor(['from' => 'pages', 'limit' => 2])));
++    }
++
++    #[Test]
++    public function it_plucks_the_same_values_with_and_without_a_sort_and_keeps_limited_subsets_ordered()
++    {
++        $pluck = fn (array $params, string $column) => (new CountEntries(Parameters::make($params, Context::make([]))))->pluck($column)->all();
++
++        $this->assertEqualsCanonicalizing(['Entry A', 'Entry B', 'Entry C'], $pluck(['from' => 'pages', 'sort' => 'random'], 'title'));
++        $this->assertEqualsCanonicalizing(['Entry A', 'Entry B', 'Entry C'], $pluck(['from' => 'pages', 'sort' => 'title:desc'], 'title'));
++        $this->assertEqualsCanonicalizing(['Entry C', 'Entry B'], $pluck(['from' => 'pages', 'sort' => 'title:desc', 'limit' => 2], 'title'));
++        $this->assertEqualsCanonicalizing(['Entry B', 'Entry C'], $pluck(['from' => 'pages', 'sort' => 'title:asc', 'limit' => 2, 'offset' => 1], 'title'));
++    }
++
++    protected function orderBysOf(array $params): array
++    {
++        return (new \ReflectionProperty(Builder::class, 'orderBys'))->getValue($this->countQueryFor($params));
++    }
++
++    protected function countQueryFor(array $params)
++    {
++        $entries = new CountEntries(Parameters::make($params, Context::make([])));
++
++        return (fn () => $this->countQuery())->call($entries);
+     }
+ 
+     protected function makeEntry($collection, $slug)
+--- a/tests/Feature/CountQueryPoolTest.php
++++ b/tests/Feature/CountQueryPoolTest.php
+@@ -0,0 +1,281 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
++use Illuminate\Database\Events\QueryExecuted;
++use Illuminate\Support\Facades\Config;
++use Illuminate\Support\Facades\Event;
++use Mockery;
++use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
++use PHPUnit\Framework\Attributes\DataProvider;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Support\CountEntries;
++use Reach\StatamicLivewireFilters\Support\CountQueryPool;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++use Statamic\Query\EloquentQueryBuilder;
++use Statamic\Query\ResolveValue;
++use Statamic\Tags\Collection\Entries as StatamicEntries;
++use Statamic\Tags\Context;
++use Statamic\Tags\Parameters;
++
++class CountQueryPoolTest extends TestCase
++{
++    use MockeryPHPUnitIntegration;
++    use PreventSavingStacheItemsToDisk;
++
++    protected int $stacheQueries = 0;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        Facades\Taxonomy::make('brands')->save();
++        Facades\Term::make()->taxonomy('brands')->inDefaultLocale()->slug('toyota')->data(['title' => 'Toyota'])->save();
++        Facades\Term::make()->taxonomy('brands')->inDefaultLocale()->slug('bmw')->data(['title' => 'BMW'])->save();
++
++        foreach (['cars', 'trucks'] as $handle) {
++            Facades\Collection::make($handle)->taxonomies(['brands'])->save();
++            $this->vehicleBlueprint()->setHandle($handle)->setNamespace('collections.'.$handle)->save();
++        }
++
++        Facades\Collection::make('news')->dated(true)->futureDateBehavior('private')->pastDateBehavior('public')->save();
++        $this->vehicleBlueprint()->setHandle('news')->setNamespace('collections.news')->save();
++
++        $this->vehicle('cars', 'car-a', ['title' => 'Car A', 'color' => ['red', 'blue'], 'transmission' => 'manual', 'seats' => 4, 'year' => '2020-05-22', 'brands' => ['toyota']]);
++        $this->vehicle('cars', 'car-b', ['title' => 'Car B', 'color' => ['red'], 'transmission' => 'automatic', 'seats' => 7, 'year' => '2022-02-02', 'brands' => ['bmw']]);
++        $this->vehicle('cars', 'car-c', ['title' => 'Car C', 'color' => ['green'], 'transmission' => 'manual', 'seats' => null, 'year' => '2024-12-30']);
++        $this->vehicle('cars', 'car-d', ['title' => 'Car D', 'color' => ['blue'], 'transmission' => 'semi', 'seats' => 2, 'year' => '2018-01-01', 'brands' => ['toyota']]);
++        $this->vehicle('cars', 'car-draft', ['title' => 'Car Draft', 'color' => ['red'], 'transmission' => 'manual', 'seats' => 9, 'year' => '2026-01-01'], false);
++        $this->vehicle('trucks', 'truck-a', ['title' => 'Truck A', 'color' => ['white'], 'transmission' => 'manual', 'seats' => 3, 'year' => '2019-06-06', 'brands' => ['toyota']]);
++        $this->vehicle('trucks', 'truck-b', ['title' => 'Truck B', 'color' => ['red'], 'transmission' => 'automatic', 'seats' => 2, 'year' => '2021-07-07']);
++
++        EntryFactory::id('news-past')->collection('news')->slug('news-past')->date('2020-01-01')->data(['title' => 'Past', 'color' => ['red']])->create();
++        EntryFactory::id('news-future')->collection('news')->slug('news-future')->date(now()->addYear()->format('Y-m-d'))->data(['title' => 'Future', 'color' => ['blue']])->create();
++
++        Event::listen(QueryExecuted::class, fn () => $this->stacheQueries++);
++    }
++
++    #[Test]
++    public function fields_sharing_base_params_share_one_filter_pass()
++    {
++        $pool = app(CountQueryPool::class);
++        $base = ['transmission:is' => 'manual'];
++
++        $this->withFakeQueries(function () use ($pool, $base) {
++            foreach (['color', 'seats', 'year', 'title'] as $field) {
++                $pool->getFieldValues('cars', $base, $field);
++            }
++        });
++        $this->assertSame(1, $this->stacheQueries);
++
++        $this->withFakeQueries(fn () => $pool->getFieldValues('cars', ['transmission:is' => 'automatic'], 'color'));
++        $this->assertSame(1, $this->stacheQueries, 'different base params need their own filter pass');
++
++        $this->withFakeQueries(fn () => $pool->getFieldValues('cars', $base, 'color'));
++        $this->assertSame(0, $this->stacheQueries, 'identical call must be served from the pool');
++
++        foreach (['color', 'seats', 'year', 'title'] as $field) {
++            $this->assertSame($this->reference(['from' => 'cars'] + $base, $field), $this->pooled('cars', $base, $field));
++        }
++    }
++
++    #[Test]
++    public function a_from_in_the_params_neither_splits_the_pool_nor_overrides_the_collection()
++    {
++        $pool = app(CountQueryPool::class);
++
++        $this->withFakeQueries(function () use ($pool) {
++            $pool->getFieldValues('cars', ['from' => 'cars', 'transmission:is' => 'manual'], 'seats');
++            $pool->getFieldValues('cars', ['transmission:is' => 'manual'], 'color');
++        });
++        $this->assertSame(1, $this->stacheQueries, 'bounds (with from) and counts (without) must share the key set');
++
++        $this->assertSame($this->reference(['from' => 'cars', 'transmission:is' => 'manual'], 'seats'), $this->pooled('cars', ['from' => 'cars', 'transmission:is' => 'manual'], 'seats'));
++        $this->assertSame($this->reference(['from' => 'cars'], 'title'), $this->pooled('cars', ['from' => 'trucks'], 'title'));
++        $this->assertSame($this->reference(['from' => 'cars'], 'title'), $this->pooled('cars', ['from' => 'cars|trucks'], 'title'));
++    }
++
++    public static function queryCases(): array
++    {
++        return [
++            'single collection, array values' => [['from' => 'cars'], 'color'],
++            'single collection, null values' => [['from' => 'cars'], 'seats'],
++            'single collection, date values (Carbon)' => [['from' => 'cars'], 'year'],
++            'multi collection a|b' => [['from' => 'cars|trucks'], 'title'],
++            'multi collection a|b, array values' => [['from' => 'cars|trucks'], 'color'],
++            'multi collection as an array' => [['from' => ['cars', 'trucks']], 'title'],
++            'multi collection with not_from' => [['from' => 'cars|trucks|news', 'not_from' => 'news'], 'title'],
++            'all collections' => [['from' => '*'], 'title'],
++            'multiselect query scope' => [['from' => 'cars', 'query_scope' => 'multiselect', 'multiselect:color' => 'red|green'], 'transmission'],
++            'taxonomy condition' => [['from' => 'cars|trucks', 'taxonomy:brands:any' => 'toyota'], 'title'],
++            'draft status' => [['from' => 'cars', 'status:is' => 'draft'], 'title'],
++            'any status' => [['from' => 'cars', 'status:is' => 'any'], 'title'],
++            'dated collection hides future' => [['from' => 'news'], 'title'],
++            'dated collection show_future' => [['from' => 'news', 'show_future' => true], 'title'],
++            'dated collection any status' => [['from' => 'news', 'status:is' => 'any'], 'title'],
++            'random sort' => [['from' => 'cars', 'sort' => 'random'], 'title'],
++            'explicit sort' => [['from' => 'cars', 'sort' => 'title:desc'], 'title'],
++            'limit keeps the sorted subset' => [['from' => 'cars', 'sort' => 'title:desc', 'limit' => 2], 'title'],
++            'offset keeps the sorted subset' => [['from' => 'cars', 'sort' => 'title:asc', 'limit' => 2, 'offset' => 1], 'title'],
++            'no matches' => [['from' => 'cars', 'title:is' => 'nope'], 'title'],
++            'nothing can match (no past, no future)' => [['from' => 'news', 'show_future' => false, 'show_past' => false], 'title'],
++        ];
++    }
++
++    #[Test]
++    #[DataProvider('queryCases')]
++    public function pooled_values_equal_the_hydrated_query_values(array $params, string $field)
++    {
++        $expected = $this->reference($params, $field);
++
++        $this->assertSame($expected, $this->pooled($params['from'], collect($params)->except('from')->all(), $field));
++        $this->assertSame($expected, $this->normalize((new CountEntries(Parameters::make($params, Context::make([]))))->pluck($field)));
++    }
++
++    #[Test]
++    public function the_fixtures_exercise_the_cases()
++    {
++        $this->assertSame(['"Car C"', '"Car D"'], $this->pooled('cars', ['sort' => 'title:desc', 'limit' => 2], 'title'));
++        $this->assertSame(['"Car B"', '"Car C"'], $this->pooled('cars', ['sort' => 'title:asc', 'limit' => 2, 'offset' => 1], 'title'));
++        $this->assertSame(['"Car Draft"'], $this->pooled('cars', ['status:is' => 'draft'], 'title'));
++        $this->assertSame(['"Past"'], $this->pooled('news', [], 'title'));
++        $this->assertSame(['"Past"'], $this->pooled('news', ['show_future' => true], 'title'), 'status=published still hides a scheduled entry');
++        $this->assertSame(['"Future"', '"Past"'], $this->pooled('news', ['status:is' => 'any'], 'title'));
++        $this->assertSame(['"Car A"', '"Car D"', '"Truck A"'], $this->pooled('cars|trucks', ['taxonomy:brands:any' => 'toyota'], 'title'));
++        $this->assertSame(['"automatic"', '"manual"', '"manual"'], $this->pooled('cars', ['query_scope' => 'multiselect', 'multiselect:color' => 'red|green'], 'transmission'));
++        $this->assertSame([], $this->pooled('news', ['show_future' => false, 'show_past' => false], 'title'));
++        $this->assertContains('null', $this->pooled('cars', [], 'seats'));
++        $this->assertCount(6, $this->pooled('cars|trucks', [], 'title'));
++    }
++
++    #[Test]
++    public function resolved_keys_are_collection_prefixed_for_every_queried_collection()
++    {
++        $keys = (new CountEntries(Parameters::make(['from' => 'cars|trucks'], Context::make([]))))->resolvedKeys();
++
++        $this->assertSame(
++            ['cars::car-a', 'cars::car-b', 'cars::car-c', 'cars::car-d', 'trucks::truck-a', 'trucks::truck-b'],
++            $keys->sort()->values()->all()
++        );
++
++        $single = (new CountEntries(Parameters::make(['from' => 'trucks'], Context::make([]))))->resolvedKeys();
++        $this->assertSame(['trucks::truck-a', 'trucks::truck-b'], $single->sort()->values()->all());
++
++        $none = (new CountEntries(Parameters::make(['from' => 'news', 'show_future' => false, 'show_past' => false], Context::make([]))))->resolvedKeys();
++        $this->assertTrue($none->isEmpty());
++        $this->assertTrue(CountEntries::valuesForKeys($none, 'title')->isEmpty());
++    }
++
++    #[Test]
++    public function numeric_entry_ids_resolve_through_the_key_set()
++    {
++        Facades\Collection::make('nums')->save();
++        $this->vehicleBlueprint()->setHandle('nums')->setNamespace('collections.nums')->save();
++        $this->vehicle('nums', '100', ['title' => 'Hundred', 'seats' => 1]);
++        $this->vehicle('nums', '200', ['title' => 'Two Hundred', 'seats' => 2]);
++
++        $this->assertSame(['nums::100', 'nums::200'], (new CountEntries(Parameters::make(['from' => 'nums'], Context::make([]))))->resolvedKeys()->sort()->values()->all());
++        $this->assertSame($this->reference(['from' => 'nums'], 'seats'), $this->pooled('nums', [], 'seats'));
++        $this->assertSame(['1', '2'], $this->pooled('nums', [], 'seats'));
++        $this->assertSame($this->reference(['from' => 'nums|cars'], 'title'), $this->pooled('nums|cars', [], 'title'));
++    }
++
++    #[Test]
++    public function localized_entries_keep_inherited_values_across_sites()
++    {
++        Config::set('statamic.system.multisite', true);
++        Facades\Site::setSites([
++            'en' => ['name' => 'English', 'url' => 'http://localhost/', 'locale' => 'en_US'],
++            'fr' => ['name' => 'French', 'url' => 'http://localhost/fr/', 'locale' => 'fr_FR'],
++        ]);
++        Facades\Collection::make('bikes')->sites(['en', 'fr'])->save();
++        $this->vehicleBlueprint()->setHandle('bikes')->setNamespace('collections.bikes')->save();
++
++        EntryFactory::id('bike-a')->collection('bikes')->slug('bike-a')->data(['title' => 'Bike A', 'color' => ['red']])->create();
++        EntryFactory::id('bike-a-fr')->collection('bikes')->slug('bike-a-fr')->locale('fr')->origin('bike-a')->data(['title' => 'Velo A'])->create();
++        EntryFactory::id('bike-b')->collection('bikes')->slug('bike-b')->data(['title' => 'Bike B', 'color' => ['blue']])->create();
++        EntryFactory::id('bike-b-fr')->collection('bikes')->slug('bike-b-fr')->locale('fr')->origin('bike-b')->data(['title' => 'Velo B', 'color' => ['green']])->create();
++        EntryFactory::id('bike-c')->collection('bikes')->slug('bike-c')->data(['title' => 'Bike C', 'color' => ['white']])->create();
++
++        $this->assertSame(['["green"]', '["red"]'], $this->pooled('bikes', ['site' => 'fr'], 'color'), 'fr inherits red from its origin');
++
++        foreach ([['site' => 'fr'], ['site' => 'en'], ['site' => '*'], []] as $params) {
++            $this->assertSame($this->reference(['from' => 'bikes'] + $params, 'color'), $this->pooled('bikes', $params, 'color'));
++        }
++
++        Facades\Site::setCurrent('fr');
++        $this->app->forgetInstance(CountQueryPool::class);
++        $this->assertSame(['["green"]', '["red"]'], $this->pooled('bikes', [], 'color'));
++    }
++
++    #[Test]
++    public function resolved_keys_are_not_attempted_on_an_eloquent_query()
++    {
++        $params = Parameters::make(['from' => 'cars'], Context::make([]));
++        $builder = Mockery::mock(EloquentQueryBuilder::class);
++        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
++        $builder->shouldNotReceive('pluck');
++        $builder->shouldNotReceive('get');
++
++        $countEntries = Mockery::mock(CountEntries::class, [$params])
++            ->makePartial()
++            ->shouldAllowMockingProtectedMethods();
++        $countEntries->shouldReceive('query')->once()->andReturn($builder);
++
++        $this->assertNull($countEntries->resolvedKeys());
++    }
++
++    protected function withFakeQueries(callable $callback): void
++    {
++        $this->stacheQueries = 0;
++        Config::set('statamic.system.fake_sql_queries', true);
++
++        try {
++            $callback();
++        } finally {
++            Config::set('statamic.system.fake_sql_queries', false);
++        }
++    }
++
++    /**
++     * Independent oracle: hydrate the entries through Statamic's own tag class and
++     * resolve each value the way the Stache indexes do.
++     */
++    protected function reference(array $params, string $field): array
++    {
++        $entries = (new StatamicEntries(Parameters::make($params, Context::make([]))))->get();
++        $resolver = new ResolveValue;
++
++        return $this->normalize($entries->map(fn ($entry) => $resolver($entry, $field)));
++    }
++
++    protected function pooled(string|array $collection, array $baseParams, string $field): array
++    {
++        return $this->normalize(app(CountQueryPool::class)->getFieldValues($collection, $baseParams, $field));
++    }
++
++    protected function normalize($values): array
++    {
++        return collect($values)->map(fn ($value) => json_encode($value))->sort()->values()->all();
++    }
++
++    protected function vehicleBlueprint()
++    {
++        return Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'title', 'field' => ['type' => 'text']],
++            ['handle' => 'color', 'field' => ['type' => 'checkboxes', 'options' => ['red' => 'Red', 'blue' => 'Blue', 'green' => 'Green', 'white' => 'White']]],
++            ['handle' => 'transmission', 'field' => ['type' => 'select', 'options' => ['manual' => 'Manual', 'automatic' => 'Automatic', 'semi' => 'Semi']]],
++            ['handle' => 'seats', 'field' => ['type' => 'integer']],
++            ['handle' => 'year', 'field' => ['type' => 'date']],
++            ['handle' => 'brands', 'field' => ['type' => 'terms', 'taxonomies' => ['brands']]],
++        ]]]]);
++    }
++
++    protected function vehicle(string $collection, string $id, array $data, bool $published = true): void
++    {
++        EntryFactory::id($id)->collection($collection)->slug($id)->data($data)->published($published)->create();
++    }
++}
+--- a/tests/Feature/EntriesUpdatedDispatchTest.php
++++ b/tests/Feature/EntriesUpdatedDispatchTest.php
+@@ -0,0 +1,139 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
++use Livewire\Livewire;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++
++/**
++ * `entries-updated` doubles as the "collection finished rendering" signal for
++ * published views (the demo's animations view ends its loading state on it), so
++ * every filter, sort or clear must still emit it even when the count and the
++ * active-filter count are unchanged. Only a pure page change with both numbers
++ * unchanged may skip it.
++ */
++class EntriesUpdatedDispatchTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        Facades\Collection::make('clothes')->save();
++
++        EntryFactory::collection('clothes')->slug('red-shirt')->data(['title' => 'Red Shirt'])->create();
++        EntryFactory::collection('clothes')->slug('black-shirt')->data(['title' => 'Black Shirt'])->create();
++        EntryFactory::collection('clothes')->slug('yellow-shirt')->data(['title' => 'Yellow Shirt'])->create();
++    }
++
++    #[Test]
++    public function entries_updated_is_dispatched_on_the_first_render()
++    {
++        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
++            ->assertDispatched('entries-updated', count: 3, active: 0);
++    }
++
++    /**
++     * "Shir" -> "Shirt" keeps count (3) and active (1) identical. An unconditional
++     * "skip when unchanged" leaves the animations view's cards at opacity-0 here.
++     */
++    #[Test]
++    public function entries_updated_is_dispatched_when_a_filter_change_leaves_count_and_active_unchanged()
++    {
++        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
++            ->dispatch('filter-updated', field: 'title', condition: 'contains', payload: 'Shir', modifier: 'any')
++            ->assertSet('entriesCount', 3)
++            ->assertSet('activeFilters', 1)
++            ->assertDispatched('entries-updated', count: 3, active: 1)
++            ->dispatch('filter-updated', field: 'title', condition: 'contains', payload: 'Shirt', modifier: 'any')
++            ->assertSet('entriesCount', 3)
++            ->assertSet('activeFilters', 1)
++            ->assertDispatched('entries-updated', count: 3, active: 1);
++    }
++
++    #[Test]
++    public function entries_updated_is_dispatched_when_switching_between_equal_count_values()
++    {
++        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
++            ->dispatch('filter-updated', field: 'title', condition: 'is', payload: 'Red Shirt', modifier: 'any')
++            ->assertSet('entriesCount', 1)
++            ->dispatch('filter-updated', field: 'title', condition: 'is', payload: 'Black Shirt', modifier: 'any')
++            ->assertSet('entriesCount', 1)
++            ->assertDispatched('entries-updated', count: 1, active: 1)
++            ->assertSee('Black Shirt')
++            ->assertDontSee('Red Shirt');
++    }
++
++    #[Test]
++    public function a_sort_change_is_dispatched_even_when_the_count_is_unchanged()
++    {
++        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
++            ->dispatch('sort-updated', sort: 'title:desc')
++            ->assertSet('entriesCount', 3)
++            ->assertDispatched('entries-updated', count: 3, active: 0);
++    }
++
++    /**
++     * A page change cannot alter the count or the active filters, so the LfCount
++     * round trip is skipped. This is the behaviour change of the plan.
++     */
++    #[Test]
++    public function a_page_change_that_changes_nothing_skips_entries_updated()
++    {
++        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'paginate' => 2]])
++            ->assertDispatched('entries-updated', count: 3, active: 0)
++            ->call('gotoPage', 2, 'page')
++            ->assertSet('paginators.page', 2)
++            ->assertSet('entriesCount', 3)
++            ->assertSee('Yellow Shirt')
++            ->assertNotDispatched('entries-updated')
++            ->call('previousPage', 'page')
++            ->assertSet('paginators.page', 1)
++            ->assertNotDispatched('entries-updated')
++            ->call('nextPage', 'page')
++            ->assertSet('paginators.page', 2)
++            ->assertNotDispatched('entries-updated');
++    }
++
++    #[Test]
++    public function a_load_more_that_changes_nothing_skips_entries_updated()
++    {
++        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'paginate' => 2, 'infinite_scroll' => true]])
++            ->assertDispatched('entries-updated', count: 3, active: 0)
++            ->call('loadMore')
++            ->assertSet('paginate', 4)
++            ->assertSet('entriesCount', 3)
++            ->assertSee('Yellow Shirt')
++            ->assertNotDispatched('entries-updated');
++    }
++
++    #[Test]
++    public function a_page_change_still_dispatches_when_the_total_changed_in_between()
++    {
++        $component = Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'paginate' => 2]])
++            ->assertDispatched('entries-updated', count: 3, active: 0);
++
++        EntryFactory::collection('clothes')->slug('green-shirt')->data(['title' => 'Green Shirt'])->create();
++
++        $component->call('gotoPage', 2, 'page')
++            ->assertSet('entriesCount', 4)
++            ->assertDispatched('entries-updated', count: 4, active: 0);
++    }
++
++    #[Test]
++    public function a_filter_change_in_the_request_after_a_page_change_is_dispatched()
++    {
++        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'paginate' => 2]])
++            ->call('gotoPage', 2, 'page')
++            ->assertNotDispatched('entries-updated')
++            ->dispatch('filter-updated', field: 'title', condition: 'contains', payload: 'Shirt', modifier: 'any')
++            ->assertSet('paginators.page', 1)
++            ->assertDispatched('entries-updated', count: 3, active: 1);
++    }
++}
+--- a/tests/Feature/FieldValuesQueryScopeAliasTest.php
++++ b/tests/Feature/FieldValuesQueryScopeAliasTest.php
+@@ -49,7 +49,7 @@
+             'from' => 'yachts',
+             'cabins:category' => 'catamaran',
+         ], $scopeParams)])->assertSet('entriesCount', 2);
+-        $event = collect($collectionComponent->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $event = collect($collectionComponent->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         foreach ([LfRangeFilter::class => 'gte', LfDualRangeFilter::class => 'dual_range'] as $component => $condition) {
+             Livewire::test($component, [
+@@ -59,7 +59,7 @@
+                 'min' => 2,
+                 'max' => 10,
+             ])
+-                ->dispatch('params-updated', ...$event)
++                ->dispatch('bounds-updated', ...$event)
+                 ->assertSet('dynamicMin', 4)
+                 ->assertSet('dynamicMax', $expectedMax);
+         }
+--- a/tests/Feature/FilterSnapshotAndOptionsTest.php
++++ b/tests/Feature/FilterSnapshotAndOptionsTest.php
+@@ -0,0 +1,343 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Illuminate\Cache\Events\CacheHit;
++use Illuminate\Cache\Events\KeyWritten;
++use Illuminate\Support\Facades\Cache;
++use Illuminate\Support\Facades\Config;
++use Illuminate\Support\Facades\Event;
++use Livewire\Attributes\Computed;
++use Livewire\Livewire;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfSort;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++use Statamic\Facades\Blink;
++use Statamic\Facades\Entry;
++use Statamic\Facades\Site;
++
++class EvaluationCountingCheckboxFilter extends LfCheckboxFilter
++{
++    public static int $evaluations = 0;
++
++    #[Computed]
++    public function filterOptions(): array
++    {
++        static::$evaluations++;
++
++        return parent::filterOptions();
++    }
++}
++
++/**
++ * Guards the slim-snapshot behaviour: `counts` is only materialised in `statamic_field`
++ * when `enable_filter_values_count` is on, the computed option properties are no longer
++ * persisted to the cache store, and term/entry options stay correct across requests,
++ * sites and content changes without any cache invalidation.
++ */
++class FilterSnapshotAndOptionsTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        Config::set('cache.default', 'array');
++        Cache::store('array')->flush();
++
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'order', 'field' => ['type' => 'text', 'display' => 'Order']],
++        ]]]])->setHandle('colors')->setNamespace('taxonomies.colors')->save();
++        Facades\Taxonomy::make('colors')->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red', 'order' => '2'])->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('black')->data(['title' => 'Black', 'order' => '1'])->save();
++
++        Facades\Collection::make('items')->taxonomies(['colors'])->save();
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'title', 'field' => ['type' => 'text', 'display' => 'Title']],
++            ['handle' => 'colors', 'field' => ['type' => 'terms', 'taxonomies' => ['colors'], 'display' => 'Colors']],
++            ['handle' => 'related', 'field' => ['type' => 'entries', 'collections' => ['items'], 'display' => 'Related']],
++            ['handle' => 'size', 'field' => ['type' => 'select', 'options' => ['s' => 'Small', 'l' => 'Large'], 'display' => 'Size', 'max_items' => 1]],
++            ['handle' => 'when', 'field' => ['type' => 'date', 'display' => 'When']],
++        ]]]])->setHandle('item')->setNamespace('collections.items')->save();
++
++        Entry::make()->collection('items')->slug('one')->data(['title' => 'One', 'colors' => ['red'], 'size' => 's'])->save();
++        Entry::make()->collection('items')->slug('two')->data(['title' => 'Two', 'colors' => ['black'], 'size' => 'l'])->save();
++    }
++
++    /**
++     * Mounts a fresh checkbox filter as a new request would (request cache flushed) and returns its options.
++     */
++    protected function mountOptions(string $field, string $condition = 'is', array $extra = [], string $blueprint = 'items.item'): array
++    {
++        Blink::flush();
++
++        return Livewire::test(LfCheckboxFilter::class, array_merge(['blueprint' => $blueprint, 'field' => $field, 'condition' => $condition], $extra))
++            ->instance()->filterOptions();
++    }
++
++    /**
++     * Multi-site content is created with its sites configured up front, as it would be on a real
++     * install: the in-process Stache memoizes a term's localizations, so re-configuring an
++     * existing taxonomy's sites inside one test would not represent a real request.
++     */
++    protected function seedTwoSites(): void
++    {
++        Config::set('statamic.system.multisite', true);
++        Site::setSites([
++            'en' => ['name' => 'English', 'url' => '/', 'locale' => 'en_US'],
++            'es' => ['name' => 'Spanish', 'url' => '/es', 'locale' => 'es_ES'],
++        ]);
++
++        Facades\Taxonomy::make('shades')->sites(['en', 'es'])->save();
++        Facades\Term::make()->taxonomy('shades')->inDefaultLocale()->slug('light')->data(['title' => 'Light'])->save();
++        Facades\Term::make()->taxonomy('shades')->inDefaultLocale()->slug('dark')->data(['title' => 'Dark'])->save();
++
++        Facades\Collection::make('goods')->sites(['en', 'es'])->taxonomies(['shades'])->save();
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'title', 'field' => ['type' => 'text', 'display' => 'Title']],
++            ['handle' => 'shades', 'field' => ['type' => 'terms', 'taxonomies' => ['shades'], 'display' => 'Shades']],
++            ['handle' => 'related', 'field' => ['type' => 'entries', 'collections' => ['goods'], 'display' => 'Related']],
++        ]]]])->setHandle('good')->setNamespace('collections.goods')->save();
++
++        Entry::make()->collection('goods')->locale('en')->slug('lamp')->data(['title' => 'Lamp', 'shades' => ['light']])->save();
++        Entry::make()->collection('goods')->locale('en')->slug('candle')->data(['title' => 'Candle', 'shades' => ['dark']])->save();
++    }
++
++    #[Test]
++    public function counts_fall_back_to_the_null_filled_shape_for_every_option_source_when_counts_are_disabled(): void
++    {
++        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
++
++        $cases = [
++            'blueprint options' => [LfSelectFilter::class, ['field' => 'size']],
++            'terms' => [LfCheckboxFilter::class, ['field' => 'colors', 'condition' => 'taxonomy']],
++            'entries' => [LfCheckboxFilter::class, ['field' => 'related']],
++            'custom options' => [LfRadioFilter::class, ['field' => 'size', 'options' => ['x' => 'X', 'y' => 'Y']]],
++        ];
++
++        foreach ($cases as $label => [$class, $params]) {
++            $component = Livewire::test($class, array_merge(['blueprint' => 'items.item', 'condition' => 'is'], $params));
++            $instance = $component->instance();
++            $expected = array_fill_keys(array_keys($instance->filterOptions()), null);
++
++            $this->assertNotEmpty($expected, $label);
++            $this->assertSame($expected, $instance->counts(), "$label: counts() must equal the null-filled option keys");
++            $this->assertSame($expected, $instance->counts, "$label: magic \$this->counts must match too (view path)");
++            $this->assertArrayNotHasKey('counts', $instance->statamic_field, "$label: no counts array in the snapshot when the feature is off");
++            $component->assertDontSeeHtml('class="text-lf-muted ml-1">(');
++        }
++    }
++
++    #[Test]
++    public function advanced_views_seed_alpine_with_null_counts_when_counts_are_disabled(): void
++    {
++        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
++
++        $component = Livewire::test(LfCheckboxFilter::class, ['blueprint' => 'items.item', 'field' => 'colors', 'condition' => 'taxonomy', 'view' => 'lf-checkbox-advanced']);
++        $this->assertMatchesRegularExpression('/counts: JSON\.parse\(\'\{\\\\u0022red\\\\u0022:null,\\\\u0022black\\\\u0022:null\}\'\)/', $component->html());
++
++        $component = Livewire::test(LfSelectFilter::class, ['blueprint' => 'items.item', 'field' => 'size', 'condition' => 'is', 'view' => 'lf-select-advanced']);
++        $this->assertMatchesRegularExpression('/counts: JSON\.parse\(\'\{\\\\u0022s\\\\u0022:null,\\\\u0022l\\\\u0022:null\}\'\)/', $component->html());
++    }
++
++    #[Test]
++    public function counts_are_still_materialized_and_dispatched_when_the_feature_is_enabled(): void
++    {
++        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
++
++        foreach ([
++            [LfCheckboxFilter::class, ['field' => 'colors', 'condition' => 'taxonomy'], ['red' => 1, 'black' => 1]],
++            [LfSelectFilter::class, ['field' => 'size', 'condition' => 'is'], ['s' => 1, 'l' => 1]],
++            [LfRadioFilter::class, ['field' => 'size', 'condition' => 'is', 'options' => ['s' => 'S', 'xl' => 'XL']], ['s' => 1, 'xl' => 0]],
++        ] as [$class, $params, $expectedCounts]) {
++            $component = Livewire::test($class, array_merge(['blueprint' => 'items.item'], $params));
++            $this->assertSame(array_fill_keys(array_keys($expectedCounts), null), $component->instance()->statamic_field['counts']);
++
++            $component->dispatch('params-updated', ['from' => 'items'])
++                ->assertDispatched('counts-updated', $expectedCounts);
++            $this->assertSame($expectedCounts, $component->instance()->counts());
++        }
++    }
++
++    #[Test]
++    public function enabling_counts_after_the_page_was_rendered_without_them_still_computes_counts_on_update(): void
++    {
++        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
++        $component = Livewire::test(LfCheckboxFilter::class, ['blueprint' => 'items.item', 'field' => 'colors', 'condition' => 'taxonomy']);
++        $this->assertArrayNotHasKey('counts', $component->instance()->statamic_field);
++
++        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
++        $component->dispatch('params-updated', ['from' => 'items'])
++            ->assertDispatched('counts-updated', ['red' => 1, 'black' => 1]);
++    }
++
++    #[Test]
++    public function lf_tags_resolves_option_labels_regardless_of_the_counts_flag(): void
++    {
++        foreach ([false, true] as $flag) {
++            Config::set('statamic-livewire-filters.enable_filter_values_count', $flag);
++            $one = Entry::query()->where('collection', 'items')->where('slug', 'one')->first()->id();
++            $component = Livewire::test(LfTags::class, ['blueprint' => 'items.item', 'fields' => 'colors|related|size'])
++                ->dispatch('tags-updated', ['from' => 'items', 'taxonomy:colors:any' => 'red', 'related:is' => $one, 'size:is' => 'l']);
++            $labels = $component->instance()->tags->pluck('optionLabel')->all();
++            $this->assertSame(['Red', 'One', 'Large'], $labels, 'flag='.var_export($flag, true));
++        }
++    }
++
++    #[Test]
++    public function filter_options_is_evaluated_once_per_request_without_persist(): void
++    {
++        EvaluationCountingCheckboxFilter::$evaluations = 0;
++        $component = Livewire::test(EvaluationCountingCheckboxFilter::class, ['blueprint' => 'items.item', 'field' => 'colors', 'condition' => 'taxonomy']);
++        $this->assertSame(1, EvaluationCountingCheckboxFilter::$evaluations, 'mount + render reads $this->filter_options once');
++
++        $instance = $component->instance();
++        $instance->filterOptions;
++        $instance->filter_options;
++        $this->assertSame(1, EvaluationCountingCheckboxFilter::$evaluations, 'memoized within the request');
++
++        $component->set('selected', ['red']);
++        $this->assertSame(3, EvaluationCountingCheckboxFilter::$evaluations, 'next request: rules() direct call + one render read');
++    }
++
++    #[Test]
++    public function no_lw_computed_cache_entries_are_written_on_mount_or_update(): void
++    {
++        $writes = [];
++        Event::listen(KeyWritten::class, function (KeyWritten $event) use (&$writes) {
++            if (str_starts_with($event->key, 'lw_computed')) {
++                $writes[] = $event->key;
++            }
++        });
++
++        Livewire::test(LfCheckboxFilter::class, ['blueprint' => 'items.item', 'field' => 'colors', 'condition' => 'taxonomy'])->set('selected', ['red']);
++        Livewire::test(LfRadioFilter::class, ['blueprint' => 'items.item', 'field' => 'size', 'condition' => 'is'])->set('selected', 's');
++        Livewire::test(LfSelectFilter::class, ['blueprint' => 'items.item', 'field' => 'size', 'condition' => 'is'])->set('selected', 'l');
++        Livewire::test(LfDateFilter::class, ['blueprint' => 'items.item', 'field' => 'when', 'condition' => 'is_after'])->set('selected', '2024-01-01');
++        Livewire::test(LfSort::class, ['blueprint' => 'items.item', 'fields' => 'title|size'])->set('selected', 'title:asc');
++        Livewire::test(LfTags::class, ['blueprint' => 'items.item', 'fields' => 'colors|size'])->dispatch('tags-updated', ['from' => 'items', 'size:is' => 's']);
++
++        $this->assertSame([], $writes);
++    }
++
++    #[Test]
++    public function lf_tags_produces_identical_tags_on_later_requests_without_a_persisted_cache(): void
++    {
++        $one = Entry::query()->where('collection', 'items')->where('slug', 'one')->first()->id();
++        $params = ['from' => 'items', 'taxonomy:colors:any' => 'red|black', 'related:is' => $one];
++
++        $cacheTraffic = [];
++        Event::listen(KeyWritten::class, function (KeyWritten $event) use (&$cacheTraffic) {
++            if (str_starts_with($event->key, 'lw_computed')) {
++                $cacheTraffic[] = 'write:'.$event->key;
++            }
++        });
++        Event::listen(CacheHit::class, function (CacheHit $event) use (&$cacheTraffic) {
++            if (str_starts_with($event->key, 'lw_computed')) {
++                $cacheTraffic[] = 'hit:'.$event->key;
++            }
++        });
++
++        $component = Livewire::test(LfTags::class, ['blueprint' => 'items.item', 'fields' => 'colors|related']);
++        Blink::flush();
++        $component->dispatch('tags-updated', $params);
++        $first = $component->instance()->tags->all();
++
++        Blink::flush();
++        $component->dispatch('tags-updated', $params);
++
++        $this->assertSame($first, $component->instance()->tags->all());
++        $this->assertSame(['Red', 'Black', 'One'], collect($first)->pluck('optionLabel')->all());
++        $this->assertSame([], $cacheTraffic, 'statamicFields is resolved per request, never through the cache store');
++    }
++
++    #[Test]
++    public function content_changes_are_visible_on_the_next_request_without_any_invalidation(): void
++    {
++        $this->assertSame(['red' => 'Red', 'black' => 'Black'], $this->mountOptions('colors', 'taxonomy'));
++        $this->assertSame(['One', 'Two'], array_values($this->mountOptions('related')));
++
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('blue')->data(['title' => 'Blue'])->saveQuietly();
++        $this->assertSame(['red' => 'Red', 'black' => 'Black', 'blue' => 'Blue'], $this->mountOptions('colors', 'taxonomy'));
++
++        Facades\Term::find('colors::blue')->data(['title' => 'Navy'])->saveQuietly();
++        $this->assertSame('Navy', $this->mountOptions('colors', 'taxonomy')['blue']);
++
++        Facades\Term::find('colors::blue')->delete();
++        $this->assertArrayNotHasKey('blue', $this->mountOptions('colors', 'taxonomy'));
++
++        Entry::query()->where('collection', 'items')->where('slug', 'two')->first()->published(false)->saveQuietly();
++        $this->assertSame(['One'], array_values($this->mountOptions('related')));
++
++        Entry::query()->where('collection', 'items')->where('slug', 'one')->first()->delete();
++        $this->assertSame([], $this->mountOptions('related'));
++    }
++
++    #[Test]
++    public function sorted_and_unsorted_term_options_agree_after_a_quiet_title_edit(): void
++    {
++        $this->mountOptions('colors', 'taxonomy');
++
++        Facades\Term::find('colors::red')->data(['title' => 'Crimson', 'order' => '2'])->saveQuietly();
++
++        $sorted = $this->mountOptions('colors', 'taxonomy', ['sort' => 'order:asc']);
++        $unsorted = $this->mountOptions('colors', 'taxonomy');
++
++        $this->assertSame(['black', 'red'], array_keys($sorted));
++        $this->assertSame('Crimson', $sorted['red']);
++        $this->assertSame('Crimson', $unsorted['red'], 'both resolution paths read live content');
++    }
++
++    #[Test]
++    public function localized_term_titles_do_not_leak_between_sites(): void
++    {
++        $this->seedTwoSites();
++        Facades\Term::find('shades::light')->in('es')->slug('claro')->data(['title' => 'Claro'])->save();
++
++        $perSite = function (string $site) {
++            Site::setCurrent($site);
++
++            return $this->mountOptions('shades', 'taxonomy', [], 'goods.good');
++        };
++
++        $this->assertSame(['light' => 'Light', 'dark' => 'Dark'], $perSite('en'));
++        $this->assertSame(['light' => 'Claro', 'dark' => 'Dark'], $perSite('es'), 'unlocalized terms fall back to the default locale title');
++
++        Facades\Term::find('shades::light')->in('es')->data(['title' => 'Muy Claro'])->save();
++        Facades\Term::find('shades::dark')->in('es')->slug('oscuro')->data(['title' => 'Oscuro'])->save();
++
++        $this->assertSame(['light' => 'Light', 'dark' => 'Dark'], $perSite('en'));
++        $this->assertSame(['light' => 'Muy Claro', 'dark' => 'Oscuro'], $perSite('es'));
++    }
++
++    #[Test]
++    public function origin_id_flag_selects_origin_or_localized_entry_ids_per_site(): void
++    {
++        $this->seedTwoSites();
++        $lamp = Entry::query()->where('collection', 'goods')->where('slug', 'lamp')->first();
++        $lampara = Entry::make()->collection('goods')->locale('es')->slug('lampara')->origin($lamp)->data(['title' => 'Lámpara']);
++        $lampara->save();
++        Site::setCurrent('es');
++
++        Config::set('statamic-livewire-filters.use_origin_id_for_entries_field', true);
++        $this->assertSame([$lamp->id() => 'Lámpara'], $this->mountOptions('related', 'is', [], 'goods.good'));
++
++        Config::set('statamic-livewire-filters.use_origin_id_for_entries_field', false);
++        $this->assertSame([$lampara->id() => 'Lámpara'], $this->mountOptions('related', 'is', [], 'goods.good'));
++
++        Config::set('statamic-livewire-filters.use_origin_id_for_entries_field', true);
++        $this->assertSame([$lamp->id() => 'Lámpara'], $this->mountOptions('related', 'is', [], 'goods.good'));
++
++        Site::setCurrent('en');
++        $this->assertSame(['Lamp', 'Candle'], array_values($this->mountOptions('related', 'is', [], 'goods.good')));
++    }
++}
+--- a/tests/Feature/HandleEntriesCountTest.php
++++ b/tests/Feature/HandleEntriesCountTest.php
+@@ -170,8 +170,10 @@
+         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+             ->dispatch('params-updated', [])
+             ->assertNotDispatched('counts-updated')
+-            ->assertViewHas('statamic_field', function ($statamic_field) {
+-                return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
++            ->tap(function ($component) {
++                $this->assertArrayNotHasKey('counts', $component->get('statamic_field'));
++                $this->assertSame(['option1' => null, 'option2' => null], $component->instance()->counts());
++                $this->assertArrayNotHasKey('html', $component->effects, 'a no-op must not re-render');
+             });
+     }
+ 
+@@ -222,8 +224,6 @@
+                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+             })
+             ->dispatch('params-updated', ['collection' => 'secrets', 'in' => 'secrets'])
+-            ->assertViewHas('statamic_field', function ($statamic_field) {
+-                return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
+-            });
++            ->assertSet('statamic_field.counts', ['option1' => 1, 'option2' => 1]);
+     }
+ }
+--- a/tests/Feature/HandleFieldBoundsTest.php
++++ b/tests/Feature/HandleFieldBoundsTest.php
+@@ -2,6 +2,7 @@
+ 
+ namespace Reach\StatamicLivewireFilters\Tests\Feature;
+ 
++use Carbon\Carbon;
+ use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+ use Illuminate\Support\Facades\Config;
+ use Livewire\Livewire;
+@@ -82,7 +83,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', false);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ['category:is' => 'catamaran'])
++            ->dispatch('bounds-updated', ['category:is' => 'catamaran'])
+             ->assertNotDispatched('range-bounds-updated')
+             ->assertSet('dynamicMin', null)
+             ->assertSet('dynamicMax', null);
+@@ -101,7 +102,7 @@
+ 
+         foreach ([LfRangeFilter::class => $this->rangeArguments(), LfDualRangeFilter::class => $this->dualRangeArguments()] as $component => $arguments) {
+             Livewire::test($component, $arguments)
+-                ->dispatch('params-updated', ['status:is' => 'draft', 'slug:is' => 'draft-yacht'])
++                ->dispatch('bounds-updated', ['status:is' => 'draft', 'slug:is' => 'draft-yacht'])
+                 ->assertNotDispatched('range-bounds-updated')
+                 ->assertSet('dynamicMin', null)
+                 ->assertSet('dynamicMax', null);
+@@ -121,7 +122,7 @@
+ 
+         foreach ([LfRangeFilter::class => $this->rangeArguments(), LfDualRangeFilter::class => $this->dualRangeArguments()] as $component => $arguments) {
+             Livewire::test($component, $arguments)
+-                ->dispatch('params-updated', ...$event)
++                ->dispatch('bounds-updated', ...$event)
+                 ->assertSet('dynamicMin', 4)
+                 ->assertSet('dynamicMax', 6);
+         }
+@@ -155,7 +156,7 @@
+         $this->mock(CountQueryPool::class)->shouldNotReceive('getFieldValues');
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+-            ->dispatch('params-updated', ...$event)
++            ->dispatch('bounds-updated', ...$event)
+             ->assertNotDispatched('range-bounds-updated')
+             ->assertSet('dynamicMin', null);
+     }
+@@ -171,7 +172,7 @@
+             $event = $this->collectionBoundsEvent(['from' => $collections]);
+ 
+             Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+-                ->dispatch('params-updated', ...$event)
++                ->dispatch('bounds-updated', ...$event)
+                 ->assertSet('dynamicMin', 4)
+                 ->assertSet('dynamicMax', 9);
+         }
+@@ -186,10 +187,10 @@
+ 
+         $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts|other']])
+             ->assertSet('entriesCount', 4);
+-        $event = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $event = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         $filter = Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$event)
++            ->dispatch('bounds-updated', ...$event)
+             ->set('selectedMin', 6)
+             ->assertDispatched('filter-updated',
+                 field: 'cabins',
+@@ -217,7 +218,7 @@
+         $event[0] = ['from' => '*', 'status:is' => 'any'];
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$event)
++            ->dispatch('bounds-updated', ...$event)
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 9);
+     }
+@@ -234,7 +235,7 @@
+ 
+         foreach ([LfRangeFilter::class => $this->rangeArguments(), LfDualRangeFilter::class => $this->dualRangeArguments()] as $component => $arguments) {
+             Livewire::test($component, $arguments)
+-                ->dispatch('params-updated', ...$event)
++                ->dispatch('bounds-updated', ...$event)
+                 ->assertSet('dynamicMin', 4)
+                 ->assertSet('dynamicMax', 9);
+         }
+@@ -250,10 +251,10 @@
+ 
+         $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']])
+             ->dispatch('filter-updated', field: 'status', condition: 'is', payload: 'any', modifier: null);
+-        $event = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $event = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+-            ->dispatch('params-updated', ...$event)
++            ->dispatch('bounds-updated', ...$event)
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 8);
+     }
+@@ -264,7 +265,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 6)
+             ->assertDispatched('range-bounds-updated', min: 4, max: 6, disabled: false);
+@@ -276,7 +277,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['cabins:gte' => 6, 'cabins:lte' => 8]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['cabins:gte' => 6, 'cabins:lte' => 8]))
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 8);
+     }
+@@ -287,7 +288,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['year:is_after' => '2022-01-01', 'year:is_before' => '2024-12-31']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['year:is_after' => '2022-01-01', 'year:is_before' => '2024-12-31']))
+             ->assertSet('dynamicMin', 2020)
+             ->assertSet('dynamicMax', 2024);
+     }
+@@ -298,19 +299,47 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+             ->assertSet('dynamicMin', 2020)
+             ->assertSet('dynamicMax', 2022)
+             ->assertDispatched('range-bounds-updated', min: 2020, max: 2022, disabled: false);
+     }
+ 
+     #[Test]
++    public function date_bounds_are_identical_whether_the_values_arrive_as_carbon_or_strings()
++    {
++        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
++
++        $expectedMin = Carbon::parse('2020-05-22')->timestamp;
++        $expectedMax = Carbon::parse('2024-12-30')->timestamp;
++
++        $variants = [
++            'strings (Eloquent path)' => ['2020-05-22', '2022-02-02', '2024-12-30'],
++            'Carbon in the app timezone (Stache index)' => [Carbon::parse('2020-05-22'), Carbon::parse('2022-02-02'), Carbon::parse('2024-12-30')],
++            'Carbon in other timezones' => [Carbon::parse('2020-05-22')->setTimezone('America/New_York'), Carbon::parse('2022-02-02')->setTimezone('Asia/Tokyo'), Carbon::parse('2024-12-30')->setTimezone('Europe/Athens')],
++            'DateTimeImmutable' => [new \DateTimeImmutable('2020-05-22'), new \DateTimeImmutable('2022-02-02'), new \DateTimeImmutable('2024-12-30')],
++            'mixed with junk' => [Carbon::parse('2020-05-22'), '2022-02-02', null, '', 'not a date', '2024-12-30'],
++        ];
++
++        foreach ($variants as $label => $values) {
++            $this->mock(CountQueryPool::class)->shouldReceive('getFieldValues')->andReturn(collect($values));
++
++            Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
++                ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
++                ->assertSet('fieldMin', $expectedMin)
++                ->assertSet('fieldMax', $expectedMax)
++                ->assertSet('dynamicMin', 2020)
++                ->assertSet('dynamicMax', 2024);
++        }
++    }
++
++    #[Test]
+     public function it_falls_back_to_absolute_bounds_when_no_entries_match()
+     {
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'nonexistent']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'nonexistent']))
+             ->assertSet('dynamicMin', 2)
+             ->assertSet('dynamicMax', 10)
+             ->assertDispatched('range-bounds-updated', min: 2, max: 10, disabled: false);
+@@ -325,7 +354,7 @@
+         $this->makeEntry($this->collection, 'yacht-e')->set('title', 'Luxury Yacht E')->set('cabins', 7)->set('category', 'special')->save();
+ 
+         Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['step' => 2]))
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'special']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'special']))
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 8);
+     }
+@@ -336,7 +365,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'monohull']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'monohull']))
+             ->assertSet('dynamicMin', 8)
+             ->assertSet('dynamicMax', 10)
+             ->assertSet('boundsDisabled', true)
+@@ -349,12 +378,12 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+             ->assertSet('selectedMin', 4)
+             ->assertSet('selectedMax', 6)
+             ->assertNotDispatched('filter-updated')
+             ->assertDispatched('range-bounds-updated', min: 4, max: 6, selectedMin: 4, selectedMax: 6, disabled: false)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments([]))
+             ->assertSet('selectedMin', 4)
+             ->assertSet('selectedMax', 8)
+             ->assertNotDispatched('filter-updated');
+@@ -372,7 +401,7 @@
+                 condition: 'dual_range',
+                 payload: ['min' => 5, 'max' => 10],
+             )
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran', 'cabins:gte' => 5, 'cabins:lte' => 10]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran', 'cabins:gte' => 5, 'cabins:lte' => 10]))
+             ->assertSet('selectedMin', 5)
+             ->assertSet('selectedMax', 10)
+             ->assertNotDispatched('filter-updated')
+@@ -387,9 +416,9 @@
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+             ->set('selectedMin', 5)
+             ->set('selectedMax', 8)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran', 'cabins:gte' => 5, 'cabins:lte' => 8]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran', 'cabins:gte' => 5, 'cabins:lte' => 8]))
+             ->assertDispatched('range-bounds-updated', min: 4, max: 8, selectedMin: 5, selectedMax: 8, disabled: false)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['cabins:gte' => 5, 'cabins:lte' => 8]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['cabins:gte' => 5, 'cabins:lte' => 8]))
+             ->assertSet('selectedMin', 5)
+             ->assertSet('selectedMax', 8)
+             ->assertNotDispatched('filter-updated')
+@@ -403,24 +432,24 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']]);
+-        $initialEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $initialEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+         $filter = Livewire::test(
+             $dualRange ? LfDualRangeFilter::class : LfRangeFilter::class,
+             $dualRange ? $this->dualRangeArguments() : $this->rangeArguments(),
+-        )->dispatch('params-updated', ...$initialEvent);
++        )->dispatch('bounds-updated', ...$initialEvent);
+ 
+         $collection->dispatch('filter-updated', field: 'category', condition: 'is', payload: 'catamaran', modifier: null);
+-        $olderEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $olderEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         $filter->set($dualRange ? 'selectedMin' : 'selected', $dualRange ? 5 : 8);
+         $selectionUpdate = collect($filter->effects['dispatches'])->firstWhere('name', 'filter-updated')['params'];
+         $collection->dispatch('filter-updated', ...$selectionUpdate)
+             ->assertSet('params.cabins:gte', $dualRange ? 5 : 8)
+             ->assertSet('entriesCount', $dualRange ? 1 : 0);
+-        $currentEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $currentEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         foreach ($reverseEvents ? [$currentEvent, $olderEvent] : [$olderEvent, $currentEvent] as $event) {
+-            $filter->dispatch('params-updated', ...$event)
++            $filter->dispatch('bounds-updated', ...$event)
+                 ->assertSet($dualRange ? 'selectedMin' : 'selected', $dualRange ? 5 : 8)
+                 ->assertSet('dynamicMin', 4)
+                 ->assertSet('dynamicMax', 8)
+@@ -465,16 +494,16 @@
+ 
+         $selectionUpdate = collect($filter->effects['dispatches'])->firstWhere('name', 'filter-updated')['params'];
+         $collection->dispatch('filter-updated', ...$selectionUpdate);
+-        $olderEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $olderEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         $filter->dispatch('clear-all-filters');
+         $clearUpdate = collect($filter->effects['dispatches'])->firstWhere('name', 'clear-filter')['params'];
+         $collection->dispatch('clear-filter', ...$clearUpdate)
+             ->assertSet('entriesCount', 2);
+-        $currentEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $currentEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         foreach ([$olderEvent, $currentEvent] as $event) {
+-            $filter->dispatch('params-updated', ...$event)
++            $filter->dispatch('bounds-updated', ...$event)
+                 ->assertSet($dualRange ? 'selectedMin' : 'selected', 4)
+                 ->assertSet('dynamicMin', 4)
+                 ->assertSet('dynamicMax', 6)
+@@ -523,11 +552,11 @@
+             $name = $select ? 'filter-updated' : 'clear-filter';
+             $update = collect($filter->effects['dispatches'])->firstWhere('name', $name)['params'];
+             $collection->dispatch($name, ...$update);
+-            $events[] = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++            $events[] = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+         }
+ 
+         foreach ($events as $event) {
+-            $filter->dispatch('params-updated', ...$event)
++            $filter->dispatch('bounds-updated', ...$event)
+                 ->assertSet($dualRange ? 'selectedMin' : 'selected', $dualRange ? 5 : 8)
+                 ->assertSet('dynamicMax', 8)
+                 ->assertSet('boundsDisabled', false)
+@@ -564,13 +593,13 @@
+                 $update = collect($filter->effects['dispatches'])->firstWhere('name', $name)['params'];
+                 $collection->dispatch($name, ...$update);
+                 if ($redundant) {
+-                    $collection->assertNotDispatched('params-updated');
++                    $collection->assertNotDispatched('bounds-updated');
+                 }
+             }
+ 
+             $collection->dispatch('filter-updated', field: 'category', condition: 'is', payload: $category, modifier: null);
+-            $event = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
+-            $filter->dispatch('params-updated', ...$event)
++            $event = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
++            $filter->dispatch('bounds-updated', ...$event)
+                 ->assertSet('pendingBoundsSelection', null);
+         }
+ 
+@@ -604,15 +633,15 @@
+ 
+         $update = collect($filter->effects['dispatches'])->firstWhere('name', 'filter-updated')['params'];
+         $collection->dispatch('filter-updated', ...$update);
+-        $olderEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $olderEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         $filter->set($property, $latest);
+         $update = collect($filter->effects['dispatches'])->firstWhere('name', 'filter-updated')['params'];
+         $collection->dispatch('filter-updated', ...$update);
+-        $currentEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        $currentEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+ 
+         foreach ([$olderEvent, $currentEvent] as $event) {
+-            $filter->dispatch('params-updated', ...$event)
++            $filter->dispatch('bounds-updated', ...$event)
+                 ->assertSet($property, $latest)
+                 ->assertSet('dynamicMin', $min)
+                 ->assertSet('dynamicMax', $latest)
+@@ -622,8 +651,8 @@
+ 
+         // After acknowledgment, a newer authoritative clear can make the range inactive.
+         $collection->dispatch('clear-filter', field: $update['field'], condition: $update['condition'], modifier: $update['modifier']);
+-        $clearEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
+-        $filter->dispatch('params-updated', ...$clearEvent)
++        $clearEvent = collect($collection->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
++        $filter->dispatch('bounds-updated', ...$clearEvent)
+             ->assertSet($property, match ($kind) {
+                 'single' => 4,
+                 'date' => 2022,
+@@ -647,10 +676,10 @@
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+             ->set('selected', 8)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran', 'cabins:gte' => 8]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran', 'cabins:gte' => 8]))
+             ->assertSet('selected', 8)
+             ->assertDispatched('range-bounds-updated', min: 4, max: 8, selected: 8, disabled: false)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['cabins:gte' => 8]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['cabins:gte' => 8]))
+             ->assertSet('selected', 8)
+             ->assertNotDispatched('filter-updated')
+             ->assertDispatched('range-bounds-updated', min: 4, max: 8, selected: 8, disabled: false);
+@@ -664,7 +693,7 @@
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+             ->set('selectedMin', 5)
+             ->set('selectedMax', 7)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'monohull', 'cabins:gte' => 5, 'cabins:lte' => 7]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'monohull', 'cabins:gte' => 5, 'cabins:lte' => 7]))
+             ->assertSet('boundsDisabled', false)
+             ->assertDispatched('range-bounds-updated', min: 5, max: 8, selectedMin: 5, selectedMax: 7, disabled: false);
+     }
+@@ -676,7 +705,7 @@
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+             ->set('selected', 8)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'monohull', 'cabins:gte' => 8]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'monohull', 'cabins:gte' => 8]))
+             ->assertSet('boundsDisabled', false)
+             ->assertDispatched('range-bounds-updated', min: 1, max: 10, selected: 8, disabled: false);
+     }
+@@ -689,7 +718,7 @@
+         $this->makeEntry($this->collection, 'yacht-tiny')->set('title', 'Tiny Yacht')->set('cabins', 1)->set('category', 'tiny')->save();
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'tiny']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'tiny']))
+             ->assertSet('dynamicMin', 2)
+             ->assertSet('dynamicMax', 10)
+             ->assertSet('boundsDisabled', false)
+@@ -704,7 +733,7 @@
+         $this->makeEntry($this->collection, 'yacht-huge')->set('title', 'Huge Yacht')->set('cabins', 15)->set('category', 'huge')->save();
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'huge']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'huge']))
+             ->assertSet('dynamicMin', 1)
+             ->assertSet('dynamicMax', 10)
+             ->assertSet('boundsDisabled', false);
+@@ -716,7 +745,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments([]))
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 8)
+             ->set('selectedMin', 6)
+@@ -738,7 +767,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+             ->assertSet('selected', 4)
+             ->set('selected', 5)
+             ->assertDispatched('filter-updated',
+@@ -762,7 +791,7 @@
+             'modifier' => 'gt|lt',
+             'step' => 2,
+         ]))
+-            ->dispatch('params-updated', ...$this->collectionBoundsEvent(['from' => 'yachts']))
++            ->dispatch('bounds-updated', ...$this->collectionBoundsEvent(['from' => 'yachts']))
+             ->set('selectedMin', 6)
+             ->set('selectedMin', 4)
+             ->set('selectedMax', 8)
+@@ -793,7 +822,7 @@
+             'min' => 2,
+             'step' => 2,
+         ]))
+-            ->dispatch('params-updated', ...$this->collectionBoundsEvent(['from' => 'yachts']))
++            ->dispatch('bounds-updated', ...$this->collectionBoundsEvent(['from' => 'yachts']))
+             ->set('selected', 6)
+             ->set('selected', 4)
+             ->assertNotDispatched('clear-filter')
+@@ -817,7 +846,7 @@
+             'min' => $min,
+             'step' => $step,
+         ]))
+-            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments([]))
+             ->assertSet('dynamicMin', $dynamicMin)
+             ->assertSet('dynamicMax', $dynamicMax)
+             ->set('selectedMin', 6)
+@@ -850,7 +879,7 @@
+             'max' => $max,
+             'step' => 2,
+         ]))
+-            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments([]))
+             ->set('selectedMin', 6)
+             ->set('selectedMin', 4)
+             ->assertNotDispatched('clear-filter')
+@@ -877,7 +906,7 @@
+             'condition' => $condition,
+             'default' => $default,
+         ]))
+-            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments([]))
+             ->assertSet('selected', $clearValue)
+             ->set('selected', 6)
+             ->set('selected', $endpoint)
+@@ -901,7 +930,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments([]))
+             ->set('selectedMin', 2022)
+             ->assertDispatched('filter-updated')
+             ->set('selectedMin', 2020)
+@@ -916,7 +945,7 @@
+         Facades\Entry::find('yacht-c')->set('year', '2024-12-31')->save();
+ 
+         $filter = Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
+-            ->dispatch('params-updated', ...$this->collectionBoundsEvent(['from' => 'yachts']))
++            ->dispatch('bounds-updated', ...$this->collectionBoundsEvent(['from' => 'yachts']))
+             ->assertSet('dynamicMin', 2019)
+             ->assertSet('dynamicMax', 2025)
+             ->set('selectedMin', 2020)
+@@ -940,7 +969,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 6)
+             ->assertSet('selected', 4)
+@@ -954,7 +983,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfRangeFilter::class, $this->rangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'monohull']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'monohull']))
+             ->assertSet('dynamicMin', 8)
+             ->assertSet('dynamicMax', 8)
+             ->assertSet('boundsDisabled', true)
+@@ -969,10 +998,10 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, $this->dualRangeArguments())
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 6)
+-            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments([]))
+             ->assertSet('dynamicMin', 4)
+             ->assertSet('dynamicMax', 8)
+             ->assertSet('boundsDisabled', false);
+@@ -984,7 +1013,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['min' => '2', 'max' => '10']))
+-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'nonexistent']))
++            ->dispatch('bounds-updated', ...$this->boundsEventArguments(['category:is' => 'nonexistent']))
+             ->assertSet('dynamicMin', 2, strict: true)
+             ->assertSet('dynamicMax', 10, strict: true);
+     }
+@@ -1113,7 +1142,7 @@
+     {
+         $component = Livewire::test(LivewireCollection::class, ['params' => $params]);
+ 
+-        return collect($component->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
++        return collect($component->effects['dispatches'])->firstWhere('name', 'bounds-updated')['params'];
+     }
+ 
+     protected function dualRangeArguments(): array
+--- a/tests/Feature/LazyClientRenderedFilterTest.php
++++ b/tests/Feature/LazyClientRenderedFilterTest.php
+@@ -0,0 +1,48 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
++use Illuminate\Support\Facades\Config;
++use Livewire\Livewire;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++
++class LazyClientRenderedFilterTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
++        $collection = Facades\Collection::make('cars')->save();
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'title', 'field' => ['type' => 'text']],
++            ['handle' => 'color', 'field' => ['type' => 'checkboxes', 'options' => [['key' => 'red', 'value' => 'Red'], ['key' => 'blue', 'value' => 'Blue']]]],
++        ]]]])->setHandle('car')->setNamespace('collections.cars')->save();
++        EntryFactory::id('c0')->collection($collection)->slug('c0')->data(['title' => 'Car', 'color' => ['red']])->create();
++    }
++
++    #[Test]
++    public function a_lazy_client_rendered_filter_is_detected_on_its_lazy_load_render_and_skips_afterwards()
++    {
++        $component = Livewire::test(LfCheckboxFilter::class, ['field' => 'color', 'blueprint' => 'cars.car', 'condition' => 'is', 'view' => 'lf-checkbox-advanced', 'lazy' => true]);
++
++        $placeholder = $component->html();
++        $this->assertStringContainsString('__lazyLoad', $placeholder);
++        $this->assertFalse($component->get('clientRendered'));
++
++        $decoded = html_entity_decode($placeholder, ENT_QUOTES);
++        preg_match("/__lazyLoad\\('([^']+)'\\)/", $decoded, $m);
++        $component->call('__lazyLoad', $m[1]);
++        $this->assertTrue($component->get('clientRendered'));
++        $this->assertArrayHasKey('html', $component->effects, 'the lazy-load render itself must be sent');
++
++        $component->dispatch('params-updated', ['from' => 'cars'])->assertDispatched('counts-updated');
++        $this->assertArrayNotHasKey('html', $component->effects);
++    }
++}
+--- a/tests/Feature/LfCheckboxFilterTest.php
++++ b/tests/Feature/LfCheckboxFilterTest.php
+@@ -654,8 +654,9 @@
+         ])
+             ->assertViewHas('statamic_field', function ($statamic_field) use ($customOptions) {
+                 return $statamic_field['options'] === $customOptions
+-                    && $statamic_field['counts'] === ['custom1' => null, 'custom2' => null];
++                    && ! array_key_exists('counts', $statamic_field);
+             })
++            ->tap(fn ($component) => $this->assertSame(['custom1' => null, 'custom2' => null], $component->instance()->counts()))
+             ->assertSee('Custom 1')
+             ->assertSee('Custom 2')
+             ->assertDontSee('Option 1')
+--- a/tests/Feature/LfCountTest.php
++++ b/tests/Feature/LfCountTest.php
+@@ -62,21 +62,27 @@
+     public function test_it_renders_the_component_and_shows_the_text()
+     {
+         Livewire::test(LfCount::class)
+-            ->dispatch('entries-updated', 1)
+-            ->assertSee('entry');
++            ->assertSeeHtml('x-on:entries-updated.window');
+     }
+ 
+     public function test_it_listens_to_the_entries_updated_event()
+     {
+         Livewire::test(LfCount::class)
+-            ->dispatch('entries-updated', 3)
++            ->set('count', 3)
+             ->assertSet('count', 3)
+             ->assertSee('3 entries');
+ 
+         Livewire::test(LfCount::class)
+-            ->dispatch('entries-updated', 1)
++            ->set('count', 1)
+             ->assertSet('count', 1)
+             ->assertSee('1 entry');
++
++        // A customized view (custom view= or a published count.blade.php) keeps the server listener.
++        $component = Livewire::test(LfCount::class)->instance();
++        $listeners = fn () => $this->getListeners();
++        $this->assertSame([], $listeners->call($component));
++        $component->view = 'custom';
++        $this->assertSame(['entries-updated' => 'updatedCount'], $listeners->call($component));
+     }
+ 
+     protected function makeEntry($collection, $slug)
+--- a/tests/Feature/LivewireCollectionComponentTest.php
++++ b/tests/Feature/LivewireCollectionComponentTest.php
+@@ -1130,7 +1130,7 @@
+                 payload: ['yellow'],
+                 modifier: 'any',
+             )
+-            ->assertDispatched('params-updated');
++            ->assertDispatched('bounds-updated');
+     }
+ 
+     #[Test]
+@@ -1159,7 +1159,7 @@
+         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+ 
+         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'music']])
+-            ->assertDispatched('params-updated');
++            ->assertDispatched('bounds-updated');
+     }
+ 
+     #[Test]
+--- a/tests/Feature/MultiselectScopeSemanticsTest.php
++++ b/tests/Feature/MultiselectScopeSemanticsTest.php
+@@ -0,0 +1,134 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Scopes\Multiselect;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++
++/**
++ * Semantics of the Multiselect scope on the Stache builder: array-stored values,
++ * numeric values, null/missing fields and the Eloquent path must behave as before;
++ * a scalar-stored value now matches (the nested orWhereJsonContains form never did).
++ */
++class MultiselectScopeSemanticsTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        Facades\Collection::make('products')->save();
++
++        $blueprint = Facades\Blueprint::make()->setContents([
++            'sections' => ['main' => ['fields' => [
++                ['handle' => 'title', 'field' => ['type' => 'text']],
++                ['handle' => 'colors', 'field' => ['type' => 'checkboxes', 'options' => ['red' => 'Red', 'blue' => 'Blue', 'green' => 'Green']]],
++                ['handle' => 'brand', 'field' => ['type' => 'select', 'max_items' => 1, 'options' => ['acme' => 'Acme', 'globex' => 'Globex']]],
++                ['handle' => 'sizes', 'field' => ['type' => 'checkboxes', 'options' => ['1' => 'One', '2' => 'Two']]],
++            ]]],
++        ]);
++        $blueprint->setHandle('product')->setNamespace('collections.products')->save();
++
++        EntryFactory::collection('products')->slug('p-array-red-blue')->data(['title' => 'Array red+blue', 'colors' => ['red', 'blue'], 'brand' => 'acme'])->create();
++        EntryFactory::collection('products')->slug('p-array-green')->data(['title' => 'Array green', 'colors' => ['green'], 'brand' => 'globex'])->create();
++        EntryFactory::collection('products')->slug('p-scalar-red')->data(['title' => 'Scalar red', 'colors' => 'red', 'brand' => 'acme'])->create();
++        EntryFactory::collection('products')->slug('p-null')->data(['title' => 'No colors', 'colors' => null, 'brand' => null])->create();
++        EntryFactory::collection('products')->slug('p-missing')->data(['title' => 'Missing field'])->create();
++        EntryFactory::collection('products')->slug('p-numeric')->data(['title' => 'Numeric', 'sizes' => ['1', 2]])->create();
++    }
++
++    protected function slugsFor(array $params): array
++    {
++        $query = Facades\Entry::query()->where('collection', 'products');
++
++        (new Multiselect)->apply($query, $params);
++
++        return $query->get()->map->slug()->sort()->values()->all();
++    }
++
++    #[Test]
++    public function array_stored_values_match_any_selected_value()
++    {
++        $this->assertSame(['p-array-green', 'p-array-red-blue', 'p-scalar-red'], $this->slugsFor(['multiselect:colors' => 'red|green']));
++        $this->assertSame(['p-array-red-blue'], $this->slugsFor(['multiselect:colors' => 'blue']));
++    }
++
++    /**
++     * A `select` with max_items 1 stores a scalar. whereJsonOverlaps treats it as a
++     * one-element set, so it matches; the previous nested orWhereJsonContains form
++     * returned nothing for it. This test fails on the pre-change scope by design.
++     */
++    #[Test]
++    public function scalar_stored_values_match_the_multiselect_scope()
++    {
++        $this->assertSame(['p-array-red-blue', 'p-scalar-red'], $this->slugsFor(['multiselect:colors' => 'red']));
++        $this->assertSame(['p-array-red-blue', 'p-scalar-red'], $this->slugsFor(['multiselect:brand' => 'acme']));
++        $this->assertSame(['p-array-green'], $this->slugsFor(['multiselect:brand' => 'globex|other']));
++    }
++
++    #[Test]
++    public function null_and_missing_values_never_match()
++    {
++        $this->assertSame([], $this->slugsFor(['multiselect:colors' => 'purple']));
++        $this->assertNotContains('p-null', $this->slugsFor(['multiselect:colors' => 'red|blue|green']));
++        $this->assertNotContains('p-missing', $this->slugsFor(['multiselect:colors' => 'red|blue|green']));
++    }
++
++    #[Test]
++    public function numeric_strings_and_integers_compare_loosely_like_before()
++    {
++        $this->assertSame(['p-numeric'], $this->slugsFor(['multiselect:sizes' => '1']));
++        $this->assertSame(['p-numeric'], $this->slugsFor(['multiselect:sizes' => '2']));
++        $this->assertSame([], $this->slugsFor(['multiselect:sizes' => '3']));
++    }
++
++    /**
++     * Two multiselect fields AND together. The scalar-stored `brand` is part of the
++     * AND, so the pre-change scope returned [] here (the scalar never matched).
++     */
++    #[Test]
++    public function multiple_multiselect_fields_are_anded_together()
++    {
++        $this->assertSame(['p-array-red-blue', 'p-scalar-red'], $this->slugsFor(['multiselect:colors' => 'red|green', 'multiselect:brand' => 'acme', 'other:param' => 'ignored']));
++    }
++
++    #[Test]
++    public function non_stache_builders_keep_the_nested_or_where_json_contains_path()
++    {
++        $query = new class
++        {
++            public array $calls = [];
++
++            public function where($callback)
++            {
++                $this->calls[] = 'where(closure)';
++                $callback($this);
++
++                return $this;
++            }
++
++            public function orWhereJsonContains($field, $value)
++            {
++                $this->calls[] = "orWhereJsonContains($field,$value)";
++
++                return $this;
++            }
++
++            public function whereJsonOverlaps($field, $values)
++            {
++                $this->calls[] = 'whereJsonOverlaps';
++
++                return $this;
++            }
++        };
++
++        (new Multiselect)->apply($query, ['multiselect:colors' => 'red|blue']);
++
++        $this->assertSame(['where(closure)', 'orWhereJsonContains(colors,red)', 'orWhereJsonContains(colors,blue)'], $query->calls);
++    }
++}
+--- a/tests/Feature/RenderWasteRegressionTest.php
++++ b/tests/Feature/RenderWasteRegressionTest.php
+@@ -0,0 +1,396 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
++use Illuminate\Support\Facades\Config;
++use Livewire\Livewire;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
++use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++
++/**
++ * Wasted-render cluster: disabled/unchanged counts & bounds, client-rendered (wire:ignore root)
++ * views, and foreign clear-option events must not send html back; real changes always must,
++ * whatever the call order inside one pooled Livewire request.
++ */
++class RenderWasteRegressionTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected int $boundsRevision = 0;
++
++    protected function setUp(): void
++    {
++        parent::setUp();
++
++        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
++        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
++
++        $collection = Facades\Collection::make('cars')->save();
++        $opts = fn (array $keys) => array_map(fn ($k) => ['key' => $k, 'value' => ucfirst($k)], $keys);
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => [
++            ['handle' => 'title', 'field' => ['type' => 'text', 'display' => 'Title']],
++            ['handle' => 'color', 'field' => ['type' => 'checkboxes', 'display' => 'Color', 'options' => $opts(['red', 'blue', 'black'])]],
++            ['handle' => 'fuel', 'field' => ['type' => 'select', 'display' => 'Fuel', 'options' => $opts(['petrol', 'diesel'])]],
++            ['handle' => 'ac', 'field' => ['type' => 'radio', 'display' => 'AC', 'options' => $opts(['yes', 'no'])]],
++            ['handle' => 'seats', 'field' => ['type' => 'integer', 'display' => 'Seats']],
++            ['handle' => 'reg', 'field' => ['type' => 'date', 'display' => 'Registered']],
++        ]]]])->setHandle('car')->setNamespace('collections.cars')->save();
++
++        foreach ([['red', 'petrol', 'yes', 2, '2019-01-01'], ['blue', 'diesel', 'no', 5, '2021-01-01'], ['red', 'petrol', 'no', 7, '2024-01-01']] as $i => [$color, $fuel, $ac, $seats, $reg]) {
++            EntryFactory::id("c$i")->collection($collection)->slug("c$i")->data([
++                'title' => "Car $i", 'color' => [$color], 'fuel' => $fuel, 'ac' => $ac, 'seats' => $seats, 'reg' => $reg,
++            ])->create();
++        }
++    }
++
++    protected function filters(): array
++    {
++        return [
++            'checkbox' => [LfCheckboxFilter::class, ['field' => 'color', 'blueprint' => 'cars.car', 'condition' => 'is']],
++            'checkbox-advanced' => [LfCheckboxFilter::class, ['field' => 'color', 'blueprint' => 'cars.car', 'condition' => 'is', 'view' => 'lf-checkbox-advanced']],
++            'select' => [LfSelectFilter::class, ['field' => 'fuel', 'blueprint' => 'cars.car', 'condition' => 'is']],
++            'radio' => [LfRadioFilter::class, ['field' => 'ac', 'blueprint' => 'cars.car', 'condition' => 'is']],
++            'text' => [LfTextFilter::class, ['field' => 'title', 'blueprint' => 'cars.car', 'condition' => 'contains']],
++            'toggle' => [LfToggleFilter::class, ['field' => 'color', 'blueprint' => 'cars.car', 'condition' => 'is', 'preset_value' => 'red', 'label' => 'Red only']],
++            'date' => [LfDateFilter::class, ['field' => 'reg', 'blueprint' => 'cars.car', 'condition' => 'is_after']],
++            'range' => [LfRangeFilter::class, ['field' => 'seats', 'blueprint' => 'cars.car', 'condition' => 'gte', 'min' => 2, 'max' => 9, 'default' => 2]],
++            'dual' => [LfDualRangeFilter::class, ['field' => 'seats', 'blueprint' => 'cars.car', 'min' => 2, 'max' => 9]],
++        ];
++    }
++
++    protected function foreignTag(): array
++    {
++        return ['field' => 'some_other_field', 'value' => 'x', 'fieldLabel' => 'Other', 'optionLabel' => 'X', 'condition' => 'is'];
++    }
++
++    protected function paramsUpdatedArgs(array $params): array
++    {
++        return [$params, RangeBoundsQuery::encode('cars', $params, 'col', ++$this->boundsRevision, [])];
++    }
++
++    protected function dispatchCall(string $event, array $args): array
++    {
++        return ['path' => '', 'method' => '__dispatch', 'params' => [$event, $args]];
++    }
++
++    protected function assertRendered($component, string $message = ''): void
++    {
++        $this->assertArrayHasKey('html', $component->effects, $message ?: 'expected the component to render html');
++    }
++
++    protected function assertRenderSkipped($component, string $message = ''): void
++    {
++        $this->assertArrayNotHasKey('html', $component->effects, $message ?: 'expected the render to be skipped');
++    }
++
++    protected function useFixtureViews(string $dir): void
++    {
++        app('view')->prependNamespace('statamic-livewire-filters', __DIR__.'/../__fixtures__/views/'.$dir);
++    }
++
++    // ----------------------------------------------------------------- R1: disabled features
++
++    #[Test]
++    public function params_updated_is_ignored_without_a_render_when_counts_are_disabled()
++    {
++        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
++
++        $component = Livewire::test(...$this->filters()['checkbox']);
++
++        $this->assertContains('params-updated', $component->effects['listeners'], 'the listener stays registered so pages rendered under another config never 500');
++
++        $component->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars']))
++            ->assertNotDispatched('counts-updated')
++            ->tap(function ($component) {
++                $this->assertArrayNotHasKey('counts', $component->get('statamic_field'), 'counts are not materialised while the feature is off');
++                $this->assertSame(['red' => null, 'blue' => null, 'black' => null], $component->instance()->counts());
++            });
++
++        $this->assertRenderSkipped($component);
++    }
++
++    #[Test]
++    public function params_updated_is_ignored_without_a_render_when_bounds_are_disabled()
++    {
++        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', false);
++
++        foreach (['range', 'dual'] as $name) {
++            $component = Livewire::test(...$this->filters()[$name]);
++
++            $this->assertContains('bounds-updated', $component->effects['listeners']);
++
++            $component->dispatch('bounds-updated', ['from' => 'cars'])
++                ->assertNotDispatched('range-bounds-updated')
++                ->assertSet('dynamicMin', null);
++
++            $this->assertRenderSkipped($component, "$name must not render on a disabled bounds update");
++        }
++    }
++
++    #[Test]
++    public function a_page_rendered_while_a_feature_was_enabled_keeps_working_after_it_is_disabled()
++    {
++        $component = Livewire::test(...$this->filters()['checkbox'])
++            ->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars']))
++            ->assertDispatched('counts-updated');
++
++        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
++
++        $component->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars', 'fuel:is' => 'petrol']))
++            ->assertNotDispatched('counts-updated')
++            ->assertSet('statamic_field.counts', ['red' => 2, 'blue' => 1, 'black' => 0]);
++
++        $this->assertRenderSkipped($component);
++    }
++
++    // ----------------------------------------------------------------- R2: client-rendered roots
++
++    #[Test]
++    public function a_bare_wire_ignore_root_marks_the_filter_as_client_rendered()
++    {
++        Livewire::test(...$this->filters()['checkbox-advanced'])->assertSet('clientRendered', true);
++        Livewire::test(LfSelectFilter::class, ['field' => 'fuel', 'blueprint' => 'cars.car', 'condition' => 'is', 'view' => 'lf-select-advanced'])->assertSet('clientRendered', true);
++
++        foreach (['checkbox', 'select', 'radio', 'text', 'toggle', 'date', 'range', 'dual'] as $name) {
++            Livewire::test(...$this->filters()[$name])->assertSet('clientRendered', false);
++        }
++    }
++
++    #[Test]
++    public function wire_ignore_self_children_or_a_quoted_wire_ignore_do_not_count_as_client_rendered()
++    {
++        $this->useFixtureViews('render-waste');
++
++        foreach (['lf-checkbox-ignore-self', 'lf-checkbox-ignore-children', 'lf-checkbox-quoted-ignore'] as $view) {
++            $component = Livewire::test(LfCheckboxFilter::class, ['field' => 'color', 'blueprint' => 'cars.car', 'condition' => 'is', 'view' => $view])
++                ->assertSet('clientRendered', false)
++                ->set('selected', ['red']);
++
++            $this->assertRendered($component, "$view still needs its html");
++        }
++
++        Livewire::test(LfCheckboxFilter::class, ['field' => 'color', 'blueprint' => 'cars.car', 'condition' => 'is', 'view' => 'lf-checkbox-custom-ignore'])
++            ->assertSet('clientRendered', true);
++    }
++
++    #[Test]
++    public function a_client_rendered_filter_skips_the_html_on_every_path_but_keeps_data_and_events_in_sync()
++    {
++        $component = Livewire::test(...$this->filters()['checkbox-advanced']);
++
++        $component->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars']))
++            ->assertDispatched('counts-updated', ['red' => 2, 'blue' => 1, 'black' => 0])
++            ->assertSet('statamic_field.counts', ['red' => 2, 'blue' => 1, 'black' => 0]);
++        $this->assertRenderSkipped($component, 'counts update');
++
++        $component->set('selected', ['red', 'blue'])
++            ->assertDispatched('filter-updated')
++            ->assertSet('selected', ['red', 'blue']);
++        $this->assertRenderSkipped($component, 'selection');
++        $this->assertSame(['red', 'blue'], $component->snapshot['data']['selected'][0], 'the client merges the snapshot even without html');
++
++        $component->dispatch('clear-option', ['field' => 'color', 'value' => 'red', 'fieldLabel' => 'Color', 'optionLabel' => 'Red', 'condition' => 'is'])
++            ->assertDispatched('filter-updated')
++            ->assertSet('selected', ['blue']);
++        $this->assertRenderSkipped($component, 'own clear-option');
++
++        $component->dispatch('clear-all-filters')
++            ->assertDispatched('clear-filter')
++            ->assertSet('selected', []);
++        $this->assertRenderSkipped($component, 'clear-all');
++
++        $component->dispatch('preset-params', ['color:is' => 'black'])
++            ->assertSet('selected', ['black']);
++        $this->assertRenderSkipped($component, 'preset-params');
++
++        $component->call('$refresh');
++        $this->assertRenderSkipped($component, 'refresh');
++    }
++
++    #[Test]
++    public function a_client_rendered_filter_still_reports_validation_errors()
++    {
++        Config::set('statamic-livewire-filters.validate_filter_values', true);
++
++        Livewire::test(...$this->filters()['checkbox-advanced'])
++            ->set('selected', ['not-an-option'])
++            ->assertHasErrors('selected')
++            ->assertNotDispatched('filter-updated');
++    }
++
++    #[Test]
++    public function a_published_view_that_reads_selected_server_side_renders_on_every_path()
++    {
++        $this->useFixtureViews('render-waste-published');
++
++        $component = Livewire::test(...$this->filters()['checkbox'])->assertSet('clientRendered', false);
++
++        $component->set('selected', ['red'])->assertSeeHtml('data-opt="red" class="active"');
++        $this->assertRendered($component, 'selection');
++
++        $component->dispatch('clear-option', ['field' => 'color', 'value' => 'red', 'fieldLabel' => 'Color', 'optionLabel' => 'Red', 'condition' => 'is'])
++            ->assertDontSeeHtml('class="active"');
++        $this->assertRendered($component, 'own clear-option');
++
++        $component->dispatch('preset-params', ['color:is' => 'blue'])->assertSeeHtml('data-opt="blue" class="active"');
++        $this->assertRendered($component, 'preset-params');
++
++        $component->dispatch('clear-all-filters')->assertDontSeeHtml('class="active"');
++        $this->assertRendered($component, 'clear-all');
++
++        Config::set('statamic-livewire-filters.validate_filter_values', true);
++        $component->set('selected', ['nope'])->assertHasErrors('selected')->assertSeeHtml('<p class="err">');
++    }
++
++    #[Test]
++    public function unchanged_counts_skip_the_render_and_changed_counts_render()
++    {
++        $component = Livewire::test(...$this->filters()['checkbox']);
++
++        $component->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars']))->assertSee('(2)');
++        $this->assertRendered($component, 'first counts');
++
++        $component->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars']))->assertDispatched('counts-updated');
++        $this->assertRenderSkipped($component, 'identical counts');
++
++        $component->dispatch('params-updated', ...$this->paramsUpdatedArgs(['from' => 'cars', 'fuel:is' => 'diesel']))->assertSee('(0)');
++        $this->assertRendered($component, 'changed counts');
++    }
++
++    #[Test]
++    public function unchanged_bounds_skip_the_render_and_changed_bounds_render()
++    {
++        $component = Livewire::test(...$this->filters()['dual']);
++
++        $component->dispatch('bounds-updated', ...$this->paramsUpdatedArgs(['from' => 'cars']))->assertSet('dynamicMin', 2)->assertSet('dynamicMax', 7);
++        $this->assertRendered($component, 'first bounds');
++
++        $component->dispatch('bounds-updated', ...$this->paramsUpdatedArgs(['from' => 'cars']))->assertDispatched('range-bounds-updated');
++        $this->assertRenderSkipped($component, 'identical bounds');
++
++        $component->dispatch('bounds-updated', ...$this->paramsUpdatedArgs(['from' => 'cars', 'fuel:is' => 'petrol']))->assertSet('dynamicMax', 7)->assertSet('dynamicMin', 2);
++        $this->assertRenderSkipped($component, 'same bounds from other params');
++
++        $component->dispatch('bounds-updated', ...$this->paramsUpdatedArgs(['from' => 'cars', 'ac:is' => 'yes']))->assertSet('dynamicMax', 3);
++        $this->assertRendered($component, 'narrowed bounds');
++    }
++
++    // ----------------------------------------------------------------- D#4: foreign clear-option
++
++    #[Test]
++    public function clear_option_for_another_field_skips_the_render_for_every_filter_type()
++    {
++        foreach ($this->filters() as $name => [$class, $params]) {
++            $component = Livewire::test($class, $params)->dispatch('clear-option', $this->foreignTag());
++
++            $this->assertRenderSkipped($component, "$name rendered on a foreign clear-option");
++            $this->assertEmpty($component->effects['dispatches'] ?? [], "$name dispatched on a foreign clear-option");
++        }
++    }
++
++    #[Test]
++    public function clear_option_for_the_owning_field_still_renders_and_clears()
++    {
++        $this->useFixtureViews('render-waste-published');
++
++        $component = Livewire::test(...$this->filters()['checkbox'])->set('selected', ['red', 'blue'])
++            ->dispatch('clear-option', ['field' => 'color', 'value' => 'red', 'fieldLabel' => 'Color', 'optionLabel' => 'Red', 'condition' => 'is'])
++            ->assertSet('selected', ['blue'])
++            ->assertDispatched('filter-updated');
++        $this->assertRendered($component, 'checkbox');
++
++        $component = Livewire::test(...$this->filters()['radio'])->set('selected', 'yes')
++            ->dispatch('clear-option', ['field' => 'ac', 'value' => 'yes', 'fieldLabel' => 'AC', 'optionLabel' => 'Yes', 'condition' => 'is'])
++            ->assertSet('selected', '')
++            ->assertDispatched('clear-filter');
++        $this->assertRendered($component, 'radio');
++
++        $component = Livewire::test(...$this->filters()['range'])->set('selected', 5)
++            ->dispatch('clear-option', ['field' => 'seats', 'value' => '5', 'fieldLabel' => 'Seats', 'optionLabel' => '5', 'condition' => 'gte'])
++            ->assertSet('selected', 2);
++        $this->assertRendered($component, 'range');
++
++        $component = Livewire::test(...$this->filters()['dual'])->set('selectedMin', 4)
++            ->dispatch('clear-option', ['field' => 'seats', 'value' => '4', 'fieldLabel' => 'Seats', 'optionLabel' => '4', 'condition' => 'gte'])
++            ->assertSet('selectedMin', 2)
++            ->assertDispatched('dual-range-preset-values');
++        $this->assertRendered($component, 'dual');
++    }
++
++    #[Test]
++    public function a_pooled_request_renders_when_a_foreign_clear_option_comes_before_a_real_counts_update()
++    {
++        $component = Livewire::test(...$this->filters()['checkbox'])->update(calls: [
++            $this->dispatchCall('clear-option', [$this->foreignTag()]),
++            $this->dispatchCall('params-updated', $this->paramsUpdatedArgs(['from' => 'cars'])),
++        ]);
++
++        $component->assertDispatched('counts-updated')->assertSee('(2)');
++        $this->assertRendered($component);
++    }
++
++    #[Test]
++    public function a_pooled_request_renders_when_a_real_counts_update_comes_before_a_foreign_clear_option()
++    {
++        $component = Livewire::test(...$this->filters()['checkbox'])->update(calls: [
++            $this->dispatchCall('params-updated', $this->paramsUpdatedArgs(['from' => 'cars'])),
++            $this->dispatchCall('clear-option', [$this->foreignTag()]),
++        ]);
++
++        $component->assertDispatched('counts-updated')->assertSee('(2)');
++        $this->assertRendered($component);
++    }
++
++    #[Test]
++    public function a_pooled_request_renders_when_a_selection_update_travels_with_a_foreign_clear_option()
++    {
++        $this->useFixtureViews('render-waste-published');
++
++        $component = Livewire::test(...$this->filters()['checkbox'])->update(
++            calls: [$this->dispatchCall('clear-option', [$this->foreignTag()])],
++            updates: ['selected' => ['red']],
++        );
++
++        $component->assertDispatched('filter-updated')->assertSet('selected', ['red']);
++        $this->assertRendered($component);
++    }
++
++    #[Test]
++    public function a_pooled_request_of_only_no_ops_skips_the_render()
++    {
++        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
++
++        $component = Livewire::test(...$this->filters()['checkbox'])->update(calls: [
++            $this->dispatchCall('clear-option', [$this->foreignTag()]),
++            $this->dispatchCall('params-updated', $this->paramsUpdatedArgs(['from' => 'cars'])),
++            $this->dispatchCall('clear-option', [$this->foreignTag()]),
++        ]);
++
++        $this->assertRenderSkipped($component);
++        $this->assertEmpty($component->effects['dispatches'] ?? []);
++    }
++
++    #[Test]
++    public function a_pooled_clear_all_and_counts_update_renders_once_with_the_cleared_selection()
++    {
++        $component = Livewire::test(...$this->filters()['checkbox'])->set('selected', ['red'])->update(calls: [
++            $this->dispatchCall('params-updated', $this->paramsUpdatedArgs(['from' => 'cars'])),
++            $this->dispatchCall('clear-all-filters', []),
++        ]);
++
++        $component->assertSet('selected', [])->assertDispatched('clear-filter')->assertSee('(2)');
++        $this->assertRendered($component);
++    }
++}
+--- a/tests/Feature/StacheIndexOptionsTest.php
++++ b/tests/Feature/StacheIndexOptionsTest.php
+@@ -0,0 +1,230 @@
++<?php
++
++namespace Reach\StatamicLivewireFilters\Tests\Feature;
++
++use Illuminate\Support\Facades\Config;
++use Livewire\Livewire;
++use PHPUnit\Framework\Attributes\Test;
++use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
++use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
++use Reach\StatamicLivewireFilters\Tests\TestCase;
++use Statamic\Facades;
++use Statamic\Facades\Blink;
++use Statamic\Facades\Entry;
++use Statamic\Facades\Site;
++use Statamic\Facades\Taxonomy;
++use Statamic\Stache\Query\EntryQueryBuilder;
++use Statamic\Stache\Query\TermQueryBuilder;
++
++/**
++ * Proves that resolving term and entry option labels from the Stache indexes
++ * (`pluck('title', 'id')`) returns exactly what the previous `get()`-and-map
++ * implementation returned: same keys, same labels, same order, on single-site,
++ * partially localized multi-site and `title_format` content.
++ */
++class StacheIndexOptionsTest extends TestCase
++{
++    use PreventSavingStacheItemsToDisk;
++
++    protected function makeBlueprint(string $collection, array $fields): void
++    {
++        Facades\Blueprint::make()->setContents(['sections' => ['main' => ['fields' => $fields]]])
++            ->setHandle($collection)->setNamespace('collections.'.$collection)->save();
++    }
++
++    /**
++     * Mounts a filter as a fresh request would and returns its resolved options.
++     */
++    protected function mountOptions(string $blueprint, string $field, string $condition = 'is'): array
++    {
++        Blink::flush();
++
++        return Livewire::test(LfCheckboxFilter::class, ['blueprint' => $blueprint, 'field' => $field, 'condition' => $condition])
++            ->instance()->filterOptions();
++    }
++
++    /**
++     * The term mapping exactly as HandleStatamicQueries::getTaxonomyTerms() computed it before this change.
++     */
++    protected function legacyTerms(string $taxonomy, string $site): array
++    {
++        return Taxonomy::findByHandle($taxonomy)->queryTerms()->get()
++            ->unique(fn ($term) => $term->inDefaultLocale()->slug())
++            ->mapWithKeys(function ($term) use ($site) {
++                $default = $term->inDefaultLocale();
++
++                return [$default->slug() => ($term->in($site) ?? $default)->title()];
++            })->all();
++    }
++
++    /**
++     * The entry mapping exactly as HandleStatamicQueries::getCollectionEntries() computed it before this change.
++     */
++    protected function legacyEntries(string $collection, string $site, bool $useOriginId): array
++    {
++        return Entry::query()
++            ->where('collection', $collection)
++            ->where('site', $site)
++            ->whereStatus('published')
++            ->get()
++            ->mapWithKeys(function ($entry) use ($useOriginId) {
++                if ($useOriginId) {
++                    return [$entry->hasOrigin() ? $entry->origin()->id() : $entry->id() => $entry->title];
++                }
++
++                return [$entry->id() => $entry->title];
++            })->all();
++    }
++
++    #[Test]
++    public function the_stache_query_builders_are_the_ones_exercised_by_this_suite(): void
++    {
++        Taxonomy::make('colors')->save();
++        Facades\Collection::make('items')->save();
++
++        $this->assertInstanceOf(TermQueryBuilder::class, Taxonomy::findByHandle('colors')->queryTerms());
++        $this->assertInstanceOf(EntryQueryBuilder::class, Entry::query());
++    }
++
++    #[Test]
++    public function single_site_term_and_entry_options_match_the_legacy_mapping_in_value_and_order(): void
++    {
++        Taxonomy::make('colors')->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('black')->data(['title' => 'Black'])->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('no-title')->data([])->save();
++
++        Facades\Collection::make('items')->taxonomies(['colors'])->save();
++        $this->makeBlueprint('items', [
++            ['handle' => 'title', 'field' => ['type' => 'text']],
++            ['handle' => 'colors', 'field' => ['type' => 'terms', 'taxonomies' => ['colors'], 'display' => 'Colors']],
++            ['handle' => 'related', 'field' => ['type' => 'entries', 'collections' => ['items'], 'display' => 'Related']],
++        ]);
++        Entry::make()->collection('items')->slug('zeta')->data(['title' => 'Zeta'])->save();
++        Entry::make()->collection('items')->slug('alpha')->data(['title' => 'Alpha'])->save();
++        Entry::make()->collection('items')->slug('draft')->published(false)->data(['title' => 'Draft'])->save();
++
++        $terms = $this->mountOptions('items.items', 'colors', 'taxonomy');
++        $this->assertSame($this->legacyTerms('colors', 'en'), $terms);
++        $this->assertSame(['red' => 'Red', 'black' => 'Black', 'no-title' => 'no-title'], $terms);
++
++        foreach ([true, false] as $useOriginId) {
++            Config::set('statamic-livewire-filters.use_origin_id_for_entries_field', $useOriginId);
++            $entries = $this->mountOptions('items.items', 'related');
++            $this->assertSame($this->legacyEntries('items', 'en', $useOriginId), $entries);
++            $this->assertSame(['Zeta', 'Alpha'], array_values($entries), 'draft excluded, legacy order kept');
++        }
++    }
++
++    #[Test]
++    public function partially_localized_sites_match_the_legacy_mapping_per_site_for_terms_and_both_entry_id_modes(): void
++    {
++        Config::set('statamic.system.multisite', true);
++        Site::setSites([
++            'en' => ['name' => 'English', 'url' => '/', 'locale' => 'en_US'],
++            'es' => ['name' => 'Spanish', 'url' => '/es', 'locale' => 'es_ES'],
++            'de' => ['name' => 'German', 'url' => '/de', 'locale' => 'de_DE'],
++        ]);
++
++        Taxonomy::make('colors')->sites(['en', 'es', 'de'])->save();
++        foreach (['red' => 'Red', 'black' => 'Black', 'yellow' => 'Yellow'] as $slug => $title) {
++            Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug($slug)->data(['title' => $title])->save();
++        }
++        Facades\Term::find('colors::red')->in('es')->slug('rojo')->data(['title' => 'Rojo'])->save();
++        Facades\Term::find('colors::black')->in('es')->slug('negro')->data(['title' => 'Negro'])->save();
++        Facades\Term::find('colors::yellow')->in('es')->slug('amarillo')->data(['title' => 'Amarillo'])->save();
++        Facades\Term::find('colors::red')->in('de')->slug('rot')->data(['title' => 'Rot'])->save();
++        Facades\Term::find('colors::black')->in('de')->slug('schwarz')->data(['title' => 'Schwarz'])->save();
++
++        Facades\Collection::make('clothes')->sites(['en', 'es', 'de'])->taxonomies(['colors'])->save();
++        $this->makeBlueprint('clothes', [
++            ['handle' => 'title', 'field' => ['type' => 'text']],
++            ['handle' => 'colors', 'field' => ['type' => 'terms', 'taxonomies' => ['colors'], 'display' => 'Colors']],
++            ['handle' => 'related', 'field' => ['type' => 'entries', 'collections' => ['clothes'], 'display' => 'Related']],
++        ]);
++        $shirt = Entry::make()->collection('clothes')->locale('en')->slug('shirt')->data(['title' => 'Shirt']);
++        $shirt->save();
++        $hat = Entry::make()->collection('clothes')->locale('en')->slug('hat')->data(['title' => 'Hat']);
++        $hat->save();
++        Entry::make()->collection('clothes')->locale('en')->slug('sock')->data(['title' => 'Sock'])->save();
++        Entry::make()->collection('clothes')->locale('es')->slug('camisa')->origin($shirt)->data(['title' => 'Camisa'])->save();
++        Entry::make()->collection('clothes')->locale('es')->slug('sombrero')->origin($hat)->published(false)->data(['title' => 'Sombrero'])->save();
++        Entry::make()->collection('clothes')->locale('es')->slug('solo-es')->data(['title' => 'Solo ES'])->save();
++        Entry::make()->collection('clothes')->locale('es')->slug('calcetin')->origin(Entry::query()->where('collection', 'clothes')->where('site', 'en')->where('slug', 'sock')->first())->data([])->save();
++
++        $expectedTerms = [
++            'en' => ['red' => 'Red', 'black' => 'Black', 'yellow' => 'Yellow'],
++            'es' => ['red' => 'Rojo', 'black' => 'Negro', 'yellow' => 'Amarillo'],
++            'de' => ['red' => 'Rot', 'black' => 'Schwarz', 'yellow' => 'Yellow'],
++        ];
++
++        foreach (['en', 'es', 'de'] as $site) {
++            Site::setCurrent($site);
++
++            $terms = $this->mountOptions('clothes.clothes', 'colors', 'taxonomy');
++            $this->assertSame($this->legacyTerms('colors', $site), $terms, "terms on $site");
++            $this->assertSame($expectedTerms[$site], $terms, "terms on $site");
++
++            foreach ([true, false] as $useOriginId) {
++                Config::set('statamic-livewire-filters.use_origin_id_for_entries_field', $useOriginId);
++                $this->assertSame(
++                    $this->legacyEntries('clothes', $site, $useOriginId),
++                    $this->mountOptions('clothes.clothes', 'related'),
++                    "entries on $site, origin ids: ".var_export($useOriginId, true)
++                );
++            }
++        }
++
++        Site::setCurrent('es');
++        Config::set('statamic-livewire-filters.use_origin_id_for_entries_field', true);
++        $this->assertSame(
++            [$shirt->id() => 'Camisa', Entry::query()->where('collection', 'clothes')->where('site', 'es')->where('slug', 'solo-es')->first()->id() => 'Solo ES', Entry::query()->where('collection', 'clothes')->where('site', 'en')->where('slug', 'sock')->first()->id() => 'Sock'],
++            $this->mountOptions('clothes.clothes', 'related'),
++            'origin ids for localizations, own id without an origin, draft excluded, inherited title'
++        );
++
++        Site::setCurrent('de');
++        $this->assertSame([], $this->mountOptions('clothes.clothes', 'related'));
++    }
++
++    #[Test]
++    public function a_taxonomy_not_configured_for_the_current_site_falls_back_to_its_default_locale_like_before(): void
++    {
++        Config::set('statamic.system.multisite', true);
++        Site::setSites([
++            'en' => ['name' => 'English', 'url' => '/', 'locale' => 'en_US'],
++            'es' => ['name' => 'Spanish', 'url' => '/es', 'locale' => 'es_ES'],
++        ]);
++        Taxonomy::make('colors')->sites(['en'])->save();
++        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
++        Facades\Collection::make('items')->sites(['en', 'es'])->taxonomies(['colors'])->save();
++        $this->makeBlueprint('items', [
++            ['handle' => 'colors', 'field' => ['type' => 'terms', 'taxonomies' => ['colors'], 'display' => 'Colors']],
++        ]);
++
++        Site::setCurrent('es');
++
++        $options = $this->mountOptions('items.items', 'colors', 'taxonomy');
++
++        $this->assertSame($this->legacyTerms('colors', 'es'), $options);
++        $this->assertSame(['red' => 'Red'], $options);
++    }
++
++    #[Test]
++    public function title_format_collections_match_the_legacy_mapping(): void
++    {
++        Facades\Collection::make('people')->titleFormats(['en' => '{{ first }} {{ last }}'])->save();
++        $this->makeBlueprint('people', [
++            ['handle' => 'first', 'field' => ['type' => 'text']],
++            ['handle' => 'last', 'field' => ['type' => 'text']],
++            ['handle' => 'friends', 'field' => ['type' => 'entries', 'collections' => ['people'], 'display' => 'Friends']],
++        ]);
++        Entry::make()->collection('people')->slug('ada')->data(['first' => 'Ada', 'last' => 'Lovelace'])->save();
++        Entry::make()->collection('people')->slug('alan')->data(['first' => 'Alan', 'last' => 'Turing'])->save();
++
++        $options = $this->mountOptions('people.people', 'friends');
++
++        $this->assertSame($this->legacyEntries('people', 'en', true), $options);
++        $this->assertSame(['Ada Lovelace', 'Alan Turing'], array_values($options));
++    }
++}
+--- a/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-custom-ignore.blade.php
++++ b/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-custom-ignore.blade.php
+@@ -0,0 +1,6 @@
++<div
++    x-data="{ options: @js($this->filter_options), pick: (v) => v.length > 0 }"
++    wire:ignore
++    class="custom">
++    <template x-for="[value, label] in Object.entries(options)"><span x-text="label"></span></template>
++</div>
+--- a/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-custom-plain.blade.php
++++ b/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-custom-plain.blade.php
+@@ -0,0 +1,5 @@
++<div>
++    @foreach($this->filter_options as $value => $label)
++    <label><input type="checkbox" wire:model.live="selected" value="{{ $value }}"> <span data-opt="{{ $value }}" class="{{ in_array($value, $selected) ? 'active' : '' }}">{{ $label }}</span></label>
++    @endforeach
++</div>
+--- a/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-ignore-children.blade.php
++++ b/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-ignore-children.blade.php
+@@ -0,0 +1,5 @@
++<div wire:ignore.children class="x">
++    @foreach($this->filter_options as $value => $label)
++    <span data-opt="{{ $value }}">{{ $label }}</span>
++    @endforeach
++</div>
+--- a/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-ignore-self.blade.php
++++ b/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-ignore-self.blade.php
+@@ -0,0 +1,5 @@
++<div wire:ignore.self x-data="{ open: (1 > 0) }">
++    @foreach($this->filter_options as $value => $label)
++    <span data-opt="{{ $value }}" class="{{ in_array($value, $selected) ? 'active' : '' }}">{{ $label }}</span>
++    @endforeach
++</div>
+--- a/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-quoted-ignore.blade.php
++++ b/tests/__fixtures__/views/render-waste/livewire/filters/lf-checkbox-quoted-ignore.blade.php
+@@ -0,0 +1,5 @@
++<div x-data="{ note: 'wire:ignore', cmp: (a, b) => a > b }" data-attr='wire:ignore'>
++    @foreach($this->filter_options as $value => $label)
++    <span data-opt="{{ $value }}">{{ $label }}</span>
++    @endforeach
++</div>
+--- a/tests/__fixtures__/views/render-waste-published/livewire/filters/lf-checkbox.blade.php
++++ b/tests/__fixtures__/views/render-waste-published/livewire/filters/lf-checkbox.blade.php
+@@ -0,0 +1,6 @@
++<div>
++    @foreach($this->filter_options as $value => $label)
++    <label><input type="checkbox" wire:model.live="selected" value="{{ $value }}"> <span data-opt="{{ $value }}" class="{{ in_array($value, $selected) ? 'active' : '' }}">{{ $label }}</span></label>
++    @endforeach
++    @error('selected') <p class="err">{{ $message }}</p> @enderror
++</div>

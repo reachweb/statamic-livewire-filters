@@ -1,0 +1,105 @@
+##### BASELINE /advanced (pristine addon) Tue Oct 20 23:24:54 EEST 2026
+----- s1_load
+Console output:
+[log] URL: http://127.0.0.1:8102/advanced
+[log] ### action "load": 1 POST livewire/update request(s)
+  #1 status=200 up=10843B down(wire)=30784B down(raw)=30784B ttfb=72ms total=73ms components=8
+     - lf-checkbox-filter   snap=1064B  call: __dispatch("params-updated", [[],"eyJpdiI6InRZUDJlNTJCUlhqSTNiOVhxOTJXb0E9PSIsInZhbHVlIjoiQkRMWT...)  => rendered=true html=8647B respSnap=1029B dispatches=[counts-updated]
+     - lf-checkbox-filter   snap=919B  call: __dispatch("params-updated", [[],"eyJpdiI6InRZUDJlNTJCUlhqSTNiOVhxOTJXb0E9PSIsInZhbHVlIjoiQkRMWT...)  => rendered=true html=4550B respSnap=902B dispatches=[counts-updated]
+     - lf-select-filter     snap=766B  call: __dispatch("params-updated", [[],"eyJpdiI6InRZUDJlNTJCUlhqSTNiOVhxOTJXb0E9PSIsInZhbHVlIjoiQkRMWT...)  => rendered=true html=1009B respSnap=762B dispatches=[counts-updated]
+     - lf-select-filter     snap=706B  call: __dispatch("params-updated", [[],"eyJpdiI6InRZUDJlNTJCUlhqSTNiOVhxOTJXb0E9PSIsInZhbHVlIjoiQkRMWT...)  => rendered=true html=980B respSnap=702B dispatches=[counts-updated]
+     - lf-radio-filter      snap=675B  call: __dispatch("params-updated", [[],"eyJpdiI6InRZUDJlNTJCUlhqSTNiOVhxOTJXb0E9PSIsInZhbHVlIjoiQkRMWT...)  => rendered=true html=1630B respSnap=670B dispatches=[counts-updated]
+     - lf-dual-range-filter snap=868B  call: __dispatch("params-updated", [[],"eyJpdiI6InRZUDJlNTJCUlhqSTNiOVhxOTJXb0E9PSIsInZhbHVlIjoiQkRMWT...)  => rendered=true html=3211B respSnap=900B dispatches=[range-bounds-updated]
+     - lf-range-filter      snap=729B  call: __dispatch("params-updated", [[],"eyJpdiI6InRZUDJlNTJCUlhqSTNiOVhxOTJXb0E9PSIsInZhbHVlIjoiQkRMWT...)  => rendered=true html=1206B respSnap=739B dispatches=[range-bounds-updated]
+     - lf-count             snap=300B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=1 up=10843B down(wire)=30784B down(raw)=30784B server(ttfb sum)=72ms
+----- s2_checkbox
+Console output:
+[log] ### action "tick-checkbox": 3 POST livewire/update request(s)
+  #1 status=200 up=1247B down(wire)=6692B down(raw)=6692B ttfb=33ms total=33ms components=1
+     - lf-checkbox-filter   snap=902B  call: $commit() updates={"selected":["cabrio"]}  => rendered=true html=5079B respSnap=910B dispatches=[filter-updated→livewire-collection]
+  #2 status=200 up=1172B down(wire)=31290B down(raw)=31290B ttfb=61ms total=62ms components=1
+     - livewire-collection  snap=784B  call: __dispatch("filter-updated", {"field":"special_categories","condition":"query_scope","payload":[...)  => rendered=true html=27329B respSnap=852B dispatches=[params-updated,tags-updated→lf-tags,update-url,entries-updated]
+  #3 status=200 up=12092B down(wire)=31348B down(raw)=31348B ttfb=31ms total=32ms components=8
+     - lf-checkbox-filter   snap=1029B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=8646B respSnap=1028B dispatches=[counts-updated]
+     - lf-checkbox-filter   snap=910B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=5079B respSnap=910B dispatches=[counts-updated]
+     - lf-select-filter     snap=762B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1007B respSnap=760B dispatches=[counts-updated]
+     - lf-select-filter     snap=702B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=978B respSnap=700B dispatches=[counts-updated]
+     - lf-radio-filter      snap=670B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1629B respSnap=669B dispatches=[counts-updated]
+     - lf-dual-range-filter snap=900B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=3211B respSnap=900B dispatches=[range-bounds-updated]
+     - lf-range-filter      snap=739B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1206B respSnap=739B dispatches=[range-bounds-updated]
+     - lf-count             snap=298B  call: __dispatch("entries-updated", {"count":6,"active":1})  => rendered=true html=176B respSnap=297B
+  TOTAL: requests=3 up=14511B down(wire)=69330B down(raw)=69330B server(ttfb sum)=125ms
+[log] Logs: [
+  '[log] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8102/_boost/browser-logs'
+]
+----- s3_range
+Console output:
+[log] ### action "range-slider": 3 POST livewire/update request(s)
+  #1 status=200 up=1050B down(wire)=2483B down(raw)=2483B ttfb=37ms total=38ms components=1
+     - lf-range-filter      snap=739B  call: $commit() updates={"selected":"4"}  => rendered=true html=1206B respSnap=768B dispatches=[filter-updated→livewire-collection]
+  #2 status=200 up=1276B down(wire)=26669B down(raw)=26669B ttfb=43ms total=44ms components=1
+     - livewire-collection  snap=852B  call: __dispatch("filter-updated", {"field":"seats","condition":"gte","payload":"4","modifier":null,"b...)  => rendered=true html=22858B respSnap=892B dispatches=[params-updated,tags-updated→lf-tags,update-url,entries-updated]
+  #3 status=200 up=12824B down(wire)=31354B down(raw)=31354B ttfb=32ms total=33ms components=8
+     - lf-checkbox-filter   snap=1028B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=8646B respSnap=1028B dispatches=[counts-updated]
+     - lf-checkbox-filter   snap=910B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=5079B respSnap=910B dispatches=[counts-updated]
+     - lf-select-filter     snap=760B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1007B respSnap=760B dispatches=[counts-updated]
+     - lf-select-filter     snap=700B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=978B respSnap=700B dispatches=[counts-updated]
+     - lf-radio-filter      snap=669B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1629B respSnap=669B dispatches=[counts-updated]
+     - lf-dual-range-filter snap=900B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=3211B respSnap=900B dispatches=[range-bounds-updated]
+     - lf-range-filter      snap=768B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1206B respSnap=741B dispatches=[range-bounds-updated]
+     - lf-count             snap=297B  call: __dispatch("entries-updated", {"count":5,"active":2})  => rendered=true html=176B respSnap=297B
+  TOTAL: requests=3 up=15150B down(wire)=60506B down(raw)=60506B server(ttfb sum)=112ms
+[log] seats value: 4
+----- s4_clearall
+Console output:
+[log] ### action "clear-all": 3 POST livewire/update request(s)
+  #1 status=200 up=1173B down(wire)=50949B down(raw)=50949B ttfb=57ms total=58ms components=1
+     - livewire-collection  snap=892B  call: clearAll()  => rendered=true html=46077B respSnap=808B dispatches=[params-updated,tags-updated→lf-tags,clear-all-filters,update-url,entries-updated]
+  #2 status=200 up=13596B down(wire)=34928B down(raw)=34928B ttfb=36ms total=36ms components=10
+     - lf-checkbox-filter   snap=1028B  call: __dispatch("params-updated", [[],"eyJpdiI6IkhrTW9lT25CdEt2UjZjbVRSM2FNVVE9PSIsInZhbHVlIjoiaGJZYk...); __dispatch("clear-all-filters", [])  => rendered=true html=8647B respSnap=1029B dispatches=[counts-updated,clear-filter→livewire-collection]
+     - lf-checkbox-filter   snap=910B  call: __dispatch("params-updated", [[],"eyJpdiI6IkhrTW9lT25CdEt2UjZjbVRSM2FNVVE9PSIsInZhbHVlIjoiaGJZYk...); __dispatch("clear-all-filters", [])  => rendered=true html=4550B respSnap=902B dispatches=[counts-updated,clear-filter→livewire-collection]
+     - lf-select-filter     snap=760B  call: __dispatch("params-updated", [[],"eyJpdiI6IkhrTW9lT25CdEt2UjZjbVRSM2FNVVE9PSIsInZhbHVlIjoiaGJZYk...); __dispatch("clear-all-filters", [])  => rendered=true html=1009B respSnap=762B dispatches=[counts-updated,clear-filter→livewire-collection]
+     - lf-select-filter     snap=700B  call: __dispatch("params-updated", [[],"eyJpdiI6IkhrTW9lT25CdEt2UjZjbVRSM2FNVVE9PSIsInZhbHVlIjoiaGJZYk...); __dispatch("clear-all-filters", [])  => rendered=true html=980B respSnap=702B dispatches=[counts-updated,clear-filter→livewire-collection]
+     - lf-radio-filter      snap=669B  call: __dispatch("params-updated", [[],"eyJpdiI6IkhrTW9lT25CdEt2UjZjbVRSM2FNVVE9PSIsInZhbHVlIjoiaGJZYk...); __dispatch("clear-all-filters", [])  => rendered=true html=1630B respSnap=670B dispatches=[counts-updated,clear-filter→livewire-collection]
+     - lf-dual-range-filter snap=900B  call: __dispatch("params-updated", [[],"eyJpdiI6IkhrTW9lT25CdEt2UjZjbVRSM2FNVVE9PSIsInZhbHVlIjoiaGJZYk...); __dispatch("clear-all-filters", [])  => rendered=true html=3211B respSnap=916B dispatches=[range-bounds-updated,dual-range-preset-values,clear-filter→livewire-collection]
+     - lf-range-filter      snap=741B  call: __dispatch("params-updated", [[],"eyJpdiI6IkhrTW9lT25CdEt2UjZjbVRSM2FNVVE9PSIsInZhbHVlIjoiaGJZYk...); __dispatch("clear-all-filters", [])  => rendered=true html=1206B respSnap=753B dispatches=[range-bounds-updated,clear-filter→livewire-collection]
+     - lf-toggle-filter     snap=633B  call: __dispatch("clear-all-filters", [])  => rendered=true html=861B respSnap=633B dispatches=[clear-filter→livewire-collection]
+     - lf-count             snap=297B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+     - livewire-collection  snap=808B  call: __dispatch("clear-all-filters", [])  => rendered=false respSnap=808B
+  #3 status=200 up=2329B down(wire)=1057B down(raw)=1057B ttfb=17ms total=18ms components=1
+     - livewire-collection  snap=808B  call: __dispatch("clear-filter", {"field":"car_brand","condition":"taxonomy","modifier":"any","bound...); __dispatch("clear-filter", {"field":"special_categories","condition":"query_scope","modifier":...); __dispatch("clear-filter", {"field":"transmission","condition":"is","modifier":"any","boundsSe...); __dispatch("clear-filter", {"field":"fuel_type","condition":"is","modifier":"any","boundsSelec...); __dispatch("clear-filter", {"field":"air_condition","condition":"is","modifier":"any","boundsS...); __dispatch("clear-filter", {"field":"date_of_registration","condition":"dual_range","modifier"...); __dispatch("clear-filter", {"field":"seats","condition":"gte","modifier":"any","boundsSelectio...); __dispatch("clear-filter", {"field":"date_of_registration","condition":"is_after","modifier":"...)  => rendered=false respSnap=833B
+  TOTAL: requests=3 up=17098B down(wire)=86934B down(raw)=86934B server(ttfb sum)=110ms
+[log] Logs: []
+----- s5_clearone
+Console output:
+[log] ### action "tick-checkbox-2": 3 POST livewire/update request(s)
+  #1 status=200 up=1247B down(wire)=6692B down(raw)=6692B ttfb=25ms total=25ms components=1
+     - lf-checkbox-filter   snap=902B  call: $commit() updates={"selected":["cabrio"]}  => rendered=true html=5079B respSnap=910B dispatches=[filter-updated→livewire-collection]
+  #2 status=200 up=1225B down(wire)=31427B down(raw)=31427B ttfb=45ms total=46ms components=1
+     - livewire-collection  snap=833B  call: __dispatch("filter-updated", {"field":"special_categories","condition":"query_scope","payload":[...)  => rendered=true html=27329B respSnap=901B dispatches=[params-updated,tags-updated→lf-tags,update-url,entries-updated]
+  #3 status=200 up=12724B down(wire)=31348B down(raw)=31348B ttfb=32ms total=33ms components=8
+     - lf-checkbox-filter   snap=1029B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=8646B respSnap=1028B dispatches=[counts-updated]
+     - lf-checkbox-filter   snap=910B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=5079B respSnap=910B dispatches=[counts-updated]
+     - lf-select-filter     snap=762B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1007B respSnap=760B dispatches=[counts-updated]
+     - lf-select-filter     snap=702B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=978B respSnap=700B dispatches=[counts-updated]
+     - lf-radio-filter      snap=670B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1629B respSnap=669B dispatches=[counts-updated]
+     - lf-dual-range-filter snap=916B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=3211B respSnap=900B dispatches=[range-bounds-updated]
+     - lf-range-filter      snap=753B  call: __dispatch("params-updated", [{"query_scope":"multiselect","multiselect:special_categories":"cab...)  => rendered=true html=1206B respSnap=739B dispatches=[range-bounds-updated]
+     - lf-count             snap=298B  call: __dispatch("entries-updated", {"count":6,"active":1})  => rendered=true html=176B respSnap=297B
+  TOTAL: requests=3 up=15196B down(wire)=69467B down(raw)=69467B server(ttfb sum)=102ms
+[log] ### action "clear-one-filter-button": 3 POST livewire/update request(s)
+  #1 status=200 up=1215B down(wire)=6108B down(raw)=6108B ttfb=24ms total=25ms components=1
+     - lf-checkbox-filter   snap=910B  call: clear()  => rendered=true html=4550B respSnap=902B dispatches=[clear-filter→livewire-collection]
+  #2 status=200 up=1301B down(wire)=50963B down(raw)=50963B ttfb=53ms total=54ms components=1
+     - livewire-collection  snap=901B  call: __dispatch("clear-filter", {"field":"special_categories","condition":"query_scope","modifier":...)  => rendered=true html=46077B respSnap=833B dispatches=[params-updated,tags-updated→lf-tags,update-url,entries-updated]
+  #3 status=200 up=11397B down(wire)=30784B down(raw)=30784B ttfb=34ms total=34ms components=8
+     - lf-checkbox-filter   snap=1028B  call: __dispatch("params-updated", [[],"eyJpdiI6IkxxaE5DZWlRM3c1YUpPeWhRWHBmM1E9PSIsInZhbHVlIjoiNjFvSn...)  => rendered=true html=8647B respSnap=1029B dispatches=[counts-updated]
+     - lf-checkbox-filter   snap=902B  call: __dispatch("params-updated", [[],"eyJpdiI6IkxxaE5DZWlRM3c1YUpPeWhRWHBmM1E9PSIsInZhbHVlIjoiNjFvSn...)  => rendered=true html=4550B respSnap=902B dispatches=[counts-updated]
+     - lf-select-filter     snap=760B  call: __dispatch("params-updated", [[],"eyJpdiI6IkxxaE5DZWlRM3c1YUpPeWhRWHBmM1E9PSIsInZhbHVlIjoiNjFvSn...)  => rendered=true html=1009B respSnap=762B dispatches=[counts-updated]
+     - lf-select-filter     snap=700B  call: __dispatch("params-updated", [[],"eyJpdiI6IkxxaE5DZWlRM3c1YUpPeWhRWHBmM1E9PSIsInZhbHVlIjoiNjFvSn...)  => rendered=true html=980B respSnap=702B dispatches=[counts-updated]
+     - lf-radio-filter      snap=669B  call: __dispatch("params-updated", [[],"eyJpdiI6IkxxaE5DZWlRM3c1YUpPeWhRWHBmM1E9PSIsInZhbHVlIjoiNjFvSn...)  => rendered=true html=1630B respSnap=670B dispatches=[counts-updated]
+     - lf-dual-range-filter snap=900B  call: __dispatch("params-updated", [[],"eyJpdiI6IkxxaE5DZWlRM3c1YUpPeWhRWHBmM1E9PSIsInZhbHVlIjoiNjFvSn...)  => rendered=true html=3211B respSnap=900B dispatches=[range-bounds-updated]
+     - lf-range-filter      snap=739B  call: __dispatch("params-updated", [[],"eyJpdiI6IkxxaE5DZWlRM3c1YUpPeWhRWHBmM1E9PSIsInZhbHVlIjoiNjFvSn...)  => rendered=true html=1206B respSnap=739B dispatches=[range-bounds-updated]
+     - lf-count             snap=297B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=3 up=13913B down(wire)=87855B down(raw)=87855B server(ttfb sum)=111ms

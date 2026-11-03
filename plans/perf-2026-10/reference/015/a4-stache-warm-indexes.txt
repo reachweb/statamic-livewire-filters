@@ -1,0 +1,15 @@
+== demo config entries.indexes ==
+            'indexes' => [                'title',                'car_brand',                'transmission',                'fuel_type',                'date_of_registration',                'special_categories',                'air_condition',                'seats',                'doors',            ],
+== field NOT in the list: price (grep count in config: 0) ==
+after clear+warm: price cached=false
+first where(price) count=36 took 20.6 ms (index built on demand, 40 entries)
+second where(price) took 0.2 ms (from cache)
+now cached=true usage=["path","car_category","uri","car_brand","price"]
+-- stache:warm WITHOUT clear (usage list intact) --
+price cached=true
+-- stache:clear + stache:warm (usage list lost) --
+price cached=false usage=["path","car_category","uri","car_brand"]
+-- declare 'price' under stores.entries.indexes, stache:clear + stache:warm --
+            'indexes' => [                'price',                'title',
+price cached=true
+(config restored, stache re-warmed)

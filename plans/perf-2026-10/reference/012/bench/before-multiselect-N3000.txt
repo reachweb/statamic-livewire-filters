@@ -1,0 +1,11 @@
+[setup] built 3000 entries in 68204 ms (cache=array)
+--- Multiselect scope via the real Entries tag, N=3000 ---
+multiselect x1: paginate(12)                                    18.824 ms/op
+multiselect x1: count()                                          4.058 ms/op
+  (count = 1019)
+multiselect x3: paginate(12)                                    37.433 ms/op
+multiselect x3: count()                                          6.709 ms/op
+  (count = 2268)
+multiselect x6: paginate(12)                                    53.742 ms/op
+multiselect x6: count()                                         10.864 ms/op
+  (count = 3000)

@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
+use Carbon\Carbon;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
@@ -342,6 +343,34 @@ class HandleFieldBoundsTest extends TestCase
             ->assertSet('dynamicMin', 2020)
             ->assertSet('dynamicMax', 2022)
             ->assertDispatched('range-bounds-updated', min: 2020, max: 2022, disabled: false);
+    }
+
+    #[Test]
+    public function date_bounds_are_identical_whether_the_values_arrive_as_carbon_or_strings()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $expectedMin = Carbon::parse('2020-05-22')->timestamp;
+        $expectedMax = Carbon::parse('2024-12-30')->timestamp;
+
+        $variants = [
+            'strings (Eloquent path)' => ['2020-05-22', '2022-02-02', '2024-12-30'],
+            'Carbon in the app timezone (Stache index)' => [Carbon::parse('2020-05-22'), Carbon::parse('2022-02-02'), Carbon::parse('2024-12-30')],
+            'Carbon in other timezones' => [Carbon::parse('2020-05-22')->setTimezone('America/New_York'), Carbon::parse('2022-02-02')->setTimezone('Asia/Tokyo'), Carbon::parse('2024-12-30')->setTimezone('Europe/Athens')],
+            'DateTimeImmutable' => [new \DateTimeImmutable('2020-05-22'), new \DateTimeImmutable('2022-02-02'), new \DateTimeImmutable('2024-12-30')],
+            'mixed with junk' => [Carbon::parse('2020-05-22'), '2022-02-02', null, '', 'not a date', '2024-12-30'],
+        ];
+
+        foreach ($variants as $label => $values) {
+            $this->mock(CountQueryPool::class)->shouldReceive('getFieldValues')->andReturn(collect($values));
+
+            Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
+                ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+                ->assertSet('fieldMin', $expectedMin)
+                ->assertSet('fieldMax', $expectedMax)
+                ->assertSet('dynamicMin', 2020)
+                ->assertSet('dynamicMax', 2024);
+        }
     }
 
     #[Test]

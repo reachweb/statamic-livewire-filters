@@ -1,0 +1,19 @@
+[setup] built 3000 entries in 57760 ms (cache=array)
+--- Infinite scroll, paginate=12, N=3000 — cold (indexes built on demand) ---
+mount+render (infinite)                         440.7 ms | idx loads   5 (built  1) | item gets 3021 | html    3783 B | snapshot   851 B | entries rendered  13 | phases: entries() total=391.4 | built: entries::products::redirect
+  !! expected 12 rendered entries, counted 13
+loadMore #1                                      46.9 ms | idx loads   5 (built  0) | item gets   33 | html    3224 B | snapshot   851 B | entries rendered  24 | phases: entries() total=37.3
+loadMore #2                                      47.0 ms | idx loads   5 (built  0) | item gets   45 | html    4554 B | snapshot   851 B | entries rendered  36 | phases: entries() total=37.4
+loadMore #3                                      48.8 ms | idx loads   5 (built  0) | item gets   57 | html    5885 B | snapshot   851 B | entries rendered  48 | phases: entries() total=37.6
+loadMore #4                                      52.1 ms | idx loads   5 (built  0) | item gets   69 | html    7216 B | snapshot   851 B | entries rendered  60 | phases: entries() total=38.6
+loadMore #5                                      57.4 ms | idx loads   5 (built  0) | item gets   81 | html    8547 B | snapshot   851 B | entries rendered  72 | phases: entries() total=42.3
+filter-updated brand:is after 5 loads           370.0 ms | idx loads   6 (built  1) | item gets 3022 | html    1898 B | snapshot   870 B | entries rendered  12 | phases: entries() total=365.4 | built: entries::products::brand
+--- Infinite scroll, paginate=12, N=3000 — warm (steady state) ---
+mount+render (infinite)                          44.4 ms | idx loads   5 (built  0) | item gets   21 | html    3783 B | snapshot   851 B | entries rendered  13 | phases: entries() total=38.4
+  !! expected 12 rendered entries, counted 13
+loadMore #1                                      45.5 ms | idx loads   5 (built  0) | item gets   33 | html    3224 B | snapshot   851 B | entries rendered  24 | phases: entries() total=38.1
+loadMore #2                                      56.7 ms | idx loads   5 (built  0) | item gets   45 | html    4554 B | snapshot   851 B | entries rendered  36 | phases: entries() total=47.3
+loadMore #3                                      49.7 ms | idx loads   5 (built  0) | item gets   57 | html    5885 B | snapshot   851 B | entries rendered  48 | phases: entries() total=38.5
+loadMore #4                                      51.6 ms | idx loads   5 (built  0) | item gets   69 | html    7216 B | snapshot   851 B | entries rendered  60 | phases: entries() total=38.4
+loadMore #5                                      53.5 ms | idx loads   5 (built  0) | item gets   81 | html    8547 B | snapshot   851 B | entries rendered  72 | phases: entries() total=39.0
+filter-updated brand:is after 5 loads            16.2 ms | idx loads   6 (built  0) | item gets   22 | html    1898 B | snapshot   870 B | entries rendered  12 | phases: entries() total=10.5

@@ -1,0 +1,15 @@
+Console output:
+[log] [load] cards=12 opacity-0=0 opacity-100=12
+[log] ### action "type Aud": 3 POST livewire/update request(s)
+     - lf-text-filter       snap=584B  call: $commit() updates={"selected":"Aud"}  => rendered=true html=1184B respSnap=587B dispatches=[filter-updated→livewire-collection]
+     - livewire-collection  snap=816B  call: __dispatch("filter-updated", {"field":"title","condition":"contains","payload":"Aud","modifier":...)  => rendered=true html=10085B respSnap=837B dispatches=[params-updated,tags-updated→lf-tags,update-url,entries-updated]
+  TOTAL: requests=3 up=8440B down(wire)=51239B down(raw)=51239B server(ttfb sum)=86ms
+[log] [after "Aud"] cards=2 opacity-0=0 opacity-100=2
+[log] ### action "type Audi": 3 POST livewire/update request(s)
+     - lf-text-filter       snap=587B  call: $commit() updates={"selected":"Audi"}  => rendered=true html=1184B respSnap=588B dispatches=[filter-updated→livewire-collection]
+     - livewire-collection  snap=837B  call: __dispatch("filter-updated", {"field":"title","condition":"contains","payload":"Audi","modifier"...)  => rendered=true html=10085B respSnap=838B dispatches=[params-updated,tags-updated→lf-tags,update-url]
+  TOTAL: requests=3 up=8468B down(wire)=51186B down(raw)=51186B server(ttfb sum)=85ms
+[log] [after "Audi"] cards=2 opacity-0=2 opacity-100=0
+[log] [after "Audi" +2s] cards=2 opacity-0=2 opacity-100=0
+[log] Logs: [
+]

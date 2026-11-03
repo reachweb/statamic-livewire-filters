@@ -11,6 +11,16 @@ trait HandleEntriesCount
 {
     use HandleFieldValuesQuery;
 
+    public function mountHandleEntriesCount(): void
+    {
+        $this->registerFacet();
+    }
+
+    protected function facetFeatureEnabled(): bool
+    {
+        return (bool) config('statamic-livewire-filters.enable_filter_values_count');
+    }
+
     #[Computed]
     public function counts()
     {
@@ -22,6 +32,10 @@ trait HandleEntriesCount
             return array_fill_keys(array_keys($this->options), null);
         }
 
+        if (isset($this->statamic_field['options']) && is_array($this->statamic_field['options'])) {
+            return array_fill_keys(array_keys($this->statamic_field['options']), null);
+        }
+
         return [];
     }
 
@@ -31,20 +45,36 @@ trait HandleEntriesCount
     public function updateCounts($params, $boundsQuery = null)
     {
         if (! config('statamic-livewire-filters.enable_filter_values_count')) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
-        $params = RangeBoundsQuery::paramsForCollection($boundsQuery, $this->collection);
+        $query = RangeBoundsQuery::decodeForCollection($boundsQuery, $this->collection);
 
-        if ($params === null) {
+        if ($query === null) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
+        $this->prefetchFacets($query);
+
+        $params = $query['params'];
         $fieldHandle = $this->resolveCountFieldHandle();
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
+        $countsBefore = $this->statamic_field['counts'] ?? null;
+
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle, $baseParams['from']);
+
+        // The Alpine views update from counts-updated; only views printing counts need the html.
+        if ($this->statamic_field['counts'] === $countsBefore) {
+            $this->skipRenderIfFilterStateUnchanged();
+        } else {
+            $this->markFilterStateChanged();
+        }
 
         $this->dispatch('counts-updated', $this->counts());
     }

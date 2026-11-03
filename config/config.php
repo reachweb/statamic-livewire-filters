@@ -68,6 +68,11 @@ return [
     // Dynamically narrow range filter bounds to match the other active filters (can be slow for a large number of entries)
     'enable_dynamic_range_bounds' => false,
 
+    // Let the collection batch the faceted-count and range-bounds queries of all filters that share a
+    // filter state into one query per state. Only reduces queries on the Eloquent driver; the Stache
+    // already shares one filter pass per state. Needs enable_filter_values_count or enable_dynamic_range_bounds.
+    'enable_facet_engine' => false,
+
     // Enable custom query string (ignored when enable_query_string is true)
     'custom_query_string' => false,
 

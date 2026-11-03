@@ -23,7 +23,7 @@ class LfCheckboxFilter extends LivewireFilter
 
     public string $placeholder = '';
 
-    #[Computed(persist: true)]
+    #[Computed]
     public function filterOptions(): array
     {
         if ($this->options !== null && is_array($this->options)) {
@@ -61,6 +61,10 @@ class LfCheckboxFilter extends LivewireFilter
         if ($tag['field'] === $this->field && in_array($tag['value'], $this->selected)) {
             $this->selected = array_values(array_diff($this->selected, [$tag['value']]));
             $this->updatedSelected();
+
+            return;
         }
+
+        $this->skipRenderIfFilterStateUnchanged();
     }
 }

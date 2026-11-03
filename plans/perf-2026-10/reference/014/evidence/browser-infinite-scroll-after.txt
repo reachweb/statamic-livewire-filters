@@ -1,0 +1,40 @@
+Console output:
+[log] URL: http://127.0.0.1:8103/infinite-scroll
+[log] ### action "load": 1 POST livewire/update request(s)
+  #1 status=200 up=5240B down(wire)=16171B down(raw)=16171B ttfb=44ms total=44ms components=4
+     - lf-checkbox-filter   snap=1063B  call: __dispatch("params-updated", [[],"eyJpdiI6IlhkVk1iR1hoZFBZTUtla1FQcy9EWGc9PSIsInZhbHVlIjoiNHB3bW...)  => rendered=true html=8463B respSnap=1028B dispatches=[counts-updated]
+     - lf-radio-filter      snap=735B  call: __dispatch("params-updated", [[],"eyJpdiI6IlhkVk1iR1hoZFBZTUtla1FQcy9EWGc9PSIsInZhbHVlIjoiNHB3bW...)  => rendered=true html=1690B respSnap=731B dispatches=[counts-updated]
+     - lf-select-filter     snap=713B  call: __dispatch("params-updated", [[],"eyJpdiI6IlhkVk1iR1hoZFBZTUtla1FQcy9EWGc9PSIsInZhbHVlIjoiNHB3bW...)  => rendered=true html=980B respSnap=709B dispatches=[counts-updated]
+     - lf-tags              snap=484B  call: __dispatch("tags-updated", [[]])  => rendered=true html=281B respSnap=540B
+  TOTAL: requests=1 up=5240B down(wire)=16171B down(raw)=16171B server(ttfb sum)=44ms
+[log] cards in DOM: 6 ["0cb80f10-51ad-479c-9f7d-f2370d0ef389","93c6a617-804e-4c4c-b936-8739638e652b","fbf51daf-6463-4999-acf3-9d294edbe1e1","d53e8176-d80c-4968-8356-eb0d6c61c258","6a59c07d-54ff-4c17-abc2-dac68546070e","ef997f2d-a985-4afe-afff-d055f773f732"]
+[log] showing text: Showing 6 of 40 cars
+[log] Logs: [
+]
+Console output:
+[log] ### action "loadMore#1": 1 POST livewire/update request(s)
+  #1 status=200 up=1078B down(wire)=12240B down(raw)=12240B ttfb=62ms total=62ms components=1
+     - livewire-collection  snap=809B  call: loadMore()  => rendered=true html=10403B respSnap=809B dispatches=[update-url]
+  TOTAL: requests=1 up=1078B down(wire)=12240B down(raw)=12240B server(ttfb sum)=62ms
+[log]   after click 1: cards in DOM=12 (unique=12) | Showing 6 of 40 cars
+[log] ### action "loadMore#2": 1 POST livewire/update request(s)
+  #1 status=200 up=1078B down(wire)=12318B down(raw)=12318B ttfb=50ms total=50ms components=1
+     - livewire-collection  snap=809B  call: loadMore()  => rendered=true html=10474B respSnap=809B dispatches=[update-url]
+  TOTAL: requests=1 up=1078B down(wire)=12318B down(raw)=12318B server(ttfb sum)=50ms
+[log]   after click 2: cards in DOM=18 (unique=18) | Showing 6 of 40 cars
+[log] ### action "loadMore#3": 1 POST livewire/update request(s)
+  #1 status=200 up=1078B down(wire)=12373B down(raw)=12373B ttfb=53ms total=54ms components=1
+     - livewire-collection  snap=809B  call: loadMore()  => rendered=true html=10522B respSnap=809B dispatches=[update-url]
+  TOTAL: requests=1 up=1078B down(wire)=12373B down(raw)=12373B server(ttfb sum)=53ms
+[log]   after click 3: cards in DOM=24 (unique=24) | Showing 6 of 40 cars
+[log] ### action "loadMore#4": 1 POST livewire/update request(s)
+  #1 status=200 up=1078B down(wire)=12701B down(raw)=12701B ttfb=70ms total=71ms components=1
+     - livewire-collection  snap=809B  call: loadMore()  => rendered=true html=10843B respSnap=809B dispatches=[update-url]
+  TOTAL: requests=1 up=1078B down(wire)=12701B down(raw)=12701B server(ttfb sum)=70ms
+[log]   after click 4: cards in DOM=30 (unique=30) | Showing 6 of 40 cars
+[log] ### action "loadMore#5": 1 POST livewire/update request(s)
+  #1 status=200 up=1078B down(wire)=12507B down(raw)=12507B ttfb=67ms total=68ms components=1
+     - livewire-collection  snap=809B  call: loadMore()  => rendered=true html=10642B respSnap=809B dispatches=[update-url]
+  TOTAL: requests=1 up=1078B down(wire)=12507B down(raw)=12507B server(ttfb sum)=67ms
+[log]   after click 5: cards in DOM=36 (unique=36) | Showing 6 of 40 cars
+[log] Logs: []

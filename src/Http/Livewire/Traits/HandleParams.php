@@ -812,6 +812,7 @@ trait HandleParams
                 $this->getId(),
                 ++$this->boundsQueryRevision,
                 $this->boundsSelectionRevisions,
+                config('statamic-livewire-filters.enable_facet_engine') ? $this->facets : [],
             ));
         }
 

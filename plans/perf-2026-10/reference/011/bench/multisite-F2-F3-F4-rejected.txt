@@ -1,0 +1,10 @@
+# Variant: F2 + F3 + F4 (REJECTED persistent cache), multi-site
+# Produced by the review-time verifier bench (testbench: Livewire 4.2.1 / Statamic 6.7.1, file cache driver, 500 terms / 1,000 entries).
+# The [TAG] prefix inside is the verifier run label, not this plan's variant name.
+[AFTER] --- F4 multi-site: current path per site, pluck alternative equivalence, localization leak attack ---
+[AFTER] site=en terms={"red":"Red","black":"Black","yellow":"Yellow"} | pluck-alt terms same | entries(origin ids)=["Shirt","Hat","Sock"] pluck-alt same | entries(own ids)=["Shirt","Hat","Sock"] pluck-alt same
+[AFTER] site=es terms={"red":"Rojo","black":"Negro","yellow":"Amarillo"} | pluck-alt terms same | entries(origin ids)=["Camisa","Solo ES"] pluck-alt same | entries(own ids)=["Camisa","Solo ES"] pluck-alt same
+[AFTER] site=de terms={"red":"Rot","black":"Schwarz","yellow":"Yellow"} | pluck-alt terms same | entries(origin ids)=[] pluck-alt same | entries(own ids)=[] pluck-alt same
+[AFTER] after es title edit: en red="Red" (expect Red) | es red="Rojo Nuevo" (expect Rojo Nuevo) | de red="Rot" (expect Rot)
+[AFTER] after new de localization: de yellow="Gelb" (expect Gelb) | en yellow="Yellow" (expect Yellow)
+[AFTER] after publishing es draft: es entries=["Camisa","Sombrero","Solo ES"] (expect Camisa, Sombrero, Solo ES)
