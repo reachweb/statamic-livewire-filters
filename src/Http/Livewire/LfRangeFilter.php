@@ -56,7 +56,7 @@ class LfRangeFilter extends LivewireFilter
     }
 
     #[On('clear-all-filters')]
-    public function clear($keptParamKeys = null): void
+    public function clear(): void
     {
         $this->selected = $this->emptyValue();
         $this->markFilterStateChanged();
@@ -66,7 +66,7 @@ class LfRangeFilter extends LivewireFilter
             $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
         }
 
-        if (! $this->clearAllNeedsRelay($keptParamKeys)) {
+        if (! $this->clearAllNeedsRelay(func_get_args()[0] ?? null)) {
             $this->forgetBoundsSelectionWithoutRelay();
 
             return;

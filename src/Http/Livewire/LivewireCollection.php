@@ -246,10 +246,22 @@ class LivewireCollection extends Component
             ->all();
     }
 
+    /**
+     * Filters skip their relay unless the event lists their key, but the list only holds
+     * the sending collection's kept keys. A collection that kept other condition keys (a
+     * second collection on the page) re-sends the event bare, so every filter relays as
+     * before and its managed keys still clear. Bare events never re-send, so this can't loop.
+     */
     #[On('clear-all-filters')]
     public function resetPaginationOnClearAll(): void
     {
         $this->clearAllFilterParams();
+
+        $keptParamKeys = func_get_args()[0] ?? null;
+
+        if (is_array($keptParamKeys) && array_diff($this->keptConditionParamKeys(), $keptParamKeys) !== []) {
+            $this->dispatch('clear-all-filters');
+        }
     }
 
     public function entries()

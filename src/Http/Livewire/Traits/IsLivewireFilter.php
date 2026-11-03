@@ -177,7 +177,8 @@ trait IsLivewireFilter
     /**
      * A bare clear-all-filters (LfTags, user code) or the per-filter clear button keeps
      * the relay. One from LivewireCollection::clearAll() lists the keys its sweep had to
-     * keep, so only a filter managing one of them needs to relay.
+     * keep, so only a filter managing one of them needs to relay. clear() reads the list with
+     * func_get_args() and declares no parameter, so subclasses overriding clear() stay compatible.
      *
      * @param  mixed  $keptParamKeys  The list from clearAll(); anything else counts as a bare event.
      */
