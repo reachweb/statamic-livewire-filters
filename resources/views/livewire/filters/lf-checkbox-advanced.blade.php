@@ -3,6 +3,18 @@
         allOptions: @js($this->filter_options),
         options: [],
         counts: @js($this->counts),
+        available: @js($this->availableOptions),
+        hideUnavailable: @js($unavailable === 'hide'),
+        shownOptions: [],
+        refreshShownOptions() {
+            this.shownOptions = this.options
+                .map(([value, label]) => [value, label, this.isAvailable(value)])
+                .filter(([value, label, available]) => available || ! this.hideUnavailable);
+            this.$refs.noResultsMessage?.classList.toggle('hidden', this.shownOptions.length > 0);
+        },
+        isAvailable(value) {
+            return this.available === null || this.available.includes(String(value)) || this.selectedOptions.includes(String(value));
+        },
         isOpen: false,
         openedWithKeyboard: false,
         openUpwards: false,
@@ -26,11 +38,7 @@
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
                 label.toLowerCase().includes(query.toLowerCase())
             )
-            if (this.options.length === 0) {
-                this.$refs.noResultsMessage?.classList.remove('hidden')
-            } else {
-                this.$refs.noResultsMessage?.classList.add('hidden')
-            }
+            this.refreshShownOptions()
         },
         updateSelectedLabels() {
             this.selectedLabels = this.selectedOptions.map(value => {
@@ -47,8 +55,9 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="options = Object.entries(allOptions); $watch('selectedOptions', () => updateSelectedLabels());"
+    x-init="options = Object.entries(allOptions); refreshShownOptions(); $watch('selectedOptions', () => { updateSelectedLabels(); refreshShownOptions() }); $watch('available', () => refreshShownOptions());"
     x-on:counts-updated="counts = Object.values($event.detail)[0];"
+    x-on:available-options-updated="available = Object.values($event.detail)[0];"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selectedOptions"
     wire:model.live="selected"
@@ -120,10 +129,11 @@
                 </li>
                 @endif
                 
-                <template x-for="[value, label] in options" x-bind:key="value">
+                <template x-for="[value, label, available] in shownOptions" x-bind:key="value">
                     <li role="option">
                         <label
                             class="flex items-center gap-2 px-4 py-2 text-sm text-lf-text"
+                            x-bind:class="available ? null : 'opacity-50'"
                             x-bind:for="'checkboxOption' + value"
                         >
                             <div class="relative flex items-center">
@@ -132,6 +142,7 @@
                                     x-on:change="handleOptionToggle($el)" 
                                     x-on:keydown.enter.prevent="$el.checked = ! $el.checked; handleOptionToggle($el)"
                                     x-bind:checked="selectedOptions.includes(value)"
+                                    x-bind:disabled="! available"
                                     x-bind:value="value" 
                                     x-bind:id="'checkboxOption' + value"
                                 />

@@ -13,7 +13,8 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
  *    sent once when they come from the collection tag or the URL: restore the
  *    selection; handled by setPresetValues().
  *  - `params-updated` with `(params, boundsQuery)`: only filters that show
- *    counts or dynamic bounds listen (HandleEntriesCount, HandleFieldBounds).
+ *    counts, dynamic bounds or dependent options listen (HandleEntriesCount,
+ *    HandleFieldBounds, HandleDependentOptions).
  *    They ignore the plain `params`, which a client controls, and read the
  *    filter state only from the encrypted `boundsQuery` (RangeBoundsQuery).
  *

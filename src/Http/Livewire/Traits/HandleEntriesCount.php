@@ -40,6 +40,11 @@ trait HandleEntriesCount
             return;
         }
 
+        $this->refreshCounts($params);
+    }
+
+    protected function refreshCounts(array $params): void
+    {
         $fieldHandle = $this->resolveCountFieldHandle();
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
@@ -53,12 +58,17 @@ trait HandleEntriesCount
     {
         $this->statamic_field['counts'] = array_fill_keys(array_keys($this->statamic_field['options']), 0);
 
-        $fieldValues = $this->getCountFieldValues($baseParams, $fieldHandle, $collections);
-
-        if ($fieldValues->isEmpty()) {
-            return;
+        foreach ($this->optionValuesIn($this->getCountFieldValues($baseParams, $fieldHandle, $collections)) as $value) {
+            $this->statamic_field['counts'][$value]++;
         }
+    }
 
+    /**
+     * The option keys found in the plucked field values, once per occurrence.
+     */
+    protected function optionValuesIn($fieldValues): array
+    {
+        $values = [];
         $singleTaxonomyPrefix = $this->singleTaxonomyPrefix();
 
         foreach ($fieldValues as $fieldValue) {
@@ -70,11 +80,13 @@ trait HandleEntriesCount
                     $value = substr($value, strlen($singleTaxonomyPrefix));
                 }
 
-                if (is_scalar($value) && isset($this->statamic_field['counts'][$value])) {
-                    $this->statamic_field['counts'][$value]++;
+                if (is_scalar($value) && array_key_exists($value, $this->statamic_field['options'])) {
+                    $values[] = $value;
                 }
             }
         }
+
+        return $values;
     }
 
     protected function singleTaxonomyPrefix(): ?string

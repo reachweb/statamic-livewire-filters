@@ -1,17 +1,20 @@
 <div>
     <div class="grid grid-cols-1 gap-y-4">
         @foreach($this->filter_options as $value => $label)
-        <div class="flex items-center">
+        @php($available = $this->optionIsAvailable($value))
+        @continue(! $available && $unavailable === 'hide')
+        <div class="flex items-center" wire:key="{{ $field }}-{{ $value }}">
             <input 
                 type="radio" 
                 class="form-radio size-4 text-lf-accent bg-lf-input-bg border-lf-border focus:ring-lf-accent focus:ring-1"
                 id="{{ $field }}-{{ $value }}"
                 wire:model.live="selected"
                 value="{{ $value }}"
+                @disabled(! $available)
             >
             <label
                 for="{{ $field }}-{{ $value }}"
-                class="ml-2 text-lf-text"
+                class="ml-2 text-lf-text @unless($available) opacity-50 @endunless"
             >
                 {{ $label }}
                 @if ($this->counts[$value] !== null)

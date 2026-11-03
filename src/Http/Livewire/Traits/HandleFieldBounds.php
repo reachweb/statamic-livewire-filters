@@ -50,7 +50,10 @@ trait HandleFieldBounds
     #[On('params-updated')]
     public function updateBounds($params, $boundsQuery = null): void
     {
+        // The collection also sends this event for counts and dependent filters, so no-op updates skip their render.
         if (! config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
@@ -59,11 +62,15 @@ trait HandleFieldBounds
         $query = RangeBoundsQuery::decodeForCollection($boundsQuery, $this->collection);
 
         if ($query === null) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
         if ($query['source'] !== null) {
             if ($query['revision'] < ($this->boundsQueryRevisions[$query['source']] ?? 0)) {
+                $this->skipRenderIfFilterStateUnchanged();
+
                 return;
             }
 
@@ -143,6 +150,8 @@ trait HandleFieldBounds
             $selectionPayload,
             ['disabled' => $disabled],
         ));
+
+        $this->markFilterStateChanged();
     }
 
     protected function rememberBoundsSelection(array $params): ?array

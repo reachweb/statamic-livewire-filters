@@ -8,7 +8,7 @@ use Livewire\Attributes\Locked;
 
 class LfRadioFilter extends LivewireFilter
 {
-    use Traits\HandleEntriesCount, Traits\IsSortable;
+    use Traits\HandleDependentOptions, Traits\IsSortable;
 
     #[Locked]
     public $view = 'lf-radio';

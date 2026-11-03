@@ -802,10 +802,11 @@ trait HandleParams
         $this->markCollectionStateChanged();
 
         if (config('statamic-livewire-filters.enable_filter_values_count')
-            || config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+            || config('statamic-livewire-filters.enable_dynamic_range_bounds')
+            || config('statamic-livewire-filters.enable_dependent_filters')) {
             $params = $this->effectiveQueryParams();
 
-            // Counts and bounds listeners require the token and use only its params.
+            // Counts, bounds and dependent-options listeners require the token and use only its params.
             $this->dispatch('params-updated', $params, RangeBoundsQuery::encode(
                 $this->collections,
                 $params,

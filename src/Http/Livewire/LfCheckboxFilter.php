@@ -9,7 +9,7 @@ use Livewire\Attributes\On;
 
 class LfCheckboxFilter extends LivewireFilter
 {
-    use Traits\HandleEntriesCount, Traits\IsSortable;
+    use Traits\HandleDependentOptions, Traits\IsSortable;
 
     #[Locked]
     public $view = 'lf-checkbox';

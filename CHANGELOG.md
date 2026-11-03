@@ -6,6 +6,15 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- Dependent filters ([#72](https://github.com/reachweb/statamic-livewire-filters/issues/72)): add `depends_on="parent_field"` to a checkbox, radio or select filter and, while the parent filter has a value, it only offers the options that appear in the entries matching the active filters. When the parent value changes, a selected option the new value doesn't offer is unselected; a selection loaded from the URL or the tag is kept. With no parent value every option is shown. Unavailable options are hidden, or disabled with `unavailable="disable"`. Turn on the new `enable_dependent_filters` config option so the collection sends its filter state to the filters. The query is the same one the faceted counts run, so with `enable_filter_values_count` on it adds none. See [Dependent filters](https://livewirefilters.com/usage/dependent-filters).
+
+### Changed
+
+- The collection now also sends `params-updated` when only `enable_dependent_filters` is on.
+- Filters no longer re-render on a `params-updated` event that changes nothing for them, such as a checkbox filter with counts off or a range filter with dynamic bounds off. A real change handled in the same request still renders.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

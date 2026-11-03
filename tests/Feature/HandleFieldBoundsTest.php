@@ -1295,6 +1295,29 @@ class HandleFieldBoundsTest extends TestCase
         return collect($component->effects['dispatches'])->firstWhere('name', 'params-updated')['params'];
     }
 
+    #[Test]
+    #[DataProvider('rangeSelectionCases')]
+    public function a_range_filter_without_dynamic_bounds_skips_its_render_unless_it_changed(bool $dualRange)
+    {
+        // Counts or dependent filters also make the collection send params-updated.
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', false);
+
+        $filter = Livewire::test(
+            $dualRange ? LfDualRangeFilter::class : LfRangeFilter::class,
+            $dualRange ? $this->dualRangeArguments() : $this->rangeArguments(),
+        );
+        $arguments = [[], RangeBoundsQuery::encode('yachts', [])];
+
+        $filter->dispatch('params-updated', ...$arguments);
+        $this->assertArrayNotHasKey('html', $filter->effects);
+
+        $filter->update(calls: [
+            ['method' => '__dispatch', 'params' => ['params-updated', $arguments], 'path' => ''],
+            ['method' => '__dispatch', 'params' => ['clear-all-filters', []], 'path' => ''],
+        ]);
+        $this->assertArrayHasKey('html', $filter->effects);
+    }
+
     protected function dualRangeArguments(): array
     {
         return [
