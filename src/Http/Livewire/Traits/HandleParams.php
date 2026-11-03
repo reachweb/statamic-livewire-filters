@@ -182,8 +182,14 @@ trait HandleParams
     {
         $paramKeys = ParamKey::build($field, 'dual_range', $modifier);
 
-        $this->params[$paramKeys['min']] = $payload['min'];
-        $this->params[$paramKeys['max']] = $payload['max'];
+        // A null bound (an open-ended range list bucket) removes that side of the range.
+        foreach (['min', 'max'] as $bound) {
+            if (($payload[$bound] ?? null) === null) {
+                unset($this->params[$paramKeys[$bound]]);
+            } else {
+                $this->params[$paramKeys[$bound]] = $payload[$bound];
+            }
+        }
 
         $this->dispatchParamsUpdated();
     }

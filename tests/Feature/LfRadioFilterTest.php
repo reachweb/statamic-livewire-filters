@@ -37,6 +37,13 @@ class LfRadioFilterTest extends TestCase
                             ],
                         ],
                         [
+                            'handle' => 'price',
+                            'field' => [
+                                'type' => 'integer',
+                                'display' => 'Price',
+                            ],
+                        ],
+                        [
 
                             'handle' => 'item_options',
                             'field' => [
@@ -65,9 +72,9 @@ class LfRadioFilterTest extends TestCase
         ]);
         $this->blueprint->setHandle('pages')->setNamespace('collections.'.$this->collection->handle())->save();
 
-        $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->set('item_options', 'option1')->save();
-        $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->set('item_options', 'option1')->save();
-        $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->set('item_options', 'option2')->save();
+        $this->makeEntry($this->collection, 'a')->set('title', 'I Love Guitars')->set('item_options', 'option1')->set('price', 50)->save();
+        $this->makeEntry($this->collection, 'b')->set('title', 'I Love Drums')->set('item_options', 'option1')->set('price', 100)->save();
+        $this->makeEntry($this->collection, 'c')->set('title', 'I Hate Flutes')->set('item_options', 'option2')->set('price', 250)->save();
     }
 
     #[Test]
@@ -248,6 +255,71 @@ class LfRadioFilterTest extends TestCase
             ->assertSee('Option 1')
             ->assertSee('Option 2')
             ->assertSee('Option 3');
+    }
+
+    #[Test]
+    public function it_turns_buckets_into_labelled_range_list_options()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->assertSet('condition', 'dual_range')
+            ->assertSet('view', 'lf-range-list')
+            ->assertSet('options', ['0-100' => 'Under 100', '100-200' => '100 to 200', '200-' => 'Over 200'])
+            ->assertSeeInOrder(['All', 'Under 100', '100 to 200', 'Over 200']);
+    }
+
+    #[Test]
+    public function it_rejects_a_malformed_bucket()
+    {
+        $this->expectExceptionMessage('Invalid range list bucket [100]');
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100']);
+    }
+
+    #[Test]
+    public function selecting_a_bucket_sends_its_bounds_and_an_open_end_as_null()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->set('selected', '100-200')
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '100', 'max' => '200'])
+            ->set('selected', '200-')
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '200', 'max' => null])
+            ->set('selected', '')
+            ->assertHasNoErrors()
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: '')
+            ->set('selected', '300-400')
+            ->assertHasErrors('selected');
+    }
+
+    #[Test]
+    public function it_selects_the_bucket_matching_preset_bounds()
+    {
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->dispatch('preset-params', ['price:gte' => '100', 'price:lte' => '200'])
+            ->assertSet('selected', '100-200')
+            ->dispatch('preset-params', ['price:gte' => '200'])
+            ->assertSet('selected', '200-')
+            ->dispatch('preset-params', ['price:gte' => '150', 'price:lte' => '200'])
+            ->assertSet('selected', '');
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-', 'modifier' => 'gte|lt'])
+            ->dispatch('preset-params', ['price:gte' => '0', 'price:lt' => '100'])
+            ->assertSet('selected', '0-100');
+    }
+
+    #[Test]
+    public function it_counts_entries_into_buckets_with_the_modifier_comparisons()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        // 100 sits on the shared edge: gte/lte counts it in both buckets, gte|lt only in the upper one.
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['price:gte' => '200', 'item_options:is' => 'option1']))
+            ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === ['0-100' => 2, '100-200' => 1, '200-' => 0]);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-', 'modifier' => 'gte|lt'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === ['0-100' => 1, '100-200' => 1, '200-' => 1])
+            ->assertSeeHtml('<span class="text-lf-muted ml-1">(1)</span>');
     }
 
     protected function makeEntry($collection, $slug)
