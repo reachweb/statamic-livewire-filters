@@ -404,6 +404,71 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
+    public function histogram_bins_are_whole_steps_that_cover_the_displayed_bounds()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        // Span 4 over 3 bins would be 1.33 wide; with step 2 that rounds up to 2 bins of 2.
+        $bins = [
+            ['from' => 4, 'to' => 6, 'count' => 1],
+            ['from' => 6, 'to' => 8, 'count' => 2],
+        ];
+
+        Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['step' => 2, 'histogram' => '3']))
+            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
+            ->assertSet('histogramBins', $bins, strict: true)
+            ->assertDispatched('range-bounds-updated', min: 4, max: 8, bins: $bins);
+    }
+
+    #[Test]
+    public function decimal_histogram_bins_land_on_the_step_grid_and_stop_at_the_max()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        foreach ([12.25, 13.5, 14.05] as $index => $length) {
+            $this->makeEntry($this->collection, "boat-{$index}")->set('length', $length)->save();
+        }
+
+        // Bounds 12.2–14.1: 1.9 / 4 = 0.475 rounds up to 0.5, and the last bin is cut at 14.1.
+        Livewire::test(LfDualRangeFilter::class, array_merge($this->lengthDualRangeArguments(), ['histogram' => 4]))
+            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
+            ->assertSet('histogramBins', [
+                ['from' => 12.2, 'to' => 12.7, 'count' => 1],
+                ['from' => 12.7, 'to' => 13.2, 'count' => 0],
+                ['from' => 13.2, 'to' => 13.7, 'count' => 1],
+                ['from' => 13.7, 'to' => 14.1, 'count' => 1],
+            ], strict: true);
+    }
+
+    #[Test]
+    public function date_histogram_bins_count_entries_by_year()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        Livewire::test(LfDualRangeFilter::class, array_merge($this->dateDualRangeArguments(), ['histogram' => 10]))
+            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
+            ->assertSet('histogramBins', [
+                ['from' => 2020, 'to' => 2021, 'count' => 1],
+                ['from' => 2021, 'to' => 2022, 'count' => 0],
+                ['from' => 2022, 'to' => 2023, 'count' => 1],
+                ['from' => 2023, 'to' => 2024, 'count' => 1],
+            ], strict: true);
+    }
+
+    #[Test]
+    public function histogram_bins_are_empty_when_no_entries_match()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['histogram' => 20]))
+            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
+            ->assertSet('histogramBins', fn ($bins) => count($bins) === 2)
+            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'nonexistent']))
+            ->assertSet('histogramBins', [])
+            ->assertDispatched('range-bounds-updated', min: 2, max: 10, bins: []);
+    }
+
+    #[Test]
     public function it_flags_disabled_and_widens_the_span_below_min_range()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);

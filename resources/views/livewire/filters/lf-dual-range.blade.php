@@ -10,6 +10,23 @@
             step: {{ $step }},
             format: '{{ $format }}',
             minRange: {{ $minRange }},
+            {{-- Read through $wire: a changed x-data value would re-initialize the slider on morph --}}
+            bins: $wire.histogramBins,
+            boundsMin: $wire.dynamicMin ?? {{ $min }},
+            boundsMax: $wire.dynamicMax ?? {{ $max }},
+            get maxBinCount() {
+                return Math.max(1, ...this.bins.map((bin) => bin.count));
+            },
+            binStyle(bin) {
+                const span = this.boundsMax - this.boundsMin;
+                const selected = bin.to > this.displayMin && bin.from < this.displayMax;
+                return {
+                    left: ((bin.from - this.boundsMin) / span * 100) + '%',
+                    width: ((bin.to - bin.from) / span * 100) + '%',
+                    height: (bin.count / this.maxBinCount * 100) + '%',
+                    backgroundColor: selected ? 'var(--noui-connect, #2563eb)' : 'var(--noui-bg-dark, #e4e4e4)',
+                };
+            },
             init() {
                 if (!window.noUiSlider) {
                     console.error('noUiSlider is not loaded');
@@ -62,6 +79,11 @@
                             'max': bounds.max
                         }
                     }, false);
+                    this.boundsMin = bounds.min;
+                    this.boundsMax = bounds.max;
+                    if (bounds.bins) {
+                        this.bins = bounds.bins;
+                    }
                     slider.noUiSlider.set([bounds.selectedMin, bounds.selectedMax], false);
                     bounds.disabled ? slider.noUiSlider.disable() : slider.noUiSlider.enable();
                 });
@@ -71,6 +93,13 @@
         class="w-full my-8"
     >
         <div class="relative">
+            @if ($histogram)
+            <div wire:ignore x-show="bins.length" class="relative h-10 w-[93%] mx-auto pointer-events-none" style="opacity: 0.35" aria-hidden="true">
+                <template x-for="bin in bins" :key="`${bin.from}-${bin.to}-${bin.count}`">
+                    <div class="absolute" style="bottom: 0; border-left: 1px solid transparent; background-clip: padding-box" :style="binStyle(bin)"></div>
+                </template>
+            </div>
+            @endif
             <div wire:ignore x-ref="slider" class="w-[93%] mx-auto"></div>
             <div class="flex justify-center mt-3">
                 <span class="font-bold" x-text="displayMin"></span>

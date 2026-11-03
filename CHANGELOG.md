@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- Histogram for the dual range slider. Add `histogram="20"` to `lf-dual-range-filter` and the slider draws up to 20 bars behind its track, counting the entries that match the other active filters in each part of the range. Needs `enable_dynamic_range_bounds`: the bars are counted from the values the bounds query already collects, once per bounds update, so they add no query. Each bar covers whole `step`s from the slider's lower bound, so you can get fewer bars than requested. The `range-bounds-updated` event carries the bars as `bins` (`{from, to, count}`) when `histogram` is set. Published `lf-dual-range.blade.php` views need the new markup to show them.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

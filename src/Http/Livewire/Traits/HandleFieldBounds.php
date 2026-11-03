@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -28,6 +29,10 @@ trait HandleFieldBounds
 
     #[Locked]
     public $fieldMax = null;
+
+    // Computed with the bounds from the same values, so the bars match the displayed range.
+    #[Locked]
+    public array $histogramBins = [];
 
     // Keep local changes authoritative until the collection acknowledges them.
     #[Locked]
@@ -75,7 +80,7 @@ trait HandleFieldBounds
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
 
-        [$min, $max] = $this->computeFieldBounds($baseParams, $fieldHandle);
+        [$min, $max, $values] = $this->computeFieldBounds($baseParams, $fieldHandle);
 
         // Tag-supplied bounds arrive as strings
         $absoluteMin = $this->normalizeBound($this->min);
@@ -128,6 +133,7 @@ trait HandleFieldBounds
         $this->dynamicMin = $min;
         $this->dynamicMax = $max;
         $this->boundsDisabled = $disabled;
+        $this->histogramBins = $this->computeHistogramBins($values, $min, $max);
 
         // Active selections are never mutated, inactive ones follow the bounds;
         // neither path dispatches filter-updated
@@ -142,6 +148,7 @@ trait HandleFieldBounds
             ['min' => $min, 'max' => $max],
             $selectionPayload,
             ['disabled' => $disabled],
+            $this->histogramBinCount() > 0 ? ['bins' => $this->histogramBins] : [],
         ));
     }
 
@@ -272,10 +279,56 @@ trait HandleFieldBounds
             return [
                 Carbon::createFromTimestamp($this->fieldMin, date_default_timezone_get())->year,
                 Carbon::createFromTimestamp($this->fieldMax, date_default_timezone_get())->year,
+                $values,
             ];
         }
 
-        return [$this->fieldMin, $this->fieldMax];
+        return [$this->fieldMin, $this->fieldMax, $values];
+    }
+
+    /**
+     * Bins are step multiples starting at the displayed min, so bar edges land on
+     * slider stops; the last bin is cut at the max and includes it.
+     */
+    protected function computeHistogramBins(Collection $values, $min, $max): array
+    {
+        $binCount = $this->histogramBinCount();
+        $span = $this->boundsSpan($min, $max);
+
+        if ($binCount < 1 || $span <= 0 || $values->isEmpty()) {
+            return [];
+        }
+
+        if (($this->statamic_field['type'] ?? null) === 'date') {
+            $values = $values->map(fn ($timestamp) => Carbon::createFromTimestamp($timestamp, date_default_timezone_get())->year);
+        }
+
+        // Rounding the ratios absorbs float error, e.g. 0.7 / 0.1 = 6.999…
+        $step = $this->boundsStep();
+        $width = $this->roundToStepPrecision(max(1, ceil(round($span / $binCount / $step, 9))) * $step);
+        $binTotal = (int) ceil(round($span / $width, 9));
+
+        $counts = array_fill(0, $binTotal, 0);
+        foreach ($values as $value) {
+            if ($value >= $min && $value <= $max) {
+                $counts[min($binTotal - 1, (int) floor(round(($value - $min) / $width, 9)))]++;
+            }
+        }
+
+        if (array_sum($counts) === 0) {
+            return [];
+        }
+
+        return array_map(fn ($count, $index) => [
+            'from' => $this->roundToStepPrecision($min + $index * $width, $min),
+            'to' => $this->roundToStepPrecision(min($max, $min + ($index + 1) * $width), $min, $max),
+            'count' => $count,
+        ], $counts, array_keys($counts));
+    }
+
+    protected function histogramBinCount(): int
+    {
+        return 0;
     }
 
     protected function boundsComparisons(): array
