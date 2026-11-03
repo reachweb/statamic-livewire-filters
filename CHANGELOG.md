@@ -6,6 +6,14 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Custom query string URLs such as `/cars/filters/brand/audi` are now served by a route that renders the base page, instead of a middleware that rewrote every matching request to `/cars`. The request keeps its pretty URL, so the static cache stores each filter URL on its own and `static_caching.exclude.urls` patterns like `/cars/filters/*` now match. A page whose own URL contains the prefix segment, such as `/docs/filters`, is now served as itself instead of being rewritten to `/docs`. Such a page can't host filters itself, because its URL is split at the first prefix segment. ([static caching guide](https://livewirefilters.com/advanced/static-caching))
+- With per-URL caching, pages can drop the `{{ nocache }}` tags that custom query string mode required. Invalidation rules must then cover the filter URLs too, for example `/cars` and `/cars/*`.
+- Templates see the pretty URL: `current_url`, `current_uri` and `segment_*` now include the filter segments.
+- Only Statamic content (entries and terms) can be the base page of a filter URL. Pages defined with `Route::statamic()` or a custom Laravel route no longer get custom query string URLs.
+- The route is registered at boot from `custom_query_string`. After changing the prefix with routes cached, run `php artisan route:cache` again.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

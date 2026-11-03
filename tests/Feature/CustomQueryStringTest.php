@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleParams;
 use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 use Reach\StatamicLivewireFilters\Tests\FakesViews;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -23,6 +24,12 @@ class CustomQueryStringTest extends TestCase
     protected $collection;
 
     protected $blueprint;
+
+    protected function defineEnvironment($app)
+    {
+        // The filters route is registered at boot, so the prefix must be set before it.
+        $app['config']->set('statamic-livewire-filters.custom_query_string', 'filters');
+    }
 
     protected function setUp(): void
     {
@@ -107,9 +114,9 @@ class CustomQueryStringTest extends TestCase
             request()->query('params')
         );
 
-        // Make sure it ignores the custom query string and loads the original URL
+        // The request keeps the pretty URL, so the static cache keys on it
         $this->assertEquals(
-            '/',
+            'filters/item_options/option2',
             request()->path()
         );
 
@@ -782,16 +789,7 @@ class CustomQueryStringTest extends TestCase
         // Each filter alone now matches two entries; only "I Love Drums" matches both
         $this->makeEntry($this->collection, 'd')->set('title', 'I Hate Drums')->set('item_options', 'option2')->save();
 
-        $params = null;
-
-        (new HandleFiltersQueryString)->handle(
-            Request::create('/blog/filters/opt/option2/ttl/Love'),
-            function ($req) use (&$params) {
-                $params = $req->input('params');
-
-                return response('ok');
-            }
-        );
+        $params = CustomQueryString::parseSegments(CustomQueryString::split('/blog/filters/opt/option2/ttl/Love')[1]);
 
         $this->assertEquals([
             'query_scope' => 'cqs_option|cqs_title',
@@ -811,14 +809,7 @@ class CustomQueryStringTest extends TestCase
         $this->assertEquals('/blog/filters/opt/option2/ttl/Love', parse_url($updateUrl['params']['newUrl'], PHP_URL_PATH));
 
         // Two aliases on the same scope register it only once
-        (new HandleFiltersQueryString)->handle(
-            Request::create('/blog/filters/opt/option2/opt_title/Love'),
-            function ($req) use (&$params) {
-                $params = $req->input('params');
-
-                return response('ok');
-            }
-        );
+        $params = CustomQueryString::parseSegments(CustomQueryString::split('/blog/filters/opt/option2/opt_title/Love')[1]);
 
         $this->assertEquals([
             'query_scope' => 'cqs_option',
