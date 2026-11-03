@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
+use Livewire\Component;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Http\Livewire\Traits\HandleEntriesCount;
+use Reach\StatamicLivewireFilters\Http\Livewire\Traits\IsLivewireFilter;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 use Reach\StatamicLivewireFilters\Tests\DispatchesParamsUpdated;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
@@ -185,10 +187,21 @@ class HandleEntriesCountTest extends TestCase
 
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
-            ->assertDispatched('counts-updated')
+            // Only filters that sort by count send the option order
+            ->assertDispatched('counts-updated', fn ($name, $params) => $params === [['option1' => 1, 'option2' => 1]])
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             });
+    }
+
+    #[Test]
+    public function it_computes_counts_for_a_custom_filter_without_sorting()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(CountsOnlyFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertDispatched('counts-updated', fn ($name, $params) => $params === [['option1' => 1, 'option2' => 1]]);
     }
 
     #[Test]
@@ -342,5 +355,18 @@ class HandleEntriesCountTest extends TestCase
             ->assertViewHas('statamic_field', function ($statamic_field) {
                 return $statamic_field['counts'] === ['option1' => 1, 'option2' => 1];
             });
+    }
+}
+
+// A custom filter that shows counts without the IsSortable trait
+class CountsOnlyFilter extends Component
+{
+    use HandleEntriesCount, IsLivewireFilter;
+
+    public $options;
+
+    public function render()
+    {
+        return '<div></div>';
     }
 }

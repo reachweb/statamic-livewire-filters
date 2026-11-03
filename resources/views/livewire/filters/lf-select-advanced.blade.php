@@ -42,7 +42,7 @@
         },
     }" 
     x-init="getFilteredOptions(''); $watch('selected', () => updateSelectedLabel());"
-    x-on:counts-updated="counts = Object.values($event.detail)[0]; if ($event.detail.order) { order = $event.detail.order; getFilteredOptions($refs.searchField?.value ?? '') }"
+    x-on:counts-updated="counts = Object.values($event.detail)[0]; if (Object.values($event.detail)[1]) { order = Object.values($event.detail)[1]; getFilteredOptions($refs.searchField?.value ?? '') }"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selected"
     wire:model.live="selected"

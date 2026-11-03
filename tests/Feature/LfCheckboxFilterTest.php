@@ -588,7 +588,7 @@ class LfCheckboxFilterTest extends TestCase
             // The option1/option2 tie falls back to the label, ascending in both directions
             ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['option3', 'option1', 'option2'])
             ->assertSeeHtmlInOrder(['id="item_options-option3"', 'id="item_options-option1"', 'id="item_options-option2"'])
-            ->assertDispatched('counts-updated', fn ($name, $params) => $params['order'] === ['option3', 'option1', 'option2']);
+            ->assertDispatched('counts-updated', fn ($name, $params) => $params[1] === ['option3', 'option1', 'option2']);
 
         // The next counts reorder the options again: option1: 1, option2: 0, option3: 0
         $component->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:is' => 'I Love Guitars']))
@@ -618,7 +618,7 @@ class LfCheckboxFilterTest extends TestCase
             // option1: 0, option2: 1, option3: 0
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:is' => 'I Hate Flutes']))
             ->assertSeeHtmlInOrder(['id="item_options-option2"', 'id="item_options-option1"', 'id="item_options-option3"'])
-            ->assertDispatched('counts-updated', fn ($name, $params) => $params['order'] === ['option2', 'option1', 'option3']);
+            ->assertDispatched('counts-updated', fn ($name, $params) => $params[1] === ['option2', 'option1', 'option3']);
     }
 
     #[Test]

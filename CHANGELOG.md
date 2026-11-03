@@ -8,7 +8,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ### Added
 
-- Filter values can be sorted by their count with `sort="count:desc"` or `sort="count:asc"`. The values are sorted again every time the counts update, values with the same count are sorted by label, and until counts arrive (or when `enable_filter_values_count` is off) they are sorted by label. This also applies to a custom `options` prop. When a filter sorts by count, its `counts-updated` event also carries an `order` key with the option keys in their new order; `Object.values($event.detail)[0]` is still the counts, but custom views that read every value of the detail now also get the order.
+- Filter values can be sorted by their count with `sort="count:desc"` or `sort="count:asc"`. The values are sorted again every time the counts update, values with the same count are sorted by label, and until counts arrive (or when `enable_filter_values_count` is off) they are sorted by label. This also applies to a custom `options` prop. When a filter sorts by count, its `counts-updated` event also carries a second value with the option keys in their new order. The first value is still the counts, so existing listeners keep working.
 
 ## [4.6.1] - 2026-11-02
 

@@ -54,7 +54,8 @@ trait HandleEntriesCount
             unset($this->filterOptions);
 
             // JS objects list integer keys first whatever the PHP order, so the views get the order separately.
-            $event['order'] = array_keys($this->statamic_field['options']);
+            // It goes second and positional, so server-side listeners that only take the counts keep working.
+            $event[] = array_keys($this->statamic_field['options']);
         }
 
         $this->dispatch('counts-updated', ...$event);
