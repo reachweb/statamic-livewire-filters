@@ -83,6 +83,24 @@ class LfDualRangeFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_histogram_bars_only_when_requested()
+    {
+        $arguments = [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+        ];
+
+        Livewire::test(LfDualRangeFilter::class, $arguments)
+            ->assertDontSeeHtml('x-for="bin in bins"');
+
+        Livewire::test(LfDualRangeFilter::class, array_merge($arguments, ['histogram' => 20]))
+            ->assertSeeHtml('x-for="bin in bins"');
+    }
+
+    #[Test]
     public function it_throws_a_field_not_found_exception_if_the_field_doesnt_exist()
     {
         $this->expectExceptionMessage('Field [not-a-field] not found');
