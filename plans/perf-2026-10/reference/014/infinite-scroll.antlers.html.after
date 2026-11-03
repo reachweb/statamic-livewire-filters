@@ -1,0 +1,64 @@
+<div>
+    {{ if pagination_total > 0 }}
+    <div class="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 @6xl:grid-cols-4 gap-8 transition-opacity duration-700" wire:loading.class="opacity-40" wire:target="loadMore">
+        {{# ISLANDS (prototype A1): pages already on the client are empty wire:ignore shells keyed by generation+page; `contents` keeps the cards in the parent grid. #}}
+        {{ previous_pages }}
+        <div wire:key="lf-page-{{ page_generation }}-{{ value }}" wire:ignore class="contents"></div>
+        {{ /previous_pages }}
+        <div wire:key="lf-page-{{ page_generation }}-{{ current_page }}" wire:ignore class="contents">
+        {{ entries }}
+        <div class="flex flex-col bg-gray-100 h-full rounded p-4" wire:key="{{ id }}">
+            <div class="mb-2">
+                {{ image }}
+                <img class="object-cover rounded w-full h-[180px]" src="{{ glide:url preset="small" }}" alt="{{ title }}">
+                {{ /image }}
+            </div>
+            <div class="leading-none font-bold my-3">
+                {{ title }}
+            </div>
+            <div class="flex items-center mb-2">
+                <div class="text-sm mr-2">
+                    <span class="font-bold">Seats:</span>
+                    {{ seats }}
+                </div>
+                <div class="text-sm">
+                    <span class="font-bold">Doors:</span>
+                    {{ doors }}
+                </div>
+            </div>
+            <div class="flex items-center mb-2">
+                <div class="text-sm">
+                    <span class="font-bold">Transmission:</span>
+                    {{ transmission:label }}
+                </div>
+            </div>
+            <div class="flex items-center mb-2">
+                <div class="text-sm">
+                    <span class="font-bold">Fuel:</span>
+                    {{ fuel_type:label }}
+                </div>
+            </div>
+            <div class="flex items-center mb-2">
+                <div class="text-sm">
+                    <span class="font-bold">Model year:</span>
+                    {{ date_of_registration format="Y" }}
+                </div>
+            </div>
+        </div>
+        {{ /entries }}
+        </div>
+    </div>
+
+    <div class="mt-8 text-center text-sm text-gray-500">
+        Showing {{ loaded_count }} of {{ pagination_total }} cars
+    </div>
+
+    {{ livewire-filters:load_more class="bg-main text-white px-6 py-3 rounded-md hover:bg-alt transition-colors duration-200 disabled:opacity-50" }}
+
+    {{ else }}
+    <div class="text-center">
+        <div class="text-2xl font-bold mb-4">No results found</div>
+        <div class="text-gray-500">Try adjusting your filters.</div>
+    </div>
+    {{ /if }}
+</div>

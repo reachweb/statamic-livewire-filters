@@ -1,0 +1,19 @@
+  #1 status=200 up=546B down(wire)=618B down(raw)=618B ttfb=16ms total=16ms components=1
+     - lf-count             snap=300B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=1 up=546B down(wire)=618B down(raw)=618B server(ttfb sum)=16ms
+Console output:
+[log] ### action "gotoPage2": 2 POST livewire/update request(s)
+  #1 status=200 up=1059B down(wire)=50508B down(raw)=50508B ttfb=65ms total=66ms components=1
+     - livewire-collection  snap=784B  call: gotoPage(2, "page")  => rendered=true html=46247B respSnap=784B dispatches=[update-url,entries-updated]
+  #2 status=200 up=544B down(wire)=618B down(raw)=618B ttfb=15ms total=16ms components=1
+     - lf-count             snap=298B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=2 up=1603B down(wire)=51126B down(raw)=51126B server(ttfb sum)=80ms
+[log] URL: http://127.0.0.1:8103/advanced?page=2
+[log] count text: 40 cars found.
+[log] ### action "gotoPage3": 2 POST livewire/update request(s)
+  #1 status=200 up=1059B down(wire)=50680B down(raw)=50680B ttfb=53ms total=54ms components=1
+     - livewire-collection  snap=784B  call: gotoPage(3, "page")  => rendered=true html=46419B respSnap=784B dispatches=[update-url,entries-updated]
+  #2 status=200 up=544B down(wire)=618B down(raw)=618B ttfb=14ms total=15ms components=1
+     - lf-count             snap=298B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=2 up=1603B down(wire)=51298B down(raw)=51298B server(ttfb sum)=67ms
+[log] Logs: []

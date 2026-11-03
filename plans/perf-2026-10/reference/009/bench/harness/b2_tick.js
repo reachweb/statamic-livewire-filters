@@ -1,0 +1,6 @@
+const { setLabel, settle, summarize } = await import('./lwcap.mjs?v=' + Date.now())
+setLabel(state, 'basic-tick-checkbox')
+await state.page.locator('input#car_brand-audi').click()
+await settle(state.page, state, 2000, 20000)
+console.log(summarize(state, 'basic-tick-checkbox'))
+console.log(await snapshot({ page: state.page, search: /Audi|Clear all/i }))

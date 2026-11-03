@@ -1,0 +1,18 @@
+ M config/config.php
+ M src/Http/Livewire/LfDualRangeFilter.php
+ M src/Http/Livewire/LfRangeFilter.php
+ M src/Http/Livewire/LivewireCollection.php
+ M src/Http/Livewire/Traits/HandleFieldBounds.php
+ M src/Http/Livewire/Traits/HandleFieldValuesQuery.php
+ M src/Http/Livewire/Traits/HandleParams.php
+ M src/Http/Livewire/Traits/IsLivewireFilter.php
+ M src/Support/CountEntries.php
+ M src/Support/CountQueryPool.php
+ M tests/Feature/CountEntriesTest.php
+ M tests/Feature/HandleFieldBoundsTest.php
+ M tests/Feature/LivewireCollectionComponentTest.php
+?? plans/
+?? src/Support/RangeBoundsQuery.php
+?? tests/__fixtures__/content/collections/clothes.yaml
+?? tests/Feature/FieldValuesQueryScopeAliasTest.php
+?? tests/Feature/RangeBoundsQueryTest.php

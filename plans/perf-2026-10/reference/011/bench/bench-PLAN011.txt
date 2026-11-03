@@ -1,0 +1,66 @@
+[PLAN011] [setup] f2_snapshot_bytes_and_counts_shape driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3666ms
+[PLAN011] --- F2: snapshot bytes per filter, counts key present?, counts() value, html md5 (flag off/on) ---
+[PLAN011] flag=off   checkbox entries(1000)     snapshot  53594 B | statamic_field  53029 B | counts key no  (    0 B) | counts()==nullfill: ok | html md5 88c6b6a692 | alpine counts md5 -
+[PLAN011] flag=off   checkbox terms(500)        snapshot  12482 B | statamic_field  11912 B | counts key no  (    0 B) | counts()==nullfill: ok | html md5 2a71753d82 | alpine counts md5 -
+[PLAN011] flag=off   checkbox terms(500) adv    snapshot  12490 B | statamic_field  11912 B | counts key no  (    0 B) | counts()==nullfill: ok | html md5 24aed5c7a2 | alpine counts md5 35988e6971
+[PLAN011] flag=off   select size(5)             snapshot    731 B | statamic_field    187 B | counts key no  (    0 B) | counts()==nullfill: ok | html md5 a42405710f | alpine counts md5 -
+[PLAN011] flag=off   select size(5) adv         snapshot    740 B | statamic_field    187 B | counts key no  (    0 B) | counts()==nullfill: ok | html md5 2474054137 | alpine counts md5 0d4962a0eb
+[PLAN011] flag=off   radio color(5)             snapshot    691 B | statamic_field    184 B | counts key no  (    0 B) | counts()==nullfill: ok | html md5 4018712cc5 | alpine counts md5 -
+[PLAN011] flag=off   checkbox custom opts       snapshot    697 B | statamic_field    108 B | counts key no  (    0 B) | counts()==nullfill: ok | html md5 b7980584d1 | alpine counts md5 -
+[PLAN011] flag=on    checkbox entries(1000)     snapshot  97619 B | statamic_field  97054 B | counts key yes (44001 B) | counts()==nullfill: ok | html md5 88c6b6a692 | alpine counts md5 -
+[PLAN011]             after params-updated: counts-updated payload md5 8f92909c33 | counts key yes | html md5 acdd9d1764 | sum(counts)=0
+[PLAN011] flag=on    checkbox terms(500)        snapshot  20899 B | statamic_field  20329 B | counts key yes ( 8393 B) | counts()==nullfill: ok | html md5 2a71753d82 | alpine counts md5 -
+[PLAN011]             after params-updated: counts-updated payload md5 e47fe2dd20 | counts key yes | html md5 fa50e717e3 | sum(counts)=1000
+[PLAN011] flag=on    checkbox terms(500) adv    snapshot  20907 B | statamic_field  20329 B | counts key yes ( 8393 B) | counts()==nullfill: ok | html md5 b1ef6d7acd | alpine counts md5 35988e6971
+[PLAN011]             after params-updated: counts-updated payload md5 e47fe2dd20 | counts key yes | html md5 65171377c5 | sum(counts)=1000
+[PLAN011] flag=on    select size(5)             snapshot    821 B | statamic_field    277 B | counts key yes (   66 B) | counts()==nullfill: ok | html md5 a42405710f | alpine counts md5 -
+[PLAN011]             after params-updated: counts-updated payload md5 0b354079ae | counts key yes | html md5 83ce8dde8e | sum(counts)=1000
+[PLAN011] flag=on    select size(5) adv         snapshot    830 B | statamic_field    277 B | counts key yes (   66 B) | counts()==nullfill: ok | html md5 2c19b91f8c | alpine counts md5 0d4962a0eb
+[PLAN011]             after params-updated: counts-updated payload md5 0b354079ae | counts key yes | html md5 654ffdd52d | sum(counts)=1000
+[PLAN011] flag=on    radio color(5)             snapshot    786 B | statamic_field    279 B | counts key yes (   71 B) | counts()==nullfill: ok | html md5 4018712cc5 | alpine counts md5 -
+[PLAN011]             after params-updated: counts-updated payload md5 121339a35a | counts key yes | html md5 288c071538 | sum(counts)=1000
+[PLAN011] flag=on    checkbox custom opts       snapshot    740 B | statamic_field    151 B | counts key yes (   19 B) | counts()==nullfill: ok | html md5 b7980584d1 | alpine counts md5 -
+[PLAN011]             after params-updated: counts-updated payload md5 863d4a537c | counts key yes | html md5 c5d30439e2 | sum(counts)=0
+[PLAN011] [setup] f2_pooled_params_updated_request_bytes driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3499ms
+[PLAN011] --- F2: pooled params-updated round trip, 7 filters (request = snapshot+calls, response = snapshot+effects) ---
+[PLAN011] counts/bounds off: 7 filters | request   78466 B | response  873386 B | server 15.8 ms | per-filter request: {"checkbox terms(500) advanced":14738,"checkbox entries(1000)":57842,"checkbox tags(5)":989,"select size(5)":991,"radio color(5)":943,"dual-range year":1514,"range price":1449}
+[PLAN011] counts/bounds ON : 7 filters | request  134238 B | response 1053109 B | server 1196.6 ms | per-filter request: {"checkbox terms(500) advanced":24161,"checkbox entries(1000)":103873,"checkbox tags(5)":1090,"select size(5)":1097,"radio color(5)":1054,"dual-range year":1514,"range price":1449}
+[PLAN011] [setup] f3_persist_cache_traffic_array_driver driver=array terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=1807ms
+[PLAN011] --- F3: #[Computed(persist)] cache traffic (array driver, event spy) ---
+[PLAN011] page view #1 (8 filters): lw_computed writes=0 (0 B) hits=0 misses=0 | keys: 
+[PLAN011] update (set selected) on entries(1000) checkbox, same component id: lw_computed writes=0 hits=0 misses=0 | hit keys: 
+[PLAN011] one $refresh render of entries(1000) checkbox: lw_computed hits=0 misses=0 writes=0
+[PLAN011] rules() direct call: lw_computed hits=0 misses=0 writes=0 (0/0/0 => method call bypasses the attribute cache)
+[PLAN011] page view #2 (new ids): lw_computed writes=0 hits=0 misses=0 (hits=0 => zero cross-page reuse)
+[PLAN011] [setup] f3_persist_file_driver_files_and_update_cost driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3578ms
+[PLAN011] --- F3: file driver: cache files written per page view, update cost with/without persisted read ---
+[PLAN011] page view (8 filters) mount+render 71.3 ms: cache files 1532 -> 1533 (+1), lw_computed writes 0 totalling 0 B
+[PLAN011] checkbox entries(1000)         set(selected) avg over 10: 12.90 ms
+[PLAN011] checkbox terms(500) advanced   set(selected) avg over 10: 2.42 ms
+[PLAN011] select size(5)                 set(selected) avg over 10: 1.26 ms
+[PLAN011] 20 more page views: cache files +0
+[PLAN011] [setup] f3_lftags_cross_request_cost driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3832ms
+[PLAN011] --- F3: LfTags tags-updated across separate requests (Blink flushed each time), file driver ---
+[PLAN011] F4 flag=n/a: tags-updated #1..#4: 53.99 / 7.21 / 6.95 / 6.9 ms | tags md5 bebdbaa6 | lw_computed writes 0 (0 B) | field-options writes 0 (0 B)
+[PLAN011] [setup] f4_per_page_view_option_resolution_cost driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3588ms
+[PLAN011] --- F4: per page view mount cost (Blink flushed before each), file driver ---
+[PLAN011] F4 flag=n/a terms(500)     mount #1..#4: 52.2 / 5.32 / 4.97 / 4.89 ms
+[PLAN011] F4 flag=n/a entries(1000)  mount #1..#4: 13.01 / 13.11 / 13.14 / 13.1 ms
+[PLAN011] F4 flag=n/a select size(5) mount #1..#4: 1.42 / 1.11 / 1.08 / 1.07 ms
+[PLAN011] F4 flag=n/a 8-filter page view #1..#3: 22.34 / 22.38 / 22.16 ms
+[PLAN011] [setup] f4_alternative_stache_index_pluck driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3474ms
+[PLAN011] --- F4 alternative: Stache index pluck() instead of get() (uncached current path vs pluck), file driver, Blink flushed ---
+[PLAN011] entries(1000) origin=true  current get(): 4.74/4.52/4.45 ms | pluck(title,id): 4.35/4.54/4.34 ms | identical: YES (1000 vs 1000)
+[PLAN011] entries(1000) origin=false current get(): 2.24/2.23/2.27 ms | pluck(title,id): 2.1/2.19/2.06 ms | identical: YES (1000 vs 1000)
+[PLAN011] terms(500)  current get(): 45.03/0.97/0.89 ms | pluck(title,id) where site: 0.94/0.86/0.85 ms | identical: YES (500 vs 500)
+[PLAN011] [setup] f4_invalidation_attacks driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3601ms
+[PLAN011] --- F4 invalidation attacks (what does a page view show after each kind of content change?) ---
+[PLAN011] baseline: terms=500 entries=1000
+[PLAN011] (a) Term::save():            terms=501 (expect 501)
+[PLAN011] (b) Term::saveQuietly():     terms=502 (fresh would be 502) 
+[PLAN011] (c) title edit saveQuietly:  brand-1 => "Brand 1 RENAMED" (fresh would be "Brand 1 RENAMED")
+[PLAN011] (d) sort=title:asc path:     brand-1 => "Brand 1 RENAMED" vs unsorted cached path "Brand 1 RENAMED" (consistent)
+[PLAN011] (e) entry unpublish save():  entries=999 (expect 999)
+[PLAN011] (e) entry unpublish quietly: entries=998 (fresh would be 998)
+[PLAN011] (f) dated collection, future entry: options now=1, 30 min later (date passed, no event)=2 (fresh would be 2) 
+[PLAN011] (g) origin flag toggle: keys identical=yes (single-site, no origins: expected identical; separate cache keys exercised)

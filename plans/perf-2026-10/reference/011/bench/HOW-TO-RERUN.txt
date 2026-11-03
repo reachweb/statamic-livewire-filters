@@ -1,0 +1,42 @@
+Plan 011 bench: slim filter snapshots + Stache-index option resolution
+=====================================================================
+
+The two bench classes are throwaway PHPUnit tests. They are NOT part of the suite:
+copy them into tests/Bench/ only for the run and delete that folder afterwards
+(a bare `vendor/bin/phpunit` would otherwise sweep them in and change the suite count).
+
+Setup inside each test: 500 taxonomy terms, 1,000 entries, a file cache store under
+the system temp dir, Blink flushed before every "page view". Each test logs one
+block of lines tagged with $BENCH_TAG to $BENCH_RESULTS (appended).
+
+One-command re-run (from the addon root, BEFORE applying the plan, then AFTER):
+
+  mkdir -p tests/Bench && cp plans/perf-2026-10/reference/011/bench/*BenchTest.php tests/Bench/
+  BENCH_TAG=BEFORE BENCH_RESULTS=/tmp/plan011-bench.txt vendor/bin/phpunit tests/Bench/SnapshotAndOptionsBenchTest.php
+  BENCH_TAG=BEFORE BENCH_RESULTS=/tmp/plan011-multisite.txt vendor/bin/phpunit tests/Bench/MultiSiteOptionsBenchTest.php
+  # ... apply the plan (git apply plans/perf-2026-10/reference/011/011-slim-snapshots-and-index-options.diff) ...
+  BENCH_TAG=AFTER  BENCH_RESULTS=/tmp/plan011-bench.txt vendor/bin/phpunit tests/Bench/SnapshotAndOptionsBenchTest.php
+  BENCH_TAG=AFTER  BENCH_RESULTS=/tmp/plan011-multisite.txt vendor/bin/phpunit tests/Bench/MultiSiteOptionsBenchTest.php
+  rm -rf tests/Bench
+
+Files in this folder
+--------------------
+bench-BASE.txt                  verifier run on the unpatched working tree (tag [BEFORE])
+bench-BASE-rerun.txt            same bench, unpatched tree, re-run while writing this plan (tag [BASE])
+bench-PLAN011.txt               the exact change this plan ships: F2 + F3 + guarded pluck (tag [PLAN011])
+multisite-BASE.txt / multisite-PLAN011.txt   3-site equivalence + localization-leak attack, before / after
+bench-F2-F3-F4-rejected.txt, bench-F2-F3-F4-rejected-rerun.txt, multisite-F2-F3-F4-rejected.txt
+                                reviewer B's persistent FieldOptionsCache variant (F4). REJECTED; see the
+                                plan's "What verification refuted". Lines tagged [AFTER] inside.
+bench-PLUCK-ONLY.txt, multisite-PLUCK-ONLY.txt
+                                pluck alone (persist still on). Shows LfTags needs pluck once persist goes.
+
+Lines to compare (same order in every file)
+-------------------------------------------
+F2  "flag=off ... snapshot N B | ... counts key yes/no"      -> key must be "no" with counts off, "yes" with counts on
+F2  "counts/bounds off: 7 filters | request N B"            -> 134,238 -> ~78,500 B
+F3  "page view #1 (8 filters): lw_computed writes=N"        -> 5 -> 0 ; "20 more page views: cache files +N" -> +100 -> +0
+F3  "tags-updated #1..#4: a / b / c / d ms"                  -> see the plan's table (no persist AND pluck)
+F4  "terms(500) mount #1..#4", "entries(1000) mount", "8-filter page view #1..#3"  -> ~35 / 185 / 220 ms -> ~6 / 14 / 26 ms
+F4  "(b) Term::saveQuietly(): terms=N (fresh would be N)"    -> must never be STALE
+Timings vary +-20% between runs on the same machine; bytes and counts are exact.

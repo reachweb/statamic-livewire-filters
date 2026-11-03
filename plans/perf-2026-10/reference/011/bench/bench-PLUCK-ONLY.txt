@@ -1,0 +1,23 @@
+# Variant: PLUCK ONLY (Stache-index pluck in HandleStatamicQueries, persist still on, counts array still materialised)
+# Produced by the review-time verifier bench (testbench: Livewire 4.2.1 / Statamic 6.7.1, file cache driver, 500 terms / 1,000 entries).
+# The [TAG] prefix inside is the verifier run label, not this plan's variant name.
+[ALT-PLUCK] [setup] f3_lftags_cross_request_cost driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=3808ms
+[ALT-PLUCK] --- F3: LfTags tags-updated across separate requests (Blink flushed each time), file driver ---
+[ALT-PLUCK] F4 flag=n/a: tags-updated #1..#4: 56.61 / 2.76 / 2.44 / 2.35 ms | tags md5 e2c5ab98 | lw_computed writes 1 (134193 B) | field-options writes 0 (0 B)
+[ALT-PLUCK] [setup] f4_per_page_view_option_resolution_cost driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=4284ms
+[ALT-PLUCK] --- F4: per page view mount cost (Blink flushed before each), file driver ---
+[ALT-PLUCK] F4 flag=n/a terms(500)     mount #1..#4: 54.51 / 6.06 / 6.54 / 5.82 ms
+[ALT-PLUCK] F4 flag=n/a entries(1000)  mount #1..#4: 14.48 / 13.95 / 14.38 / 14.15 ms
+[ALT-PLUCK] F4 flag=n/a select size(5) mount #1..#4: 1.61 / 1.4 / 1.65 / 1.64 ms
+[ALT-PLUCK] F4 flag=n/a 8-filter page view #1..#3: 30.46 / 25.38 / 26.22 ms
+[ALT-PLUCK] [setup] f4_invalidation_attacks driver=file terms=500 entries=1000 livewire=v4.2.1 statamic=v6.7.1 setup=4198ms
+[ALT-PLUCK] --- F4 invalidation attacks (what does a page view show after each kind of content change?) ---
+[ALT-PLUCK] baseline: terms=500 entries=1000
+[ALT-PLUCK] (a) Term::save():            terms=501 (expect 501)
+[ALT-PLUCK] (b) Term::saveQuietly():     terms=502 (fresh would be 502) 
+[ALT-PLUCK] (c) title edit saveQuietly:  brand-1 => "Brand 1 RENAMED" (fresh would be "Brand 1 RENAMED")
+[ALT-PLUCK] (d) sort=title:asc path:     brand-1 => "Brand 1 RENAMED" vs unsorted cached path "Brand 1 RENAMED" (consistent)
+[ALT-PLUCK] (e) entry unpublish save():  entries=999 (expect 999)
+[ALT-PLUCK] (e) entry unpublish quietly: entries=998 (fresh would be 998)
+[ALT-PLUCK] (f) dated collection, future entry: options now=1, 30 min later (date passed, no event)=2 (fresh would be 2) 
+[ALT-PLUCK] (g) origin flag toggle: keys identical=yes (single-site, no origins: expected identical; separate cache keys exercised)

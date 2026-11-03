@@ -1,0 +1,30 @@
+##### T4 BEFORE: counts+bounds OFF, page load (addon src = T1-mine, irrelevant to load) Tue Oct 20 23:40:01 EEST 2026
+----- /advanced load
+Console output:
+[log] URL: http://127.0.0.1:8102/advanced
+[log] ### action "load": 1 POST livewire/update request(s)
+  #1 status=200 up=546B down(wire)=618B down(raw)=618B ttfb=16ms total=17ms components=1
+     - lf-count             snap=300B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=1 up=546B down(wire)=618B down(raw)=618B server(ttfb sum)=16ms
+----- /basic load
+Console output:
+[log] URL: http://127.0.0.1:8102/basic
+[log] ### action "load": 1 POST livewire/update request(s)
+  #1 status=200 up=734B down(wire)=1004B down(raw)=1004B ttfb=15ms total=15ms components=1
+     - lf-tags              snap=474B  call: __dispatch("tags-updated", [[]])  => rendered=true html=281B respSnap=530B
+  TOTAL: requests=1 up=734B down(wire)=1004B down(raw)=1004B server(ttfb sum)=15ms
+----- /advanced tick (counts off)
+Console output:
+[log] ### action "tick-checkbox": 3 POST livewire/update request(s)
+  #1 status=200 up=1264B down(wire)=6228B down(raw)=6228B ttfb=25ms total=26ms components=1
+     - lf-checkbox-filter   snap=919B  call: $commit() updates={"selected":["cabrio"]}  => rendered=true html=4622B respSnap=927B dispatches=[filter-updated→livewire-collection]
+  #2 status=200 up=1172B down(wire)=30666B down(raw)=30666B ttfb=45ms total=46ms components=1
+     - livewire-collection  snap=784B  call: __dispatch("filter-updated", {"field":"special_categories","condition":"query_scope","payload":[...)  => rendered=true html=27329B respSnap=852B dispatches=[tags-updated→lf-tags,update-url,entries-updated]
+  #3 status=200 up=543B down(wire)=616B down(raw)=616B ttfb=14ms total=15ms components=1
+     - lf-count             snap=298B  call: __dispatch("entries-updated", {"count":6,"active":1})  => rendered=true html=176B respSnap=297B
+  TOTAL: requests=3 up=2979B down(wire)=37510B down(raw)=37510B server(ttfb sum)=84ms
+[log] Logs: [
+  '[log] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8102/_boost/browser-logs',
+  '[log] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8102/_boost/browser-logs',
+  '[log] 🔍 Browser logger active (MCP server detected). Posting to: http://127.0.0.1:8102/_boost/browser-logs'
+]

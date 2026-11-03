@@ -1,0 +1,54 @@
+##### BREAK-IT on combined copy, counts+bounds OFF Tue Oct 20 23:54:33 EEST 2026
+----- (a) published OLD lf-checkbox view (pristine, no client dispatch): tick must still filter
+[log] ### action "load": 0 POST livewire/update request(s)
+  TOTAL: requests=0 up=0B down(wire)=0B down(raw)=0B server(ttfb sum)=0ms
+[log] ### action "t2-tick": 2 POST livewire/update request(s)
+  #1 status=200 up=1287B down(wire)=6251B down(raw)=6251B ttfb=29ms total=29ms components=1
+     - lf-checkbox-filter   snap=940B  call: $commit() updates={"selected":["cabrio"]}  => rendered=true html=4622B respSnap=948B dispatches=[filter-updated→livewire-collection]
+  #2 status=200 up=1172B down(wire)=30666B down(raw)=30666B ttfb=47ms total=48ms components=1
+  TOTAL: requests=2 up=2459B down(wire)=36917B down(raw)=36917B server(ttfb sum)=76ms
+[log] AFTER tick: {"collectionParams":{"query_scope":"multiselect","multiselect:special_categories":"cabrio"},"selected":["cabrio"],"entriesShown":6,"url":"http://127.0.0.1:8102/advanced/search/categories/cabrio","countText":"6 cars found."}
+[log] ### action "t2-untick": 2 POST livewire/update request(s)
+  #1 status=200 up=1289B down(wire)=5659B down(raw)=5659B ttfb=16ms total=17ms components=1
+     - lf-checkbox-filter   snap=948B  call: $commit() updates={"selected":[]}  => rendered=true html=4093B respSnap=940B dispatches=[filter-updated→livewire-collection]
+  #2 status=200 up=1240B down(wire)=50383B down(raw)=50383B ttfb=50ms total=51ms components=1
+  TOTAL: requests=2 up=2529B down(wire)=56042B down(raw)=56042B server(ttfb sum)=66ms
+[log] AFTER untick: {"collectionParams":[],"selected":[],"entriesShown":9,"url":"http://127.0.0.1:8102/advanced","countText":"40 cars found."}
+[log] Logs: []
+----- (b) published OLD count view (pristine): load must keep the lf-count POST and the count must still update
+[log] ### action "load": 1 POST livewire/update request(s)
+  #1 status=200 up=546B down(wire)=618B down(raw)=618B ttfb=16ms total=16ms components=1
+     - lf-count             snap=300B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=1 up=546B down(wire)=618B down(raw)=618B server(ttfb sum)=16ms
+[log] ### action "t2-tick": 2 POST livewire/update request(s)
+     - lf-count             snap=298B  call: __dispatch("entries-updated", {"count":6,"active":1})  => rendered=true html=176B respSnap=297B
+  TOTAL: requests=2 up=2954B down(wire)=39868B down(raw)=39868B server(ttfb sum)=76ms
+[log] AFTER tick: {"collectionParams":{"query_scope":"multiselect","multiselect:special_categories":"cabrio"},"selected":["cabrio"],"entriesShown":6,"url":"http://127.0.0.1:8102/advanced/search/categories/cabrio","countText":"6 cars found."}
+[log] ### action "t2-untick": 2 POST livewire/update request(s)
+     - lf-count             snap=297B  call: __dispatch("entries-updated", {"count":40,"active":0})  => rendered=true html=177B respSnap=298B
+  TOTAL: requests=2 up=3024B down(wire)=59003B down(raw)=59003B server(ttfb sum)=69ms
+[log] Logs: []
+----- (c) URL-hydrated param then clearAll (no exempt keys -> no relay)
+[log] ### action "load": 1 POST livewire/update request(s)
+  TOTAL: requests=1 up=10127B down(wire)=34400B down(raw)=34400B server(ttfb sum)=22ms
+[log] params before: {"query_scope":"multiselect","multiselect:special_categories":"cabrio"}
+[log] ### action "clear-all": 2 POST livewire/update request(s)
+  #1 status=200 up=1127B down(wire)=50426B down(raw)=50426B ttfb=49ms total=49ms components=1
+  #2 status=200 up=9476B down(wire)=33603B down(raw)=33603B ttfb=21ms total=21ms components=9
+  TOTAL: requests=2 up=10603B down(wire)=84029B down(raw)=84029B server(ttfb sum)=70ms
+animations.antlers.html
+infinite-scroll.antlers.html
+livewire-collection.antlers.html
+
+Error executing code: page.evaluate: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': '[wire\\:id] img' is not a valid selector.
+    at eval (eval at evaluate (:301:30), <anonymous>:1:269)
+    at UtilityScript.evaluate (<anonymous>:303:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at <scratchpad>/verify/V4-roundtrips/measure/.playwriter-eval.js:1:43
+    at <scratchpad>/verify/V4-roundtrips/measure/.playwriter-eval.js:1:433
+    at <npx-cache>/node_modules/playwriter/dist/executor.js:1499:32
+    at PlaywrightExecutor.executeInternal (<npx-cache>/node_modules/playwriter/dist/executor.js:1513:15)
+
+[HINT: If this is an internal Playwright error, page/browser closed, or connection issue, call reset to reconnect.]
+Console output:
+[log] (c) state after clearAll: {"params":[],"selected":[],"url":"http://127.0.0.1:8102/advanced","entries":9}

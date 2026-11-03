@@ -1,0 +1,6 @@
+const { setLabel, settle, summarize } = await import('./lwcap.mjs?v=' + Date.now())
+setLabel(state, 'tick-checkbox')
+await state.page.locator('input#special_categories-cabrio').click()
+await settle(state.page, state, 2000, 20000)
+console.log(summarize(state, 'tick-checkbox'))
+console.log('Logs:', await getLatestLogs({ page: state.page, sinceLastCall: true }))

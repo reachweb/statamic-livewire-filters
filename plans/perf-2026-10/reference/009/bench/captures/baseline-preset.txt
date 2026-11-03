@@ -1,0 +1,34 @@
+##### BASELINE /preset tags Clear all (pristine) Tue Oct 20 23:34:48 EEST 2026
+Console output:
+[log] ### action "load": 1 POST livewire/update request(s)
+  #1 status=200 up=10786B down(wire)=31446B down(raw)=31446B ttfb=35ms total=36ms components=8
+     - lf-sort              snap=361B  call: __dispatch("preset-params", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}])  => rendered=true html=919B respSnap=371B
+     - lf-date-filter       snap=599B  call: __dispatch("preset-params", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}])  => rendered=true html=1319B respSnap=599B
+     - lf-checkbox-filter   snap=1054B  call: __dispatch("preset-params", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}]); __dispatch("params-updated", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}...)  => rendered=true html=8992B respSnap=1042B dispatches=[counts-updated]
+     - lf-checkbox-filter   snap=917B  call: __dispatch("preset-params", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}]); __dispatch("params-updated", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}...)  => rendered=true html=4549B respSnap=899B dispatches=[counts-updated]
+     - lf-select-filter     snap=764B  call: __dispatch("preset-params", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}]); __dispatch("params-updated", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}...)  => rendered=true html=1008B respSnap=759B dispatches=[counts-updated]
+     - lf-select-filter     snap=704B  call: __dispatch("preset-params", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}]); __dispatch("params-updated", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}...)  => rendered=true html=979B respSnap=699B dispatches=[counts-updated]
+     - livewire-collection  snap=852B  call: __dispatch("preset-params", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}])  => rendered=false respSnap=852B dispatches=[update-url]
+     - lf-tags              snap=511B  call: __dispatch("tags-updated", [{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"}])  => rendered=true html=4178B respSnap=917B
+  TOTAL: requests=1 up=10786B down(wire)=31446B down(raw)=31446B server(ttfb sum)=35ms
+[log] BEFORE clear-all: {"collectionParams":{"taxonomy:car_brand:any":"toyota|hyundai|vw","sort":"seats:desc"},"carBrandSelected":["toyota","hyundai","vw"],"tagsCount":3,"tagsInDom":3,"entriesShown":6,"url":"http://127.0.0.1:8102/preset/search/brand/toyota,hyundai,vw/sort/seats:desc"}
+[log] ### action "preset-tags-clear-all": 4 POST livewire/update request(s)
+  #1 status=200 up=1242B down(wire)=5628B down(raw)=5628B ttfb=24ms total=25ms components=1
+     - lf-tags              snap=917B  call: clearAll()  => rendered=true html=4178B respSnap=917B dispatches=[clear-all-filters]
+  #2 status=200 up=6415B down(wire)=24028B down(raw)=24028B ttfb=19ms total=20ms components=6
+     - lf-date-filter       snap=599B  call: __dispatch("clear-all-filters", [])  => rendered=true html=1319B respSnap=599B dispatches=[clear-filter→livewire-collection]
+     - lf-checkbox-filter   snap=1042B  call: __dispatch("clear-all-filters", [])  => rendered=true html=8463B respSnap=1019B dispatches=[clear-filter→livewire-collection]
+     - lf-checkbox-filter   snap=899B  call: __dispatch("clear-all-filters", [])  => rendered=true html=4549B respSnap=899B dispatches=[clear-filter→livewire-collection]
+     - lf-select-filter     snap=759B  call: __dispatch("clear-all-filters", [])  => rendered=true html=1008B respSnap=759B dispatches=[clear-filter→livewire-collection]
+     - lf-select-filter     snap=699B  call: __dispatch("clear-all-filters", [])  => rendered=true html=979B respSnap=699B dispatches=[clear-filter→livewire-collection]
+     - livewire-collection  snap=852B  call: __dispatch("clear-all-filters", [])  => rendered=false respSnap=852B
+  #3 status=200 up=1848B down(wire)=37866B down(raw)=37866B ttfb=50ms total=50ms components=1
+     - livewire-collection  snap=852B  call: __dispatch("clear-filter", {"field":"date_of_registration","condition":"is_after","modifier":"...); __dispatch("clear-filter", {"field":"car_brand","condition":"taxonomy","modifier":"any","bound...); __dispatch("clear-filter", {"field":"special_categories","condition":"query_scope","modifier":...); __dispatch("clear-filter", {"field":"transmission","condition":"is","modifier":"any","boundsSe...); __dispatch("clear-filter", {"field":"fuel_type","condition":"is","modifier":"any","boundsSelec...)  => rendered=true html=33918B respSnap=807B dispatches=[params-updated,tags-updated→lf-tags,update-url,entries-updated]
+  #4 status=200 up=7485B down(wire)=21521B down(raw)=21521B ttfb=29ms total=29ms components=5
+     - lf-checkbox-filter   snap=1019B  call: __dispatch("params-updated", [{"sort":"seats:desc"},"eyJpdiI6IlVXdkI5S2dyZ0NodUpsVU0weWV3ZkE9PSI...)  => rendered=true html=8463B respSnap=1019B dispatches=[counts-updated]
+     - lf-checkbox-filter   snap=899B  call: __dispatch("params-updated", [{"sort":"seats:desc"},"eyJpdiI6IlVXdkI5S2dyZ0NodUpsVU0weWV3ZkE9PSI...)  => rendered=true html=4550B respSnap=900B dispatches=[counts-updated]
+     - lf-select-filter     snap=759B  call: __dispatch("params-updated", [{"sort":"seats:desc"},"eyJpdiI6IlVXdkI5S2dyZ0NodUpsVU0weWV3ZkE9PSI...)  => rendered=true html=1009B respSnap=760B dispatches=[counts-updated]
+     - lf-select-filter     snap=699B  call: __dispatch("params-updated", [{"sort":"seats:desc"},"eyJpdiI6IlVXdkI5S2dyZ0NodUpsVU0weWV3ZkE9PSI...)  => rendered=true html=980B respSnap=700B dispatches=[counts-updated]
+     - lf-tags              snap=917B  call: __dispatch("tags-updated", [{"sort":"seats:desc"}])  => rendered=true html=281B respSnap=567B
+  TOTAL: requests=4 up=16990B down(wire)=89043B down(raw)=89043B server(ttfb sum)=122ms
+[log] AFTER clear-all: {"collectionParams":{"sort":"seats:desc"},"carBrandSelected":[],"tagsCount":0,"tagsInDom":0,"entriesShown":6,"url":"http://127.0.0.1:8102/preset/search/sort/seats:desc"}
