@@ -18,9 +18,11 @@ use Statamic\Stache\Query\TermQueryBuilder;
 
 /**
  * Proves that resolving term and entry option labels from the Stache indexes
- * (`pluck('title', 'id')`) returns exactly what the previous `get()`-and-map
- * implementation returned: same keys, same labels, same order, on single-site,
- * partially localized multi-site and `title_format` content.
+ * returns exactly what the previous `get()`-and-map implementation returned:
+ * same keys, same labels, same order, on single-site, partially localized
+ * multi-site, numeric-id and `title_format` content. Terms use a keyed
+ * `pluck('title', 'id')`; entries read `title`/`origin` from the collection's
+ * own store, since a keyed pluck through the aggregate store renumbers numeric ids.
  */
 class StacheIndexOptionsTest extends TestCase
 {

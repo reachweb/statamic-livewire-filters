@@ -229,6 +229,10 @@ class FilterSnapshotAndOptionsTest extends TestCase
         Livewire::test(LfTags::class, ['blueprint' => 'items.item', 'fields' => 'colors|size'])->dispatch('tags-updated', ['from' => 'items', 'size:is' => 's']);
 
         $this->assertSame([], $writes);
+
+        // Positive control: the listener does see an lw_computed write.
+        Cache::remember('lw_computed.probe', 60, fn () => 'probe');
+        $this->assertSame(['lw_computed.probe'], $writes);
     }
 
     #[Test]
@@ -260,6 +264,11 @@ class FilterSnapshotAndOptionsTest extends TestCase
         $this->assertSame($first, $component->instance()->tags->all());
         $this->assertSame(['Red', 'Black', 'One'], collect($first)->pluck('optionLabel')->all());
         $this->assertSame([], $cacheTraffic, 'statamicFields is resolved per request, never through the cache store');
+
+        // Positive control: the listeners do see an lw_computed write and hit.
+        Cache::remember('lw_computed.probe', 60, fn () => 'probe');
+        Cache::remember('lw_computed.probe', 60, fn () => 'probe');
+        $this->assertSame(['write:lw_computed.probe', 'hit:lw_computed.probe'], $cacheTraffic);
     }
 
     #[Test]
