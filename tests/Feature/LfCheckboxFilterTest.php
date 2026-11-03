@@ -572,6 +572,56 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_reorders_filter_values_by_count_every_time_counts_are_updated()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        // Counts become option1: 2, option2: 2, option3: 3
+        $this->makeEntry($this->collection, 'd')->set('title', 'I Love Flutes')->set('item_options', 'option2')->save();
+        foreach (['e', 'f', 'g'] as $slug) {
+            $this->makeEntry($this->collection, $slug)->set('title', 'I Love Pianos')->set('item_options', 'option3')->save();
+        }
+
+        $component = Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'count:desc'])
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['option1', 'option2', 'option3'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            // The option1/option2 tie falls back to the label, ascending in both directions
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['option3', 'option1', 'option2'])
+            ->assertSeeHtmlInOrder(['id="item_options-option3"', 'id="item_options-option1"', 'id="item_options-option2"'])
+            ->assertDispatched('counts-updated', fn ($name, $params) => $params['order'] === ['option3', 'option1', 'option2']);
+
+        // The next counts reorder the options again: option1: 1, option2: 0, option3: 0
+        $component->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:is' => 'I Love Guitars']))
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['option1', 'option2', 'option3'])
+            ->assertSeeHtmlInOrder(['id="item_options-option1"', 'id="item_options-option2"', 'id="item_options-option3"']);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'sort' => 'count:asc'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:is' => 'I Love Pianos']))
+            // option1: 0, option2: 0, option3: 3
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['option1', 'option2', 'option3'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['option1', 'option2', 'option3'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:is' => 'I Love Drums']))
+            // option1: 1, option2: 0, option3: 0
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['option2', 'option3', 'option1']);
+    }
+
+    #[Test]
+    public function it_sorts_filter_values_by_label_when_sorting_by_count_without_counts()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
+
+        // Terms are created as red, black, yellow
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'sort' => 'count:desc'])
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['black', 'red', 'yellow'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([], 'clothes'))
+            ->assertViewHas('statamic_field', fn ($statamic_field) => array_keys($statamic_field['options']) === ['black', 'red', 'yellow']
+                && $statamic_field['counts'] === ['red' => null, 'black' => null, 'yellow' => null])
+            ->assertSeeHtmlInOrder(['id="colors-black"', 'id="colors-red"', 'id="colors-yellow"'])
+            ->assertNotDispatched('counts-updated');
+    }
+
+    #[Test]
     public function it_can_reorder_term_filter_values_by_custom_field()
     {
         Facades\Blueprint::make()->setContents([

@@ -46,7 +46,13 @@ trait HandleEntriesCount
 
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle, $baseParams['from']);
 
-        $this->dispatch('counts-updated', $this->counts());
+        if ($this->sortsByCount()) {
+            $this->sortOptionsByCount();
+            unset($this->filterOptions);
+        }
+
+        // `order` carries the option order, as JS objects list integer keys first whatever the PHP order.
+        $this->dispatch('counts-updated', $this->counts(), order: array_keys($this->filterOptions()));
     }
 
     protected function updateCountsWithBatchQuery($baseParams, $fieldHandle, $collections = null)

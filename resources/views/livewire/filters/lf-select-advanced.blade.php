@@ -1,6 +1,7 @@
 <div 
     x-data="{
         allOptions: @js($this->filter_options),
+        order: @js(array_keys($this->filter_options)),
         options: [],
         counts: @js($this->counts),
         isOpen: false,
@@ -18,7 +19,7 @@
             this.openedWithKeyboard = false
         },
         getFilteredOptions(query) {
-            this.options = Object.entries(this.allOptions).filter(([value, label]) =>
+            this.options = this.order.map((value) => [String(value), this.allOptions[value]]).filter(([value, label]) =>
                 label.toLowerCase().includes(query.toLowerCase())
             )
             if (this.options.length === 0) {
@@ -40,8 +41,8 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="options = Object.entries(allOptions); $watch('selected', () => updateSelectedLabel());"
-    x-on:counts-updated="counts = Object.values($event.detail)[0];"
+    x-init="getFilteredOptions(''); $watch('selected', () => updateSelectedLabel());"
+    x-on:counts-updated="counts = Object.values($event.detail)[0]; order = $event.detail.order; getFilteredOptions($refs.searchField?.value ?? '');"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selected"
     wire:model.live="selected"
