@@ -9,6 +9,8 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 ### Added
 
 - Checkbox, radio and select filters take a `zero_count` property to choose what happens to options whose count drops to zero: `show` (default) keeps them, `hide` removes them and `disable` disables them. It only applies when `enable_filter_values_count` is on, and selected options are always kept usable. The advanced checkbox and select views apply it in the browser whenever the counts update, and show "No results found" when no option is left, now also without `searchable`. An unknown value throws `InvalidZeroCountModeException`. Published copies of the `lf-checkbox`, `lf-radio`, `lf-select`, `lf-checkbox-advanced` and `lf-select-advanced` views ignore `zero_count` until you re-publish them or merge in the new markup.
+- A `{{ livewire-filters:seo }}` tag for the layout `<head>` that outputs `<link rel="canonical">` to the base listing page and `<meta name="robots" content="noindex,follow">` on filtered pages and pages above 1. Filters listed in the new `seo_indexable_filters` config keep single-value URLs indexable with a self canonical.
+- In custom query-string mode, all filter URLs of a page share one static cache entry, so the tag only outputs page-dependent tags there. Turn on the new `seo_filter_headers` config to send `X-Robots-Tag` and canonical `Link` headers for filter URLs instead. The headers are added after the half measure cache stores the response, so they never leak into the cached page.
 
 ## [4.6.3] - 2026-11-04
 

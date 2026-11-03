@@ -18,6 +18,8 @@ class HandleFiltersQueryString
      */
     protected const RESERVED_INPUT_KEYS = ['url', '_token', '_method', 'fingerprint', 'serialized', 'effects'];
 
+    public const ORIGINAL_PATH_ATTRIBUTE = 'statamic-livewire-filters.original_path';
+
     public function handle(Request $request, Closure $next): mixed
     {
         if (Nocache::matches($request)) {
@@ -75,6 +77,9 @@ class HandleFiltersQueryString
                     $request->files->all(),
                     $request->server->all()
                 );
+
+                // Keep the visible filter URL for SEO signals that need it after the rewrite.
+                $request->attributes->set(self::ORIGINAL_PATH_ATTRIBUTE, '/'.$path);
             }
         }
 
