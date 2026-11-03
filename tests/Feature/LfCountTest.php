@@ -83,9 +83,20 @@ class LfCountTest extends TestCase
     {
         $component = Livewire::test(LfCount::class)
             ->assertSeeHtml('x-on:entries-updated.window')
-            ->assertSeeHtml('$event.detail.entriesLabel');
+            ->assertSeeHtml('detail?.entriesLabel');
 
         $this->assertNotContains('entries-updated', $component->effects['listeners'] ?? []);
+    }
+
+    /** An event without the label (user code) sets the count from the browser, and the server renders it. */
+    public function test_the_bundled_view_falls_back_to_the_server_for_events_without_a_label()
+    {
+        Livewire::test(LfCount::class)
+            ->assertSeeHtml("\$wire.\$set('count', count)")
+            ->set('count', 3)
+            ->assertSee('3 entries')
+            ->set('count', 1)
+            ->assertSee('1 entry');
     }
 
     public function test_a_published_count_view_keeps_the_server_listener()
