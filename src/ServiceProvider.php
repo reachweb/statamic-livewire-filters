@@ -2,8 +2,10 @@
 
 namespace Reach\StatamicLivewireFilters;
 
+use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Console\Commands\UpdateLivewireFilters;
+use Reach\StatamicLivewireFilters\Http\Controllers\FiltersController;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCount;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDateFilter;
@@ -20,6 +22,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCo
 use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Reach\StatamicLivewireFilters\Scopes\Multiselect;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 use Reach\StatamicLivewireFilters\Support\RestoreNocacheMemoPath;
 use Reach\StatamicLivewireFilters\Support\SuppressPaginatorUrlHistory;
 use Reach\StatamicLivewireFilters\Tags\LivewireCollection;
@@ -75,6 +78,16 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-count', LfCount::class);
 
         RestoreNocacheMemoPath::register();
+
+        $this->registerWebRoutes(static function (): void {
+            if (($prefix = CustomQueryString::prefix()) === false) {
+                return;
+            }
+
+            Route::get('{path}', [FiltersController::class, 'index'])
+                ->where('path', '(?:.*/)?'.preg_quote($prefix).'(?:/.*)?')
+                ->name('statamic-livewire-filters.filters');
+        });
 
         // Booted so our dehydrate listener runs after Livewire's url effect is set.
         $this->app->booted(static function (): void {
