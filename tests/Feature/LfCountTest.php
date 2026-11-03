@@ -79,6 +79,28 @@ class LfCountTest extends TestCase
             ->assertSee('1 entry');
     }
 
+    public function test_the_bundled_view_updates_in_the_browser_without_a_server_listener()
+    {
+        $component = Livewire::test(LfCount::class)
+            ->assertSeeHtml('x-on:entries-updated.window')
+            ->assertSeeHtml('$event.detail.entriesLabel');
+
+        $this->assertNotContains('entries-updated', $component->effects['listeners'] ?? []);
+    }
+
+    public function test_a_published_count_view_keeps_the_server_listener()
+    {
+        app('view')->prependNamespace('statamic-livewire-filters', __DIR__.'/../__fixtures__/views/published-count');
+
+        $component = Livewire::test(LfCount::class);
+
+        $this->assertContains('entries-updated', $component->effects['listeners'] ?? []);
+
+        $component->dispatch('entries-updated', count: 3, active: 0, entriesLabel: 'entries')
+            ->assertSet('count', 3)
+            ->assertSee('3 entries');
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

@@ -56,7 +56,7 @@ class LfRangeFilter extends LivewireFilter
     }
 
     #[On('clear-all-filters')]
-    public function clear(): void
+    public function clear($keptParamKeys = null): void
     {
         $this->selected = $this->emptyValue();
         $this->markFilterStateChanged();
@@ -64,6 +64,12 @@ class LfRangeFilter extends LivewireFilter
         // Reset to the last known bounds; on clear-all the relay may not trigger another params-updated.
         if ($this->dynamicMin !== null) {
             $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
+        }
+
+        if (! $this->clearAllNeedsRelay($keptParamKeys)) {
+            $this->forgetBoundsSelectionWithoutRelay();
+
+            return;
         }
 
         $this->clearFilters($this->rememberBoundsSelection([]));

@@ -107,7 +107,7 @@ class LfDualRangeFilter extends LivewireFilter
     }
 
     #[On('clear-all-filters')]
-    public function clear(): void
+    public function clear($keptParamKeys = null): void
     {
         $this->selectedMin = $this->min;
         $this->selectedMax = $this->max;
@@ -118,14 +118,22 @@ class LfDualRangeFilter extends LivewireFilter
             $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
         }
 
-        $boundsSelection = $this->rememberBoundsSelection([]);
+        $relay = $this->clearAllNeedsRelay($keptParamKeys);
+
+        if ($relay) {
+            $boundsSelection = $this->rememberBoundsSelection([]);
+        } else {
+            $this->forgetBoundsSelectionWithoutRelay();
+        }
 
         $this->dispatch('dual-range-preset-values',
             min: $this->selectedMin,
             max: $this->selectedMax,
         );
 
-        $this->clearFilters($boundsSelection);
+        if ($relay) {
+            $this->clearFilters($boundsSelection);
+        }
     }
 
     #[On('clear-option')]

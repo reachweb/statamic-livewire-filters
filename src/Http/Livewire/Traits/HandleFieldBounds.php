@@ -176,6 +176,17 @@ trait HandleFieldBounds
         return ['source' => $this->getId(), 'revision' => ++$this->boundsSelectionRevision];
     }
 
+    /**
+     * A clear-all the collection already swept sends no relay, so no acknowledgement will
+     * come for a new revision. An empty pending selection (rather than null, which trusts
+     * the event's params) keeps an older bounds event that still carries the cleared
+     * selection from re-activating the slider until the next selection is acknowledged.
+     */
+    protected function forgetBoundsSelectionWithoutRelay(): void
+    {
+        $this->pendingBoundsSelection = config('statamic-livewire-filters.enable_dynamic_range_bounds') ? [] : null;
+    }
+
     protected function boundsSelectionParams(array $params, array $selections): array
     {
         if ($this->pendingBoundsSelection === null) {

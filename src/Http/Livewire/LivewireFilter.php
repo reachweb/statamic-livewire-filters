@@ -73,11 +73,14 @@ abstract class LivewireFilter extends Component implements FilterContract
     }
 
     #[On('clear-all-filters')]
-    public function clear()
+    public function clear($keptParamKeys = null)
     {
         $this->selected = $this->emptyValue();
         $this->markFilterStateChanged();
-        $this->clearFilters();
+
+        if ($this->clearAllNeedsRelay($keptParamKeys)) {
+            $this->clearFilters();
+        }
     }
 
     #[On('clear-option')]

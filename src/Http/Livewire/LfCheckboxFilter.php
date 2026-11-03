@@ -23,6 +23,9 @@ class LfCheckboxFilter extends LivewireFilter
 
     public string $placeholder = '';
 
+    /** Set by the bundled view in the commit whose filter-updated it already sent to the collection. */
+    public bool $syncedByView = false;
+
     #[Computed]
     public function filterOptions(): array
     {
@@ -40,6 +43,28 @@ class LfCheckboxFilter extends LivewireFilter
         return [
             'selected' => ['array', Rule::in(array_keys($this->filterOptions()))],
         ];
+    }
+
+    /**
+     * The bundled view dispatches filter-updated from the browser, pooled into this
+     * commit's request, so the server relay (and its extra round trip) is skipped.
+     * A view without the flag, such as one published before it, still relays.
+     */
+    protected function dispatchFilterUpdated(array $extra = []): void
+    {
+        if ($this->syncedByView) {
+            $this->syncedByView = false;
+
+            return;
+        }
+
+        parent::dispatchFilterUpdated($extra);
+    }
+
+    // The flag covers one request, even when failed validation never reached the dispatch.
+    public function dehydrate(): void
+    {
+        $this->syncedByView = false;
     }
 
     protected function emptyValue(): mixed

@@ -30,7 +30,7 @@ under "Conflict hotspots" — the plan text, not the diff, is the contract.
 | 008 | Share resolved key sets and drop the sort in faceted count and bounds queries | P1 | M | MED | — | DONE |
 | 011 | Slim filter snapshots and resolve term/entry options from Stache indexes | P2 | M | LOW-MED | — | DONE |
 | 010 | Skip renders nobody uses: `wire:ignore` roots, disabled-feature listeners, unchanged counts/bounds, foreign clear-option | P1 | M | LOW-MED | — | DONE |
-| 009 | Cut Livewire round trips: client-side filter dispatch, zero-request page load, relay-free clear-all, separate bounds event | P1 | L | MED | apply after 010 and 008 | TODO |
+| 009 | Cut Livewire round trips: client-side filter dispatch, zero-request page load, relay-free clear-all, separate bounds event | P1 | L | MED | apply after 010 and 008 | DONE (steps 1–3; step 4 REJECTED: since 4.6.1 count listeners need the encrypted query too, so a separate `bounds-updated` saves nothing with counts and bounds on and only renames a documented event) |
 | 012 | Multiselect scope: one Stache index pass for all selected values | P2 | S | LOW | — | TODO |
 | 013 | Skip the `entries-updated` dispatch on page-change requests when nothing changed | P3 | S | LOW | 009 | TODO |
 | 014 | Append-only load more for the Antlers view via keyed `wire:ignore` page shells (alternative to Plan 006) | P2 | M | MED | decision vs Plan 006 | TODO |
