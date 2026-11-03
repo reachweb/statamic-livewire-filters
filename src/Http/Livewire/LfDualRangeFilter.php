@@ -35,7 +35,7 @@ class LfDualRangeFilter extends LivewireFilter
     #[Locked]
     public $format = 'integer';
 
-    // Number of histogram bars behind the slider; needs enable_dynamic_range_bounds.
+    // Maximum number of histogram bars behind the slider; needs enable_dynamic_range_bounds.
     #[Locked]
     public $histogram = null;
 
@@ -200,7 +200,8 @@ class LfDualRangeFilter extends LivewireFilter
 
     protected function histogramBinCount(): int
     {
-        return max(0, (int) $this->histogram);
+        // Capped so a large value can't bloat the payload or slow the bars down while dragging.
+        return min(100, max(0, (int) $this->histogram));
     }
 
     protected function clampedSelectionPayload($min, $max): array

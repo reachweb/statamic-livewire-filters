@@ -8,7 +8,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ### Added
 
-- Histogram for the dual range slider. Add `histogram="20"` to `lf-dual-range-filter` and the slider draws up to 20 bars behind its track, counting the entries that match the other active filters in each part of the range. Needs `enable_dynamic_range_bounds`: the bars are counted from the values the bounds query already collects, once per bounds update, so they add no query. Each bar covers whole `step`s from the slider's lower bound, so you can get fewer bars than requested. The `range-bounds-updated` event carries the bars as `bins` (`{from, to, count}`) when `histogram` is set. Published `lf-dual-range.blade.php` views need the new markup to show them.
+- Histogram for the dual range slider. Add `histogram="20"` to `lf-dual-range-filter` and the slider draws up to 20 bars (100 at most) behind its track, counting the values of the entries that match the other active filters in each part of the range. Needs `enable_dynamic_range_bounds`: the bars are counted from the values the bounds query already collects, once per bounds update, so they add no query. Each bar covers whole `step`s of slider stops from the slider's lower bound, and the upper bound gets a bar of its own, so you can get fewer bars than requested. Bars between the handles are highlighted. The `range-bounds-updated` event carries the bars as `bins`, a list of `{from, to, count}` where `from` is included and `to` isn't, when `histogram` is set. Published `lf-dual-range.blade.php` views need the new markup to show them.
 
 ## [4.6.1] - 2026-11-02
 

@@ -287,31 +287,32 @@ trait HandleFieldBounds
     }
 
     /**
-     * Bins are step multiples starting at the displayed min, so bar edges land on
-     * slider stops; the last bin is cut at the max and includes it.
+     * Half-open [from, to) bins of whole steps from the displayed min, the stops
+     * noUiSlider counts from. The max is a stop of its own, so the bins cover one
+     * step past it and the last bin holds it.
      */
     protected function computeHistogramBins(Collection $values, $min, $max): array
     {
         $binCount = $this->histogramBinCount();
-        $span = $this->boundsSpan($min, $max);
 
-        if ($binCount < 1 || $span <= 0 || $values->isEmpty()) {
+        if ($binCount < 1 || $this->boundsSpan($min, $max) <= 0 || $values->isEmpty()) {
             return [];
         }
 
         if (($this->statamic_field['type'] ?? null) === 'date') {
-            $values = $values->map(fn ($timestamp) => Carbon::createFromTimestamp($timestamp, date_default_timezone_get())->year);
+            // Same default timezone as computeFieldBounds, without a Carbon instance per value.
+            $values = $values->map(fn ($timestamp) => (int) date('Y', $timestamp));
         }
 
         // Rounding the ratios absorbs float error, e.g. 0.7 / 0.1 = 6.999…
         $step = $this->boundsStep();
-        $width = $this->roundToStepPrecision(max(1, ceil(round($span / $binCount / $step, 9))) * $step);
-        $binTotal = (int) ceil(round($span / $width, 9));
+        $width = $this->roundToStepPrecision(max(1, ceil(round(($max - $min + $step) / $binCount / $step, 9))) * $step);
+        $binTotal = (int) floor(round(($max - $min) / $width, 9)) + 1;
 
         $counts = array_fill(0, $binTotal, 0);
         foreach ($values as $value) {
             if ($value >= $min && $value <= $max) {
-                $counts[min($binTotal - 1, (int) floor(round(($value - $min) / $width, 9)))]++;
+                $counts[(int) floor(round(($value - $min) / $width, 9))]++;
             }
         }
 
@@ -321,7 +322,7 @@ trait HandleFieldBounds
 
         return array_map(fn ($count, $index) => [
             'from' => $this->roundToStepPrecision($min + $index * $width, $min),
-            'to' => $this->roundToStepPrecision(min($max, $min + ($index + 1) * $width), $min, $max),
+            'to' => $this->roundToStepPrecision($min + ($index + 1) * $width, $min),
             'count' => $count,
         ], $counts, array_keys($counts));
     }

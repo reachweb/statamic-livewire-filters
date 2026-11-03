@@ -10,24 +10,31 @@
             step: {{ $step }},
             format: '{{ $format }}',
             minRange: {{ $minRange }},
-            {{-- Read through $wire: a changed x-data value would re-initialize the slider on morph --}}
-            bins: $wire.histogramBins,
-            boundsMin: $wire.dynamicMin ?? {{ $min }},
-            boundsMax: $wire.dynamicMax ?? {{ $max }},
-            get maxBinCount() {
-                return Math.max(1, ...this.bins.map((bin) => bin.count));
+            {{-- Same range the slider is created with; range-bounds-updated moves both --}}
+            boundsMin: {{ $min }},
+            boundsMax: {{ $max }},
+            bins: [],
+            maxBinCount: 1,
+            setBins(bins) {
+                this.bins = bins;
+                this.maxBinCount = Math.max(1, ...bins.map((bin) => bin.count));
             },
+            {{-- A bar spans its stops, each owning half a step on either side, cut at the track ends --}}
             binStyle(bin) {
                 const span = this.boundsMax - this.boundsMin;
-                const selected = bin.to > this.displayMin && bin.from < this.displayMax;
+                const start = Math.max(this.boundsMin, bin.from - this.step / 2);
+                const end = Math.min(this.boundsMax, bin.to - this.step / 2);
+                const selected = bin.from <= this.displayMax && bin.to > this.displayMin;
                 return {
-                    left: ((bin.from - this.boundsMin) / span * 100) + '%',
-                    width: ((bin.to - bin.from) / span * 100) + '%',
+                    left: ((start - this.boundsMin) / span * 100) + '%',
+                    width: ((end - start) / span * 100) + '%',
                     height: (bin.count / this.maxBinCount * 100) + '%',
                     backgroundColor: selected ? 'var(--noui-connect, #2563eb)' : 'var(--noui-bg-dark, #e4e4e4)',
                 };
             },
             init() {
+                {{-- Read through $wire: a changed x-data value would re-initialize the slider on morph --}}
+                this.setBins($wire.histogramBins);
                 if (!window.noUiSlider) {
                     console.error('noUiSlider is not loaded');
                     return;
@@ -82,7 +89,7 @@
                     this.boundsMin = bounds.min;
                     this.boundsMax = bounds.max;
                     if (bounds.bins) {
-                        this.bins = bounds.bins;
+                        this.setBins(bounds.bins);
                     }
                     slider.noUiSlider.set([bounds.selectedMin, bounds.selectedMax], false);
                     bounds.disabled ? slider.noUiSlider.disable() : slider.noUiSlider.enable();

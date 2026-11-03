@@ -404,14 +404,15 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
-    public function histogram_bins_are_whole_steps_that_cover_the_displayed_bounds()
+    public function histogram_bins_are_whole_steps_and_the_max_gets_a_bin_of_its_own()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
 
-        // Span 4 over 3 bins would be 1.33 wide; with step 2 that rounds up to 2 bins of 2.
+        // Stops 4, 6, 8 over 3 bins: one step each, so 8 doesn't share a bin with 6.
         $bins = [
             ['from' => 4, 'to' => 6, 'count' => 1],
-            ['from' => 6, 'to' => 8, 'count' => 2],
+            ['from' => 6, 'to' => 8, 'count' => 1],
+            ['from' => 8, 'to' => 10, 'count' => 1],
         ];
 
         Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['step' => 2, 'histogram' => '3']))
@@ -421,7 +422,7 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
-    public function decimal_histogram_bins_land_on_the_step_grid_and_stop_at_the_max()
+    public function decimal_histogram_bins_land_on_the_step_grid()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
 
@@ -429,15 +430,31 @@ class HandleFieldBoundsTest extends TestCase
             $this->makeEntry($this->collection, "boat-{$index}")->set('length', $length)->save();
         }
 
-        // Bounds 12.2–14.1: 1.9 / 4 = 0.475 rounds up to 0.5, and the last bin is cut at 14.1.
+        // Bounds 12.2–14.1 have 20 stops: 20 / 4 bins = 5 steps of 0.1 per bin.
         Livewire::test(LfDualRangeFilter::class, array_merge($this->lengthDualRangeArguments(), ['histogram' => 4]))
             ->dispatch('params-updated', ...$this->boundsEventArguments([]))
             ->assertSet('histogramBins', [
                 ['from' => 12.2, 'to' => 12.7, 'count' => 1],
                 ['from' => 12.7, 'to' => 13.2, 'count' => 0],
                 ['from' => 13.2, 'to' => 13.7, 'count' => 1],
-                ['from' => 13.7, 'to' => 14.1, 'count' => 1],
+                ['from' => 13.7, 'to' => 14.2, 'count' => 1],
             ], strict: true);
+    }
+
+    #[Test]
+    public function the_histogram_is_capped_at_100_bins()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $this->makeEntry($this->collection, 'boat-short')->set('length', 10)->save();
+        $this->makeEntry($this->collection, 'boat-long')->set('length', 30)->save();
+
+        // 201 stops: 1000 bins would be one step each, 100 bins round up to 3 steps.
+        Livewire::test(LfDualRangeFilter::class, array_merge($this->lengthDualRangeArguments(), ['histogram' => 1000]))
+            ->dispatch('params-updated', ...$this->boundsEventArguments([]))
+            ->assertSet('histogramBins', fn ($bins) => count($bins) === 67
+                && $bins[0] === ['from' => 10, 'to' => 10.3, 'count' => 1]
+                && $bins[66] === ['from' => 29.8, 'to' => 30.1, 'count' => 1]);
     }
 
     #[Test]
@@ -451,7 +468,29 @@ class HandleFieldBoundsTest extends TestCase
                 ['from' => 2020, 'to' => 2021, 'count' => 1],
                 ['from' => 2021, 'to' => 2022, 'count' => 0],
                 ['from' => 2022, 'to' => 2023, 'count' => 1],
-                ['from' => 2023, 'to' => 2024, 'count' => 1],
+                ['from' => 2023, 'to' => 2024, 'count' => 0],
+                ['from' => 2024, 'to' => 2025, 'count' => 1],
+            ], strict: true);
+    }
+
+    #[Test]
+    public function histogram_bins_cover_bounds_widened_by_an_active_selection()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        // Catamarans have 4 and 6 cabins; the off-grid selection widens the slider to 3.5–9,
+        // whose stops noUiSlider counts from 3.5.
+        Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['histogram' => 20]))
+            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran', 'cabins:gte' => 3.5, 'cabins:lte' => 9]))
+            ->assertSet('dynamicMin', 3.5)
+            ->assertSet('dynamicMax', 9)
+            ->assertSet('histogramBins', [
+                ['from' => 3.5, 'to' => 4.5, 'count' => 1],
+                ['from' => 4.5, 'to' => 5.5, 'count' => 0],
+                ['from' => 5.5, 'to' => 6.5, 'count' => 1],
+                ['from' => 6.5, 'to' => 7.5, 'count' => 0],
+                ['from' => 7.5, 'to' => 8.5, 'count' => 0],
+                ['from' => 8.5, 'to' => 9.5, 'count' => 0],
             ], strict: true);
     }
 
@@ -460,12 +499,37 @@ class HandleFieldBoundsTest extends TestCase
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
 
-        Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['histogram' => 20]))
+        $this->makeEntry($this->collection, 'yacht-tiny')->set('cabins', 1)->set('category', 'tiny')->save();
+
+        $component = Livewire::test(LfDualRangeFilter::class, array_merge($this->dualRangeArguments(), ['histogram' => 20]))
             ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'catamaran']))
-            ->assertSet('histogramBins', fn ($bins) => count($bins) === 2)
-            ->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => 'nonexistent']))
-            ->assertSet('histogramBins', [])
-            ->assertDispatched('range-bounds-updated', min: 2, max: 10, bins: []);
+            ->assertSet('histogramBins', [
+                ['from' => 4, 'to' => 5, 'count' => 1],
+                ['from' => 5, 'to' => 6, 'count' => 0],
+                ['from' => 6, 'to' => 7, 'count' => 1],
+            ], strict: true);
+
+        // No matches at all, and matches that all lie outside the tag's min and max.
+        foreach (['nonexistent', 'tiny'] as $category) {
+            $component->dispatch('params-updated', ...$this->boundsEventArguments(['category:is' => $category]))
+                ->assertSet('histogramBins', [])
+                ->assertDispatched('range-bounds-updated', min: 2, max: 10, bins: []);
+        }
+    }
+
+    #[Test]
+    public function bounds_events_carry_bins_only_with_a_histogram()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        $withoutBins = fn ($name, $params) => $name === 'range-bounds-updated' && ! array_key_exists('bins', $params);
+
+        foreach ([LfRangeFilter::class => $this->rangeArguments(), LfDualRangeFilter::class => $this->dualRangeArguments()] as $component => $arguments) {
+            Livewire::test($component, $arguments)
+                ->dispatch('params-updated', ...$this->boundsEventArguments([]))
+                ->assertDispatched('range-bounds-updated', $withoutBins)
+                ->assertSet('histogramBins', []);
+        }
     }
 
     #[Test]
