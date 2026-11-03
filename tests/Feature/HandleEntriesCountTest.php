@@ -174,8 +174,9 @@ class HandleEntriesCountTest extends TestCase
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertNotDispatched('counts-updated')
             ->assertViewHas('statamic_field', function ($statamic_field) {
-                return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
-            });
+                return ! array_key_exists('counts', $statamic_field);
+            })
+            ->tap(fn ($component) => $this->assertSame(['option1' => null, 'option2' => null], $component->instance()->counts()));
     }
 
     #[Test]

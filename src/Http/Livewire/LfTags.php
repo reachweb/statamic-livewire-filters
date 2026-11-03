@@ -40,7 +40,7 @@ class LfTags extends Component
         $this->tags = collect();
     }
 
-    #[Computed(persist: true)]
+    #[Computed]
     public function statamicFields(): Collection
     {
         $statamicFields = collect();

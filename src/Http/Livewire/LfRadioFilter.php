@@ -18,7 +18,7 @@ class LfRadioFilter extends LivewireFilter
 
     public $selected = '';
 
-    #[Computed(persist: true)]
+    #[Computed]
     public function filterOptions(): array
     {
         if ($this->options !== null && is_array($this->options)) {

@@ -22,6 +22,10 @@ trait HandleEntriesCount
             return array_fill_keys(array_keys($this->options), null);
         }
 
+        if (isset($this->statamic_field['options']) && is_array($this->statamic_field['options'])) {
+            return array_fill_keys(array_keys($this->statamic_field['options']), null);
+        }
+
         return [];
     }
 
