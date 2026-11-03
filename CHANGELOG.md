@@ -6,6 +6,11 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- A "Match any / Match all" toggle for checkbox filters on taxonomies and multi-value fields. Add `logic_toggle="true"` to switch a `taxonomy` filter between the `any` and `all` modifiers, or an `overlaps` filter to the new `contains_all` condition, which matches entries holding every ticked value. The switch re-dispatches `filter-updated` with the new key and a `logicSwitched` flag, and the collection drops the old key in the same update. Pretty URLs write and restore the match-all key through an `-all` alias, such as `brand-all`.
+- Match-all tags are labelled "Field (all): Value". A published `tags` view needs the updated condition label, or match-all taxonomy tags read "FieldAll Value".
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

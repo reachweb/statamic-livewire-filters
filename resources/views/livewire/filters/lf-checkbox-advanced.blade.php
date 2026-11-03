@@ -55,6 +55,7 @@
     wire:ignore
     class="w-full flex flex-col"
 >
+    @include('statamic-livewire-filters::livewire.ui.logic-toggle')
     <div class="relative w-full">
         <button 
             type="button" 

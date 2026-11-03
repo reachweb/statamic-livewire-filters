@@ -188,6 +188,26 @@ trait HandleParams
         $this->dispatchParamsUpdated();
     }
 
+    /**
+     * A filter switching between match any and match all sends its values under the
+     * new key; the old key is removed here in the same update rather than by a
+     * separate clear-filter, so the change costs one params-updated round, not two.
+     * Only the key's own logic counterpart can be removed this way.
+     */
+    protected function forgetLogicCounterpart($field, $condition, $modifier): bool
+    {
+        $paramKey = ParamKey::build($field, $condition, $modifier);
+        $counterpart = is_string($paramKey) ? ParamKey::logicCounterpart($paramKey) : null;
+
+        if ($counterpart === null || ! array_key_exists($counterpart, $this->params)) {
+            return false;
+        }
+
+        unset($this->params[$counterpart]);
+
+        return true;
+    }
+
     #[On('clear-filter')]
     public function clearFilter($field, $condition, $modifier, $boundsSelection = null): void
     {
@@ -546,7 +566,7 @@ trait HandleParams
 
     protected function getConfigAliases(): array
     {
-        return collect(config('statamic-livewire-filters.custom_query_string_aliases', []))->transform(function ($value, $key) {
+        return collect(CustomQueryString::withMatchAllAliases(config('statamic-livewire-filters.custom_query_string_aliases', [])))->transform(function ($value, $key) {
             if (str_contains($value, 'query_scope')) {
                 [$scopeString, $scopeKey] = explode(':', $value, 2);
 

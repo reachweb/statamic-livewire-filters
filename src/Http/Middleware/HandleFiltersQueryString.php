@@ -185,7 +185,7 @@ class HandleFiltersQueryString
             [
                 'sort' => 'sort',
             ],
-            config('statamic-livewire-filters.custom_query_string_aliases', [])
+            CustomQueryString::withMatchAllAliases(config('statamic-livewire-filters.custom_query_string_aliases', []))
         );
         $params = [];
 

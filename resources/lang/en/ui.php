@@ -10,6 +10,8 @@ return [
     'entries' => '{0} entries|{1} entry|[2,*] entries',
     'load_more' => 'Load more',
     'loading' => 'Loading…',
+    'match_all' => 'Match all',
+    'match_any' => 'Match any',
     'to' => 'to',
     'value' => 'Value',
     'please_select' => 'Please select',
@@ -21,6 +23,7 @@ return [
     // Conditions
     'any' => ':',
     'contains' => ' contains',
+    'contains_all' => ' (all):',
     'doesnt_contain' => ' does not contain',
     'doesnt_end_with' => ' does not end with',
     'doesnt_exist' => ' does not exist',

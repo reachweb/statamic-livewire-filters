@@ -41,6 +41,32 @@ final class ParamKey
     }
 
     /**
+     * The other key of a match-any / match-all pair, which the checkbox filter's logic
+     * toggle switches between: `taxonomy:field:any` and `taxonomy:field:all`, or
+     * `field:overlaps` and `field:contains_all`. Null for keys outside these pairs.
+     */
+    public static function logicCounterpart(string $key): ?string
+    {
+        $parsed = self::parse($key);
+
+        return match (true) {
+            $parsed->condition === 'taxonomy' && $parsed->modifier === 'any' => self::build($parsed->field, 'taxonomy', 'all'),
+            $parsed->condition === 'taxonomy' && $parsed->modifier === 'all' => self::build($parsed->field, 'taxonomy', 'any'),
+            $parsed->condition === 'overlaps' => self::build($parsed->field, 'contains_all'),
+            $parsed->condition === 'contains_all' => self::build($parsed->field, 'overlaps'),
+            default => null,
+        };
+    }
+
+    public static function isMatchAll(string $key): bool
+    {
+        $parsed = self::parse($key);
+
+        return $parsed->condition === 'contains_all'
+            || ($parsed->condition === 'taxonomy' && $parsed->modifier === 'all');
+    }
+
+    /**
      * A `scope:field` key reads like `field:condition`, so scope keys are only
      * recognized when their scope is listed in $scopes (the query_scope registry).
      *

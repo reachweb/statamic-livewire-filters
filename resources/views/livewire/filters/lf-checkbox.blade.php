@@ -1,4 +1,5 @@
 <div>
+    @include('statamic-livewire-filters::livewire.ui.logic-toggle')
     <div class="grid grid-cols-1 gap-y-4">
         @foreach($this->filter_options as $value => $label)
         <div class="flex items-center">

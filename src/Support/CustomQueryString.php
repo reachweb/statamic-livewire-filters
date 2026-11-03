@@ -4,6 +4,27 @@ namespace Reach\StatamicLivewireFilters\Support;
 
 class CustomQueryString
 {
+    /**
+     * URL alias => param key, where an alias for a match-any key (`brand` =>
+     * `taxonomy:car_brand:any`) also names its match-all counterpart as `brand-all`.
+     * An alias configured explicitly always wins over a derived one.
+     *
+     * @param  array<string, string>  $aliases
+     * @return array<string, string>
+     */
+    public static function withMatchAllAliases(array $aliases): array
+    {
+        foreach ($aliases as $alias => $key) {
+            $counterpart = ParamKey::logicCounterpart($key);
+
+            if ($counterpart !== null && ! ParamKey::isMatchAll($key) && ! in_array($counterpart, $aliases, true)) {
+                $aliases[$alias.'-all'] ??= $counterpart;
+            }
+        }
+
+        return $aliases;
+    }
+
     public static function livewireQueryStringEnabled(): bool
     {
         return (bool) config('statamic-livewire-filters.enable_query_string');

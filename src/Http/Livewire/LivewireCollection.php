@@ -7,9 +7,9 @@ use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
+use Reach\StatamicLivewireFilters\Support\Entries;
 use Reach\StatamicLivewireFilters\Support\Nocache;
 use Statamic\Support\Traits\Hookable;
-use Statamic\Tags\Collection\Entries;
 
 class LivewireCollection extends Component
 {
@@ -150,11 +150,13 @@ class LivewireCollection extends Component
     }
 
     #[On('filter-updated')]
-    public function filterUpdated($field, $condition, $payload, $modifier, $boundsSelection = null)
+    public function filterUpdated($field, $condition, $payload, $modifier, $boundsSelection = null, $logicSwitched = false)
     {
         $this->rememberBoundsSelectionRevision($boundsSelection);
 
-        if ($this->filterUpdateIsRedundant($field, $condition, $payload, $modifier)) {
+        $counterpartRemoved = $logicSwitched === true && $this->forgetLogicCounterpart($field, $condition, $modifier);
+
+        if (! $counterpartRemoved && $this->filterUpdateIsRedundant($field, $condition, $payload, $modifier)) {
             $this->skipRenderIfCollectionStateUnchanged();
 
             return;

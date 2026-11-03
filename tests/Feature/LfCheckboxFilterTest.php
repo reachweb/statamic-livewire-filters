@@ -1121,6 +1121,155 @@ class LfCheckboxFilterTest extends TestCase
             ->set('field', 'status');
     }
 
+    #[Test]
+    public function the_logic_toggle_switches_a_taxonomy_filter_between_any_and_all()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'logic_toggle' => 'true'])
+            ->assertSee('Match any')
+            ->assertSee('Match all')
+            ->set('selected', ['red', 'black'])
+            ->call('setLogic', 'all')
+            ->assertSet('modifier', 'all')
+            ->assertSet('condition', 'taxonomy')
+            ->assertDispatched('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red', 'black'], modifier: 'all', logicSwitched: true)
+            ->call('setLogic', 'any')
+            ->assertSet('modifier', 'any')
+            ->assertDispatched('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red', 'black'], modifier: 'any', logicSwitched: true);
+    }
+
+    #[Test]
+    public function the_logic_toggle_switches_a_plain_field_between_overlaps_and_contains_all()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'overlaps', 'logic_toggle' => 'true'])
+            ->call('setLogic', 'all')
+            ->assertSet('condition', 'contains_all')
+            ->assertNotDispatched('filter-updated')
+            ->set('selected', ['option1', 'option2'])
+            ->assertDispatched('filter-updated', field: 'item_options', condition: 'contains_all', payload: ['option1', 'option2'])
+            ->call('setLogic', 'any')
+            ->assertSet('condition', 'overlaps')
+            ->assertDispatched('filter-updated', field: 'item_options', condition: 'overlaps', payload: ['option1', 'option2'], logicSwitched: true);
+    }
+
+    #[Test]
+    public function the_logic_only_changes_to_its_own_counterpart()
+    {
+        // Toggle off: setLogic is a no-op and nothing renders
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->assertDontSee('Match all')
+            ->call('setLogic', 'all')
+            ->assertSet('modifier', 'any');
+
+        // `not` is no logic pair, and only `any`/`all` are accepted
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'modifier' => 'not', 'logic_toggle' => 'true'])
+            ->assertDontSee('Match all')
+            ->call('setLogic', 'all')
+            ->assertSet('modifier', 'not');
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'logic_toggle' => 'true'])
+            ->call('setLogic', 'all')
+            ->assertSet('condition', 'is');
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'logic_toggle' => 'true'])
+            ->call('setLogic', 'not')
+            ->assertSet('modifier', 'any');
+    }
+
+    #[Test]
+    public function the_client_cannot_set_the_modifier_or_the_logic_toggle()
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'logic_toggle' => 'true'])
+            ->set('modifier', 'not');
+    }
+
+    #[Test]
+    public function a_preset_with_the_other_logic_key_switches_the_toggle()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'logic_toggle' => 'true'])
+            ->dispatch('preset-params', ['taxonomy:colors:all' => 'red|black'])
+            ->assertSet('modifier', 'all')
+            ->assertSet('selected', ['red', 'black']);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'overlaps', 'logic_toggle' => 'true'])
+            ->dispatch('preset-params', ['item_options:contains_all' => 'option1'])
+            ->assertSet('condition', 'contains_all')
+            ->assertSet('selected', ['option1']);
+
+        // Without the toggle the filter keeps its own key and ignores the other one
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->dispatch('preset-params', ['taxonomy:colors:all' => 'red'])
+            ->assertSet('modifier', 'any')
+            ->assertSet('selected', []);
+    }
+
+    #[Test]
+    public function switching_logic_replaces_the_old_key_and_matches_all_values()
+    {
+        $this->makeEntry($this->collection, 'd')->set('title', 'Both')->set('item_options', ['option1', 'option2'])->save();
+        $this->makeEntry($this->collection, 'e')->set('title', 'All three')->set('item_options', ['option1', 'option2', 'option3'])->save();
+
+        // a, b: [option1]; c: [option2]; d: [option1, option2]; e: all three
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages']])
+            ->dispatch('filter-updated', field: 'item_options', condition: 'overlaps', payload: ['option1', 'option2'], modifier: 'any')
+            ->assertSet('entriesCount', 5)
+            ->dispatch('filter-updated', field: 'item_options', condition: 'contains_all', payload: ['option1', 'option2'], modifier: 'any', logicSwitched: true)
+            ->assertSet('params', ['item_options:contains_all' => 'option1|option2'])
+            ->assertSet('entriesCount', 2)
+            ->dispatch('filter-updated', field: 'item_options', condition: 'contains_all', payload: ['option3', 'option2'], modifier: 'any')
+            ->assertSet('entriesCount', 1)
+            ->dispatch('filter-updated', field: 'item_options', condition: 'overlaps', payload: ['option3', 'option2'], modifier: 'any', logicSwitched: true)
+            ->assertSet('params', ['item_options:overlaps' => 'option3|option2'])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function switching_a_taxonomy_filter_to_all_matches_entries_with_every_term()
+    {
+        $clothes = Facades\Collection::findByHandle('clothes');
+        $this->makeEntry($clothes, 'red-shirt')->set('title', 'Red shirt')->set('colors', ['red'])->save();
+        $this->makeEntry($clothes, 'striped-shirt')->set('title', 'Striped shirt')->set('colors', ['red', 'black'])->save();
+        $this->makeEntry($clothes, 'black-shirt')->set('title', 'Black shirt')->set('colors', ['black', 'yellow'])->save();
+
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red', 'black'], modifier: 'any')
+            ->assertSet('entriesCount', 3)
+            ->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red', 'black'], modifier: 'all', logicSwitched: true)
+            ->assertSet('params', ['taxonomy:colors:all' => 'red|black'])
+            ->assertSet('entriesCount', 1);
+    }
+
+    #[Test]
+    public function a_logic_switch_only_removes_the_keys_own_counterpart()
+    {
+        // logicSwitched on a key without a counterpart leaves the other params alone
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages', 'item_options:is' => 'option1', 'title:contains' => 'Love']])
+            ->dispatch('filter-updated', field: 'item_options', condition: 'in', payload: ['option2'], modifier: 'any', logicSwitched: true)
+            ->assertSet('params', ['item_options:is' => 'option1', 'title:contains' => 'Love', 'item_options:in' => 'option2']);
+    }
+
+    #[Test]
+    public function match_all_counts_keep_the_ticked_values()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $this->makeEntry($this->collection, 'd')->set('title', 'Both')->set('item_options', ['option1', 'option2'])->save();
+        $this->makeEntry($this->collection, 'e')->set('title', 'All three')->set('item_options', ['option1', 'option2', 'option3'])->save();
+
+        $component = Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'overlaps', 'logic_toggle' => 'true'])
+            ->set('selected', ['option1']);
+
+        // Match any counts as if the filter were unset
+        $component->dispatch('params-updated', ...$this->paramsUpdatedArguments(['item_options:overlaps' => 'option1']))
+            ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === ['option1' => 4, 'option2' => 3, 'option3' => 1]);
+
+        // Match all counts what ticking each option would leave
+        $component->call('setLogic', 'all')
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['item_options:contains_all' => 'option1']))
+            ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === ['option1' => 4, 'option2' => 2, 'option3' => 1]);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
