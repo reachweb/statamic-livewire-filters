@@ -3,6 +3,8 @@
         allOptions: @js($this->filter_options),
         options: [],
         counts: @js($this->counts),
+        zeroCount: @js($this->zeroCountMode()),
+        query: '',
         isOpen: false,
         openedWithKeyboard: false,
         openUpwards: false,
@@ -17,9 +19,17 @@
             this.isOpen = false
             this.openedWithKeyboard = false
         },
+        isZeroCount(value) {
+            return this.zeroCount !== 'show' && this.counts[value] === 0 && this.selected != value;
+        },
+        isDisabled(value) {
+            return this.zeroCount === 'disable' && this.isZeroCount(value);
+        },
         getFilteredOptions(query) {
+            this.query = query
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
                 label.toLowerCase().includes(query.toLowerCase())
+                && ! (this.zeroCount === 'hide' && this.isZeroCount(value))
             )
             if (this.options.length === 0) {
                 this.$refs.noResultsMessage?.classList.remove('hidden')
@@ -40,8 +50,8 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="options = Object.entries(allOptions); $watch('selected', () => updateSelectedLabel());"
-    x-on:counts-updated="counts = Object.values($event.detail)[0];"
+    x-init="getFilteredOptions(''); $watch('selected', () => updateSelectedLabel());"
+    x-on:counts-updated="counts = Object.values($event.detail)[0]; getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selected"
     wire:model.live="selected"
@@ -119,10 +129,12 @@
                     <li 
                         class="inline-flex justify-between gap-6 bg-lf-input-bg px-4 py-2 text-lf text-lf-text hover:bg-lf-subtle focus-visible:bg-lf-subtle focus-visible:outline-hidden cursor-pointer" 
                         role="option" 
-                        x-on:click="setSelectedOption(value)" 
-                        x-on:keydown.enter="setSelectedOption(value)" 
+                        x-on:click="isDisabled(value) || setSelectedOption(value)" 
+                        x-on:keydown.enter="isDisabled(value) || setSelectedOption(value)" 
                         x-bind:id="'option-' + index" 
-                        tabindex="0"
+                        x-bind:class="isDisabled(value) ? 'opacity-50 cursor-not-allowed' : null"
+                        x-bind:aria-disabled="isDisabled(value)"
+                        x-bind:tabindex="isDisabled(value) ? -1 : 0"
                     >
                         <span>
                             <span x-bind:class="selected == value ? 'font-bold' : null" x-text="label"></span>

@@ -344,6 +344,82 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_shows_options_with_a_zero_count_by_default()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $html = Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertSet('zero_count', 'show')
+            ->assertSee('Option 3')
+            ->assertSeeHtml('<span class="text-lf-muted ml-1">(0)</span>')
+            ->html();
+
+        $this->assertStringNotContainsString('disabled', $html);
+    }
+
+    #[Test]
+    public function it_hides_options_with_a_zero_count_but_keeps_selected_ones()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        // "Flutes" only matches entry c (option2), so option1 and option3 both count 0, but option1 is checked.
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'selected' => ['option1']])
+            ->assertSee('Option 3')
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes', 'item_options:is' => 'option1']))
+            ->assertSee('Option 1')
+            ->assertSee('Option 2')
+            ->assertDontSee('Option 3')
+            ->assertSet('visibleOptions', ['option1' => 'Option 1', 'option2' => 'Option 2'])
+            ->set('selected', [])
+            ->assertDontSee('Option 1')
+            ->assertDontSee('Option 3');
+    }
+
+    #[Test]
+    public function it_disables_options_with_a_zero_count_but_not_selected_ones()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $html = Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'disable', 'selected' => ['option1']])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes']))
+            ->assertSee('Option 3')
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value="option3"\s+disabled\s*>/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="option1"\s+disabled/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="option2"\s+disabled/', $html);
+    }
+
+    #[Test]
+    public function it_ignores_zero_count_when_counts_are_disabled()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', false);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'view' => 'lf-checkbox-advanced'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes']))
+            ->assertSet('visibleOptions', ['option1' => 'Option 1', 'option2' => 'Option 2', 'option3' => 'Option 3'])
+            ->assertSeeHtml("zeroCount: 'show'");
+    }
+
+    #[Test]
+    public function it_passes_the_zero_count_mode_to_the_advanced_view()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'disable', 'view' => 'lf-checkbox-advanced'])
+            ->assertSeeHtml("zeroCount: 'disable'");
+    }
+
+    #[Test]
+    public function it_rejects_an_unknown_zero_count_mode()
+    {
+        $this->expectExceptionMessage('Invalid zero_count [hidden]');
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hidden']);
+    }
+
+    #[Test]
     public function it_calculates_the_count_for_dictionary_field()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);

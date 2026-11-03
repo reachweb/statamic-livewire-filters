@@ -2,7 +2,9 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use InvalidArgumentException;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 use Statamic\Entries\EntryCollection;
@@ -10,6 +12,54 @@ use Statamic\Entries\EntryCollection;
 trait HandleEntriesCount
 {
     use HandleFieldValuesQuery;
+
+    /** How options with a count of zero render: `show`, `hide` or `disable`. */
+    #[Locked]
+    public $zero_count = 'show';
+
+    public function mountHandleEntriesCount(): void
+    {
+        if (! in_array($this->zero_count, ['show', 'hide', 'disable'], true)) {
+            throw new InvalidArgumentException("Invalid zero_count [{$this->zero_count}]. Use show, hide or disable.");
+        }
+    }
+
+    /** The options to render: with `zero_count="hide"`, those without matching entries are left out. */
+    #[Computed]
+    public function visibleOptions(): array
+    {
+        if ($this->zeroCountMode() !== 'hide') {
+            return $this->filterOptions();
+        }
+
+        return array_diff_key($this->filterOptions(), array_flip($this->zeroCountOptions()));
+    }
+
+    /** @return list<string|int> The option keys to render disabled with `zero_count="disable"`. */
+    #[Computed]
+    public function disabledOptions(): array
+    {
+        return $this->zeroCountMode() === 'disable' ? $this->zeroCountOptions() : [];
+    }
+
+    /** The mode the views apply; without counts there is nothing to hide or disable. */
+    public function zeroCountMode(): string
+    {
+        return config('statamic-livewire-filters.enable_filter_values_count') ? $this->zero_count : 'show';
+    }
+
+    // Counts are null until the first `params-updated`, so only an exact 0 matches. Selected options
+    // stay usable, or a visitor could not see or uncheck an option the other filters narrowed to zero.
+    protected function zeroCountOptions(): array
+    {
+        $selected = array_map('strval', (array) $this->selected);
+
+        return array_keys(array_filter(
+            $this->counts(),
+            fn ($count, $value) => $count === 0 && ! in_array((string) $value, $selected, true),
+            ARRAY_FILTER_USE_BOTH,
+        ));
+    }
 
     #[Computed]
     public function counts()

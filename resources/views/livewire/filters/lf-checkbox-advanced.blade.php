@@ -3,6 +3,8 @@
         allOptions: @js($this->filter_options),
         options: [],
         counts: @js($this->counts),
+        zeroCount: @js($this->zeroCountMode()),
+        query: '',
         isOpen: false,
         openedWithKeyboard: false,
         openUpwards: false,
@@ -22,9 +24,14 @@
                 )
             }
         },
+        isZeroCount(value) {
+            return this.zeroCount !== 'show' && this.counts[value] === 0 && ! this.selectedOptions.includes(value);
+        },
         getFilteredOptions(query) {
+            this.query = query
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
                 label.toLowerCase().includes(query.toLowerCase())
+                && ! (this.zeroCount === 'hide' && this.isZeroCount(value))
             )
             if (this.options.length === 0) {
                 this.$refs.noResultsMessage?.classList.remove('hidden')
@@ -47,8 +54,8 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="options = Object.entries(allOptions); $watch('selectedOptions', () => updateSelectedLabels());"
-    x-on:counts-updated="counts = Object.values($event.detail)[0];"
+    x-init="getFilteredOptions(''); $watch('selectedOptions', () => updateSelectedLabels());"
+    x-on:counts-updated="counts = Object.values($event.detail)[0]; getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selectedOptions"
     wire:model.live="selected"
@@ -124,6 +131,7 @@
                     <li role="option">
                         <label
                             class="flex items-center gap-2 px-4 py-2 text-sm text-lf-text"
+                            x-bind:class="zeroCount === 'disable' && isZeroCount(value) ? 'opacity-50' : null"
                             x-bind:for="'checkboxOption' + value"
                         >
                             <div class="relative flex items-center">
@@ -132,6 +140,7 @@
                                     x-on:change="handleOptionToggle($el)" 
                                     x-on:keydown.enter.prevent="$el.checked = ! $el.checked; handleOptionToggle($el)"
                                     x-bind:checked="selectedOptions.includes(value)"
+                                    x-bind:disabled="zeroCount === 'disable' && isZeroCount(value)"
                                     x-bind:value="value" 
                                     x-bind:id="'checkboxOption' + value"
                                 />
