@@ -355,7 +355,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSeeHtml('<span class="text-lf-muted ml-1">(0)</span>')
             ->html();
 
-        $this->assertStringNotContainsString('disabled', $html);
+        $this->assertSame([], $this->disabledValues($html));
     }
 
     #[Test]
@@ -386,9 +386,7 @@ class LfCheckboxFilterTest extends TestCase
             ->assertSee('Option 3')
             ->html();
 
-        $this->assertMatchesRegularExpression('/value="option3"\s+disabled\s*>/', $html);
-        $this->assertDoesNotMatchRegularExpression('/value="option1"\s+disabled/', $html);
-        $this->assertDoesNotMatchRegularExpression('/value="option2"\s+disabled/', $html);
+        $this->assertSame(['option3'], $this->disabledValues($html));
     }
 
     #[Test]
@@ -399,7 +397,7 @@ class LfCheckboxFilterTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'view' => 'lf-checkbox-advanced'])
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes']))
             ->assertSet('visibleOptions', ['option1' => 'Option 1', 'option2' => 'Option 2', 'option3' => 'Option 3'])
-            ->assertSeeHtml("zeroCount: 'show'");
+            ->assertSet('zeroCountMode', 'show');
     }
 
     #[Test]

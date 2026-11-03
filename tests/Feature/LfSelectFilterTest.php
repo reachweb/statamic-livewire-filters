@@ -284,9 +284,7 @@ class LfSelectFilterTest extends TestCase
             ->assertSee('Option 1')
             ->html();
 
-        $this->assertMatchesRegularExpression('/value="option1"\s+disabled\s*>/', $html);
-        $this->assertDoesNotMatchRegularExpression('/value="option2"\s+disabled/', $html);
-        $this->assertDoesNotMatchRegularExpression('/value="option3"\s+disabled/', $html);
+        $this->assertSame(['option1'], $this->disabledValues($html));
     }
 
     #[Test]
