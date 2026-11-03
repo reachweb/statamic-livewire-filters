@@ -6,7 +6,10 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
  * The event protocol between a filter component and LivewireCollection.
  *
  * A filter consumes:
- *  - `clear-all-filters`: reset the selection; handled by clear().
+ *  - `clear-all-filters`: reset the selection; handled by clear(). From
+ *    LivewireCollection::clearAll() it carries one positional list of the
+ *    condition keys its sweep kept; a filter relays `clear-filter` only when
+ *    its own key is listed, or when the event is bare (LfTags, user code).
  *  - `clear-option` with a tag `{field, value, condition}` from LfTags: drop
  *    that value when `field` matches; handled by clearOption().
  *  - `preset-params` with the collection's params keyed like getParamKey(),

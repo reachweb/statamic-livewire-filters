@@ -69,6 +69,31 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_sends_tags_updated_on_mount_only_when_there_is_a_tag_to_show()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'sort' => 'title']])
+            ->assertNotDispatched('tags-updated');
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red']])
+            ->assertDispatched('tags-updated', fn ($event, $params) => $params[0] === ['taxonomy:colors:any' => 'red']);
+
+        // Later updates always refresh LfTags, even when they leave nothing to show.
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated', field: 'title', condition: 'is', payload: 'Red Shirt', modifier: 'any')
+            ->dispatch('clear-filter', field: 'title', condition: 'is', modifier: 'any')
+            ->assertDispatched('tags-updated', fn ($event, $params) => $params[0] === []);
+    }
+
+    #[Test]
+    public function entries_updated_carries_the_count_label_in_its_plural_form()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertDispatched('entries-updated', count: 3, entriesLabel: 'entries')
+            ->dispatch('filter-updated', field: 'title', condition: 'is', payload: 'Red Shirt', modifier: 'any')
+            ->assertDispatched('entries-updated', count: 1, entriesLabel: 'entry');
+    }
+
+    #[Test]
     public function it_loads_the_livewire_component_with_parameters()
     {
         $params = [

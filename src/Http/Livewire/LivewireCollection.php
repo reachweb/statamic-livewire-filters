@@ -102,7 +102,7 @@ class LivewireCollection extends Component
 
         // Dispatched after the init hooks and trust captures so the initial
         // counts/bounds/tags payloads match what the entries query will use.
-        $this->dispatchParamsUpdated();
+        $this->dispatchParamsUpdated(initial: true);
     }
 
     protected function resolveCurrentPath(): string
@@ -223,16 +223,45 @@ class LivewireCollection extends Component
         }
     }
 
+    /**
+     * The sweep removes every runtime param itself. The condition keys it had to keep
+     * (tag- or init-hook-authored) ride along positionally, so only a filter managing
+     * one of them relays a clear-filter, and listeners without the argument still work.
+     */
     public function clearAll()
     {
         $this->clearAllFilterParams();
-        $this->dispatch('clear-all-filters');
+        $this->dispatch('clear-all-filters', $this->keptConditionParamKeys());
     }
 
+    /**
+     * @return array<int, string>
+     */
+    protected function keptConditionParamKeys(): array
+    {
+        return collect($this->params)
+            ->keys()
+            ->filter(fn ($key) => is_string($key) && str_contains($key, ':'))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Filters skip their relay unless the event lists their key, but the list only holds
+     * the sending collection's kept keys. A collection that kept other condition keys (a
+     * second collection on the page) re-sends the event bare, so every filter relays as
+     * before and its managed keys still clear. Bare events never re-send, so this can't loop.
+     */
     #[On('clear-all-filters')]
     public function resetPaginationOnClearAll(): void
     {
         $this->clearAllFilterParams();
+
+        $keptParamKeys = func_get_args()[0] ?? null;
+
+        if (is_array($keptParamKeys) && array_diff($this->keptConditionParamKeys(), $keptParamKeys) !== []) {
+            $this->dispatch('clear-all-filters');
+        }
     }
 
     public function entries()
@@ -272,6 +301,11 @@ class LivewireCollection extends Component
 
     public function rendered()
     {
-        $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->activeFilters);
+        // The label lets the bundled LfCount view update in the browser with the locale's plural form.
+        $this->dispatch('entries-updated',
+            count: $this->entriesCount,
+            active: $this->activeFilters,
+            entriesLabel: trans_choice('statamic-livewire-filters::ui.entries', (int) $this->entriesCount),
+        );
     }
 }
