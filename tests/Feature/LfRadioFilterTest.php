@@ -167,6 +167,45 @@ class LfRadioFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_hides_options_with_a_zero_count_but_keeps_the_selected_one()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        // "Flutes" only matches entry c (option2), so option1 and option3 both count 0, but option1 is selected.
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'selected' => 'option1'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes', 'item_options:is' => 'option1']))
+            ->assertSee('Option 1')
+            ->assertSee('Option 2')
+            ->assertDontSee('Option 3');
+    }
+
+    #[Test]
+    public function it_disables_options_with_a_zero_count_but_not_the_selected_one()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $html = Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'disable', 'selected' => 'option1'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes']))
+            ->assertSee('Option 3')
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value="option3"\s+disabled\s*>/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="option1"\s+disabled/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="option2"\s+disabled/', $html);
+    }
+
+    #[Test]
+    public function it_keeps_zero_count_options_until_the_counts_are_calculated()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide'])
+            ->assertSee('Option 3')
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertDontSee('Option 3');
+    }
+
+    #[Test]
     public function it_leaves_counts_unset_on_initial_mount_and_populates_them_after_params_updated()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);

@@ -18,8 +18,8 @@
         }"
         @endif
     >
-        @foreach($this->filter_options as $value => $label)
-        <div class="flex items-center">
+        @foreach($this->visible_options as $value => $label)
+        <div class="flex items-center" wire:key="{{ $field }}-{{ $value }}">
             <input 
                 type="checkbox" 
                 class="form-checkbox size-4 text-lf-accent bg-lf-input-bg border-lf-border rounded-lf-sm focus:ring-lf-accent focus:ring-1"
@@ -27,10 +27,11 @@
                 wire:model.live="selected"
                 value="{{ $value }}"
                 @checked(in_array((string) $value, array_map('strval', array_filter($selected, 'is_scalar')), true))
+                @disabled(in_array($value, $this->disabled_options, true))
             >
             <label
                 for="{{ $field }}-{{ $value }}"
-                class="ml-2 text-lf-text"
+                @class(['ml-2 text-lf-text', 'opacity-50' => in_array($value, $this->disabled_options, true)])
             >
                 {{ $label }}
                 @if ($this->counts[$value] !== null)
