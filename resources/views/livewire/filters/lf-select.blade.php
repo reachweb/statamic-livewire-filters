@@ -6,8 +6,12 @@
     >
         <option selected value="">{{ $this->placeholder !== '' ? $this->placeholder : __('statamic-livewire-filters::ui.all') }}</option>
         @foreach ($this->filter_options as $value => $label)
+            @php($available = $this->optionIsAvailable($value))
+            @continue(! $available && $unavailable === 'hide')
             <option 
-                value="{{ $value }}">
+                wire:key="{{ $field }}-{{ $value }}"
+                value="{{ $value }}"
+                @disabled(! $available)>
                 {{ $label }}
                 @if ($this->counts[$value] !== null)
                 <span class="text-gray-500 ml-1">({{ $this->counts[$value] }})</span>

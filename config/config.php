@@ -68,6 +68,9 @@ return [
     // Dynamically narrow range filter bounds to match the other active filters (can be slow for a large number of entries)
     'enable_dynamic_range_bounds' => false,
 
+    // Send the filter state to filters with `depends_on`, so they can narrow their options to the parent's value
+    'enable_dependent_filters' => false,
+
     // Enable custom query string (ignored when enable_query_string is true)
     'custom_query_string' => false,
 

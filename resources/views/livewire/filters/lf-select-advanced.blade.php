@@ -3,6 +3,17 @@
         allOptions: @js($this->filter_options),
         options: [],
         counts: @js($this->counts),
+        available: @js($this->availableOptions),
+        hideUnavailable: @js($unavailable === 'hide'),
+        shownOptions: [],
+        refreshShownOptions() {
+            this.shownOptions = this.options
+                .map(([value, label]) => [value, label, this.isAvailable(value)])
+                .filter(([value, label, available]) => available || ! this.hideUnavailable);
+        },
+        isAvailable(value) {
+            return this.available === null || this.available.includes(String(value)) || String(this.selected) === String(value);
+        },
         isOpen: false,
         openedWithKeyboard: false,
         openUpwards: false,
@@ -21,6 +32,7 @@
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
                 label.toLowerCase().includes(query.toLowerCase())
             )
+            this.refreshShownOptions()
             if (this.options.length === 0) {
                 this.$refs.noResultsMessage?.classList.remove('hidden')
             } else {
@@ -40,8 +52,9 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="options = Object.entries(allOptions); $watch('selected', () => updateSelectedLabel());"
+    x-init="options = Object.entries(allOptions); refreshShownOptions(); $watch('selected', () => { updateSelectedLabel(); refreshShownOptions() }); $watch('available', () => refreshShownOptions());"
     x-on:counts-updated="counts = Object.values($event.detail)[0];"
+    x-on:available-options-updated="available = Object.values($event.detail)[0];"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selected"
     wire:model.live="selected"
@@ -115,12 +128,14 @@
                 </li>
                 @endif
                 
-                <template x-for="([value, label], index) in options" x-bind:key="value">
+                <template x-for="([value, label, available], index) in shownOptions" x-bind:key="value">
                     <li 
                         class="inline-flex justify-between gap-6 bg-lf-input-bg px-4 py-2 text-lf text-lf-text hover:bg-lf-subtle focus-visible:bg-lf-subtle focus-visible:outline-hidden cursor-pointer" 
                         role="option" 
-                        x-on:click="setSelectedOption(value)" 
-                        x-on:keydown.enter="setSelectedOption(value)" 
+                        x-on:click="available && setSelectedOption(value)" 
+                        x-on:keydown.enter="available && setSelectedOption(value)" 
+                        x-bind:aria-disabled="! available"
+                        x-bind:class="available ? null : 'opacity-50 cursor-not-allowed'"
                         x-bind:id="'option-' + index" 
                         tabindex="0"
                     >

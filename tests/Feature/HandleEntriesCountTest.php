@@ -173,9 +173,7 @@ class HandleEntriesCountTest extends TestCase
         Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertNotDispatched('counts-updated')
-            ->assertViewHas('statamic_field', function ($statamic_field) {
-                return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
-            });
+            ->assertSet('statamic_field.counts', ['option1' => null, 'option2' => null]);
     }
 
     #[Test]
@@ -297,9 +295,7 @@ class HandleEntriesCountTest extends TestCase
             Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
                 ->dispatch('params-updated', ...$arguments)
                 ->assertNotDispatched('counts-updated')
-                ->assertViewHas('statamic_field', function ($statamic_field) {
-                    return $statamic_field['counts'] === ['option1' => null, 'option2' => null];
-                });
+                ->assertSet('statamic_field.counts', ['option1' => null, 'option2' => null]);
         }
     }
 
