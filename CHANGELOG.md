@@ -25,6 +25,11 @@ Sites that use the bundled views, or published copies of them, need no changes. 
 - **Custom views that read `$statamic_field['counts']`.** None of the bundled views ever did. With `enable_filter_values_count` off the key is no longer set, so `$statamic_field['counts'][$value]` throws an "Undefined array key" error. Use `$this->counts[$value]` instead, which works with counts on or off.
 - **Custom views with a bare `wire:ignore` on their root.** Livewire already skipped morphing such a root, so the HTML it no longer receives was being thrown away. Nothing changes in the browser.
 - **Leftover cache entries.** `lw_computed.*` entries written by earlier versions are no longer read and expire on their own within an hour.
+- **`validate_filter_values`.** With the bundled checkbox view, an invalid value still shows the validation error but now reaches the collection too. Don't rely on validation to keep values out of the query; a visitor could always send `filter-updated` directly.
+- **Subclasses of `LfCheckboxFilter`.** A subclass that defines its own `payload()`, `updatedSelected()` or `dispatchFilterUpdated()` keeps the server relay and works as before, without the saved request.
+- **Published `lf-checkbox.blade.php`.** It keeps working through the server relay. Merge in the new bundled markup, or re-publish it, to get the saved request.
+- **Published `ui/count.blade.php`.** Any published copy, re-published ones included, keeps the server listener and works as before. Delete it to get the saved request.
+- **Custom `clear-all-filters` listeners.** When the collection's "Clear all" sends the event, it now passes one argument, the list of condition keys it kept. A listener that declares a parameter receives that list.
 
 ## [4.6.1] - 2026-11-02
 
