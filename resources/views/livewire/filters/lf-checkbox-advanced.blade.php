@@ -10,6 +10,7 @@
             this.shownOptions = this.options
                 .map(([value, label]) => [value, label, this.isAvailable(value)])
                 .filter(([value, label, available]) => available || ! this.hideUnavailable);
+            this.$refs.noResultsMessage?.classList.toggle('hidden', this.shownOptions.length > 0);
         },
         isAvailable(value) {
             return this.available === null || this.available.includes(String(value)) || this.selectedOptions.includes(String(value));
@@ -38,11 +39,6 @@
                 label.toLowerCase().includes(query.toLowerCase())
             )
             this.refreshShownOptions()
-            if (this.options.length === 0) {
-                this.$refs.noResultsMessage?.classList.remove('hidden')
-            } else {
-                this.$refs.noResultsMessage?.classList.add('hidden')
-            }
         },
         updateSelectedLabels() {
             this.selectedLabels = this.selectedOptions.map(value => {

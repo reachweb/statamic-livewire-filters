@@ -31,6 +31,8 @@ trait IsLivewireFilter
     #[Locked]
     public $modifier = 'any';
 
+    protected bool $filterStateChangedThisRequest = false;
+
     public function mountIsLivewireFilter($blueprint)
     {
         [$collection, $blueprint] = explode('.', $blueprint);
@@ -108,6 +110,8 @@ trait IsLivewireFilter
 
     public function clearFilters($boundsSelection = null)
     {
+        $this->markFilterStateChanged();
+
         $this->dispatch('clear-filter',
             field: $this->field,
             condition: $this->condition,
@@ -115,6 +119,25 @@ trait IsLivewireFilter
             boundsSelection: $boundsSelection,
         )
             ->to(LivewireCollection::class);
+    }
+
+    /**
+     * Like LivewireCollection, one pooled request can carry several event calls for
+     * this filter, and skipRender() is request-wide: a no-op `params-updated` must
+     * not suppress the render of a real change handled in the same request.
+     */
+    protected function markFilterStateChanged(): void
+    {
+        $this->filterStateChangedThisRequest = true;
+
+        \Livewire\store($this)->set('skipRender', false);
+    }
+
+    protected function skipRenderIfFilterStateUnchanged(): void
+    {
+        if (! $this->filterStateChangedThisRequest) {
+            $this->skipRender();
+        }
     }
 
     protected function getParamKey()

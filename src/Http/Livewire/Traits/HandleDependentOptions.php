@@ -8,9 +8,8 @@ use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 /**
- * Restricts an options filter to the values that co-occur with the active value
- * of the field named in `depends_on`. Livewire binds one method per event, so
- * this trait's listener replaces HandleEntriesCount's and refreshes both.
+ * Restricts an options filter, while the field named in `depends_on` has a
+ * value, to the options found in the entries matching every other active filter.
  */
 trait HandleDependentOptions
 {
@@ -23,13 +22,25 @@ trait HandleDependentOptions
     #[Locked]
     public string $unavailable = 'hide';
 
-    // Option keys (as strings) that co-occur with the parent value; null shows every option.
+    // Option keys (as strings) found in the matching entries; null shows every option.
     #[Locked]
     public ?array $availableOptions = null;
 
     #[Locked]
     public ?string $parentValue = null;
 
+    // The first `params-updated` only records the parent value, so a preset selection is never cleared on page load.
+    #[Locked]
+    public bool $parentValueRecorded = false;
+
+    public function mountHandleDependentOptions(): void
+    {
+        if (! in_array($this->unavailable, ['hide', 'disable'], true)) {
+            throw new \InvalidArgumentException("The unavailable parameter must be `hide` or `disable`, `{$this->unavailable}` given.");
+        }
+    }
+
+    // Keeps HandleEntriesCount's name so it replaces that listener: Livewire binds one method per event.
     #[On('params-updated')]
     public function updateCounts($params, $boundsQuery = null)
     {
@@ -39,14 +50,17 @@ trait HandleDependentOptions
             ? RangeBoundsQuery::paramsForCollection($boundsQuery, $this->collection)
             : null;
 
-        // The collection sends this event to every filter, so one with nothing to update skips its render.
-        $changed = $params !== null && $this->depends_on !== null && $this->refreshAvailableOptions($params);
+        if ($params !== null && $this->depends_on !== null) {
+            $this->refreshAvailableOptions($params);
+        }
 
         if ($params !== null && $countsEnabled) {
             $this->refreshCounts($params);
-        } elseif (! $changed) {
-            $this->skipRender();
+            $this->markFilterStateChanged();
         }
+
+        // The collection sends this event to every filter, so one with nothing to update skips its render.
+        $this->skipRenderIfFilterStateUnchanged();
     }
 
     public function optionIsAvailable($value): bool
@@ -56,14 +70,12 @@ trait HandleDependentOptions
             || in_array((string) $value, array_map('strval', (array) $this->selected), true);
     }
 
-    /**
-     * @return bool Whether the available options or the selection changed.
-     */
-    protected function refreshAvailableOptions(array $params): bool
+    protected function refreshAvailableOptions(array $params): void
     {
         $parentValue = $this->activeParentValue($params);
-        $parentChanged = $parentValue !== $this->parentValue;
+        $parentChanged = $this->parentValueRecorded && $parentValue !== $this->parentValue;
         $this->parentValue = $parentValue;
+        $this->parentValueRecorded = true;
 
         $available = null;
 
@@ -77,35 +89,34 @@ trait HandleDependentOptions
             $available = array_values(array_unique(array_map('strval', $this->optionValuesIn($fieldValues))));
         }
 
-        $optionsChanged = $available !== $this->availableOptions;
-
-        if ($optionsChanged) {
+        if ($available !== $this->availableOptions) {
             $this->availableOptions = $available;
             $this->dispatch('available-options-updated', $available);
+            $this->markFilterStateChanged();
         }
 
-        $selectionChanged = $parentChanged && $available !== null && $this->dropUnavailableSelection();
-
-        return $optionsChanged || $selectionChanged;
+        if ($parentChanged && $available !== null) {
+            $this->dropUnavailableSelection();
+        }
     }
 
-    protected function dropUnavailableSelection(): bool
+    protected function dropUnavailableSelection(): void
     {
-        $selected = array_map('strval', (array) $this->selected);
+        $selected = array_values(array_filter(array_map('strval', (array) $this->selected), fn ($value) => $value !== ''));
         $kept = array_values(array_intersect($selected, $this->availableOptions));
 
         if ($kept === $selected) {
-            return false;
+            return;
         }
 
         if (! is_array($this->selected) || $kept === []) {
             $this->clear();
-        } else {
-            $this->selected = $kept;
-            $this->updatedSelected();
+
+            return;
         }
 
-        return true;
+        $this->selected = $kept;
+        $this->updatedSelected();
     }
 
     /**

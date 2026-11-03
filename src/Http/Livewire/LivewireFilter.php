@@ -42,6 +42,8 @@ abstract class LivewireFilter extends Component implements FilterContract
 
     public function updatedSelected()
     {
+        $this->markFilterStateChanged();
+
         if (method_exists($this, 'rules') && config('statamic-livewire-filters.validate_filter_values')) {
             $this->validate();
         }
@@ -52,6 +54,8 @@ abstract class LivewireFilter extends Component implements FilterContract
     /** @param  array<string, mixed>  $extra  Additional named event params, such as `boundsSelection`. */
     protected function dispatchFilterUpdated(array $extra = []): void
     {
+        $this->markFilterStateChanged();
+
         $this->dispatch('filter-updated', ...[
             'field' => $this->field,
             'condition' => $this->condition,
@@ -80,6 +84,7 @@ abstract class LivewireFilter extends Component implements FilterContract
     #[On('preset-params')]
     public function setPresetValues($params)
     {
+        $this->markFilterStateChanged();
         $this->applyPreset($params);
     }
 
