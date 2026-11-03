@@ -189,9 +189,21 @@ class LfRadioFilterTest extends TestCase
             ->assertSee('Option 3')
             ->html();
 
-        $this->assertMatchesRegularExpression('/value="option3"\s+disabled\s*>/', $html);
-        $this->assertDoesNotMatchRegularExpression('/value="option1"\s+disabled/', $html);
-        $this->assertDoesNotMatchRegularExpression('/value="option2"\s+disabled/', $html);
+        $this->assertSame(['option3'], $this->disabledValues($html));
+    }
+
+    #[Test]
+    public function it_ignores_a_tampered_nested_selection_when_applying_zero_count()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        Config::set('statamic-livewire-filters.validate_filter_values', false);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->set('selected', [['option3']])
+            ->assertOk()
+            ->assertSee('Option 1')
+            ->assertDontSee('Option 3');
     }
 
     #[Test]

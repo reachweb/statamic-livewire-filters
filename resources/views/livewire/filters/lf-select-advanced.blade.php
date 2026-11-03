@@ -3,7 +3,7 @@
         allOptions: @js($this->filter_options),
         options: [],
         counts: @js($this->counts),
-        zeroCount: @js($this->zeroCountMode()),
+        zeroCount: @js($this->zero_count_mode),
         query: '',
         isOpen: false,
         openedWithKeyboard: false,
@@ -28,7 +28,7 @@
         getFilteredOptions(query) {
             this.query = query
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
-                label.toLowerCase().includes(query.toLowerCase())
+                String(label ?? value).toLowerCase().includes(query.toLowerCase())
                 && ! (this.zeroCount === 'hide' && this.isZeroCount(value))
             )
             if (this.options.length === 0) {
@@ -39,6 +39,14 @@
         },
         updateSelectedLabel() {
             this.selectedLabel = this.allOptions[this.selected] || this.selected;
+        },
+        // Disabled options keep tabindex=-1, which $focus still treats as focusable, so arrow keys skip them here.
+        focusOption(step) {
+            const items = Array.from(this.$refs.listbox.querySelectorAll('li[role=option]:not([aria-disabled=true])'));
+            if (items.length === 0) return;
+            const index = items.indexOf(document.activeElement);
+            const next = index === -1 ? (step > 0 ? 0 : items.length - 1) : (index + step + items.length) % items.length;
+            items[next].focus();
         },
         resetSearch() {
             if (this.$refs.searchField) {
@@ -51,7 +59,7 @@
         },
     }" 
     x-init="getFilteredOptions(''); $watch('selected', () => updateSelectedLabel());"
-    x-on:counts-updated="counts = Object.values($event.detail)[0]; getFilteredOptions(query);"
+    x-on:counts-updated="counts = Object.values($event.detail)[0]; if (zeroCount === 'hide') getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selected"
     wire:model.live="selected"
@@ -115,8 +123,9 @@
             <ul 
                 class="flex max-h-64 w-full flex-col overflow-hidden overflow-y-auto py-1.5" 
                 role="listbox" 
-                x-on:keydown.down.prevent="$focus.wrap().next()" 
-                x-on:keydown.up.prevent="$focus.wrap().previous()" 
+                x-ref="listbox"
+                x-on:keydown.down.prevent="focusOption(1)" 
+                x-on:keydown.up.prevent="focusOption(-1)" 
                 x-trap="openedWithKeyboard"
             >
                 @if ($this->searchable)

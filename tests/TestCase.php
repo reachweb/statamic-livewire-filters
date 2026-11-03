@@ -4,7 +4,13 @@ namespace Reach\StatamicLivewireFilters\Tests;
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use Livewire\LivewireServiceProvider;
+use Reach\StatamicLivewireFilters\ServiceProvider;
+use Spatie\LaravelRay\RayServiceProvider;
+use Statamic\Extend\Manifest;
 use Statamic\Facades\Site;
+use Statamic\Providers\StatamicServiceProvider;
+use Statamic\Stache\Stores\UsersStore;
 
 abstract class TestCase extends \Orchestra\Testbench\TestCase
 {
@@ -46,17 +52,29 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     protected function getPackageProviders($app)
     {
         return [
-            \Statamic\Providers\StatamicServiceProvider::class,
-            \Livewire\LivewireServiceProvider::class,
-            \Reach\StatamicLivewireFilters\ServiceProvider::class,
+            StatamicServiceProvider::class,
+            LivewireServiceProvider::class,
+            ServiceProvider::class,
             \Wilderborn\Partyline\ServiceProvider::class,
-            \Spatie\LaravelRay\RayServiceProvider::class,
+            RayServiceProvider::class,
         ];
     }
 
     protected function getPackageAliases($app)
     {
         return ['Statamic' => 'Statamic\Statamic'];
+    }
+
+    /** The values of the disabled inputs and options in rendered filter HTML. */
+    protected function disabledValues(string $html): array
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($html);
+
+        return array_map(
+            fn ($node) => $node->getAttribute('value'),
+            iterator_to_array((new \DOMXPath($dom))->query('//input[@disabled] | //option[@disabled]')),
+        );
     }
 
     protected function resolveApplicationConfiguration($app)
@@ -78,8 +96,8 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     protected function getEnvironmentSetUp($app)
     {
         // Statamic 6 moved Manifest from Statamic\Extend to Statamic\Addons
-        $manifestClass = class_exists(\Statamic\Extend\Manifest::class)
-            ? \Statamic\Extend\Manifest::class
+        $manifestClass = class_exists(Manifest::class)
+            ? Manifest::class
             : \Statamic\Addons\Manifest::class;
 
         $app->make($manifestClass)->manifest = [
@@ -93,7 +111,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
         $app['config']->set('statamic.stache.watcher', false);
         $app['config']->set('statamic.users.repository', 'file');
         $app['config']->set('statamic.stache.stores.users', [
-            'class' => \Statamic\Stache\Stores\UsersStore::class,
+            'class' => UsersStore::class,
             'directory' => __DIR__.'/__fixtures__/users',
         ]);
 

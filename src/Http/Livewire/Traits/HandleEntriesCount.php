@@ -2,10 +2,10 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
-use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
+use Reach\StatamicLivewireFilters\Exceptions\InvalidZeroCountModeException;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 use Statamic\Entries\EntryCollection;
 
@@ -20,7 +20,7 @@ trait HandleEntriesCount
     public function mountHandleEntriesCount(): void
     {
         if (! in_array($this->zero_count, ['show', 'hide', 'disable'], true)) {
-            throw new InvalidArgumentException("Invalid zero_count [{$this->zero_count}]. Use show, hide or disable.");
+            throw new InvalidZeroCountModeException($this->zero_count);
         }
     }
 
@@ -43,6 +43,7 @@ trait HandleEntriesCount
     }
 
     /** The mode the views apply; without counts there is nothing to hide or disable. */
+    #[Computed]
     public function zeroCountMode(): string
     {
         return config('statamic-livewire-filters.enable_filter_values_count') ? $this->zero_count : 'show';
@@ -52,7 +53,8 @@ trait HandleEntriesCount
     // stay usable, or a visitor could not see or uncheck an option the other filters narrowed to zero.
     protected function zeroCountOptions(): array
     {
-        $selected = array_map('strval', (array) $this->selected);
+        // `selected` comes from the client, so a tampered nested array must not reach strval().
+        $selected = array_map('strval', array_filter((array) $this->selected, 'is_scalar'));
 
         return array_keys(array_filter(
             $this->counts(),

@@ -3,7 +3,7 @@
         allOptions: @js($this->filter_options),
         options: [],
         counts: @js($this->counts),
-        zeroCount: @js($this->zeroCountMode()),
+        zeroCount: @js($this->zero_count_mode),
         query: '',
         isOpen: false,
         openedWithKeyboard: false,
@@ -30,7 +30,7 @@
         getFilteredOptions(query) {
             this.query = query
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
-                label.toLowerCase().includes(query.toLowerCase())
+                String(label ?? value).toLowerCase().includes(query.toLowerCase())
                 && ! (this.zeroCount === 'hide' && this.isZeroCount(value))
             )
             if (this.options.length === 0) {
@@ -55,7 +55,7 @@
         },
     }" 
     x-init="getFilteredOptions(''); $watch('selectedOptions', () => updateSelectedLabels());"
-    x-on:counts-updated="counts = Object.values($event.detail)[0]; getFilteredOptions(query);"
+    x-on:counts-updated="counts = Object.values($event.detail)[0]; if (zeroCount === 'hide') getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selectedOptions"
     wire:model.live="selected"
