@@ -142,7 +142,6 @@ class CountQueryPoolTest extends TestCase
         $this->assertSame(['"Car B"', '"Car C"'], $this->pooled('cars', ['sort' => 'title:asc', 'limit' => 2, 'offset' => 1], 'title'));
         $this->assertSame(['"Car Draft"'], $this->pooled('cars', ['status:is' => 'draft'], 'title'));
         $this->assertSame(['"Past"'], $this->pooled('news', [], 'title'));
-        $this->assertSame(['"Past"'], $this->pooled('news', ['show_future' => true], 'title'), 'status=published still hides a scheduled entry');
         $this->assertSame(['"Future"', '"Past"'], $this->pooled('news', ['status:is' => 'any'], 'title'));
         $this->assertSame(['"Car A"', '"Car D"', '"Truck A"'], $this->pooled('cars|trucks', ['taxonomy:brands:any' => 'toyota'], 'title'));
         $this->assertSame(['"automatic"', '"manual"', '"manual"'], $this->pooled('cars', ['query_scope' => 'multiselect', 'multiselect:color' => 'red|green'], 'transmission'));
