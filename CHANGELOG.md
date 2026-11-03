@@ -6,6 +6,11 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Faceted counts and dynamic range bounds now find the matching entries once per filter state per request and read each field straight from the Stache index, instead of running one sorted query per filter. On a 5,000-entry collection with 8 filters, the counts request after page load drops from about 1 s to 300 ms, and the requests after filter changes get about 25% faster overall (less when many filters are active). Counts and bounds are the same as before. The Eloquent driver is unchanged.
+- The minimum supported Statamic 5 version is now 5.29.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

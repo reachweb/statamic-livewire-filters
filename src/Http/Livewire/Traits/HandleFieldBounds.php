@@ -254,7 +254,12 @@ trait HandleFieldBounds
             ->filter(fn ($value) => $value !== null && $value !== '');
 
         if (($this->statamic_field['type'] ?? null) === 'date') {
+            // Stache indexes hold Carbon instances already; only Eloquent hands back strings
             $values = $values->map(function ($value) {
+                if ($value instanceof \DateTimeInterface) {
+                    return $value->getTimestamp();
+                }
+
                 try {
                     return Carbon::parse($value)->timestamp;
                 } catch (\Throwable $exception) {
