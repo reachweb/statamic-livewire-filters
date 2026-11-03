@@ -389,6 +389,23 @@ class RenderWasteRegressionTest extends TestCase
     }
 
     #[Test]
+    public function a_pooled_request_renders_an_own_clear_option_that_fails_validation_after_a_foreign_clear_option()
+    {
+        Config::set('statamic-livewire-filters.validate_filter_values', true);
+        $this->useFixtureViews('render-waste-published');
+
+        $component = Livewire::test(...$this->filters()['checkbox'])->dispatch('preset-params', ['color:is' => 'red|nope']);
+
+        $component->update(calls: [
+            $this->dispatchCall('clear-option', [$this->foreignTag()]),
+            $this->dispatchCall('clear-option', [['field' => 'color', 'value' => 'red', 'fieldLabel' => 'Color', 'optionLabel' => 'Red', 'condition' => 'is']]),
+        ]);
+
+        $component->assertSet('selected', ['nope'])->assertHasErrors('selected')->assertSeeHtml('<p class="err">');
+        $this->assertRendered($component);
+    }
+
+    #[Test]
     public function a_pooled_request_of_only_no_ops_skips_the_render()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', false);

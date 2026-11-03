@@ -48,11 +48,14 @@ abstract class LivewireFilter extends Component implements FilterContract
 
     public function updatedSelected()
     {
+        // Server-side callers such as clearOption() bypass the updating hook; mark before
+        // validate() can throw so the new selection and its error still render.
+        $this->markFilterStateChanged();
+
         if (method_exists($this, 'rules') && config('statamic-livewire-filters.validate_filter_values')) {
             $this->validate();
         }
 
-        $this->markFilterStateChanged();
         $this->dispatchFilterUpdated();
     }
 
