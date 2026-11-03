@@ -4,6 +4,7 @@ namespace Reach\StatamicLivewireFilters\Tests\Feature;
 
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\KeyWritten;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
@@ -236,6 +237,24 @@ class FilterSnapshotAndOptionsTest extends TestCase
     }
 
     #[Test]
+    public function lf_tags_keeps_its_options_across_requests_when_they_cannot_come_from_the_stache_indexes(): void
+    {
+        $one = Entry::query()->where('collection', 'items')->where('slug', 'one')->first()->id();
+        $params = ['from' => 'items', 'taxonomy:colors:any' => 'red|black', 'related:is' => $one];
+
+        NonIndexedLfTags::$resolutions = 0;
+        $component = Livewire::test(NonIndexedLfTags::class, ['blueprint' => 'items.item', 'fields' => 'colors|related']);
+
+        foreach ([1, 2, 3] as $request) {
+            Blink::flush();
+            $component->dispatch('tags-updated', $params);
+            $this->assertSame(['Red', 'Black', 'One'], collect($component->instance()->tags)->pluck('optionLabel')->all());
+        }
+
+        $this->assertSame(1, NonIndexedLfTags::$resolutions, 'options are resolved once, then served from the cache store');
+    }
+
+    #[Test]
     public function lf_tags_produces_identical_tags_on_later_requests_without_a_persisted_cache(): void
     {
         $one = Entry::query()->where('collection', 'items')->where('slug', 'one')->first()->id();
@@ -350,5 +369,22 @@ class FilterSnapshotAndOptionsTest extends TestCase
 
         Site::setCurrent('en');
         $this->assertSame(['Lamp', 'Candle'], array_values($this->mountOptions('related', 'is', [], 'goods.good')));
+    }
+}
+
+class NonIndexedLfTags extends LfTags
+{
+    public static int $resolutions = 0;
+
+    protected function optionsComeFromStacheIndexes(): bool
+    {
+        return false;
+    }
+
+    protected function resolveStatamicFields(): Collection
+    {
+        static::$resolutions++;
+
+        return parent::resolveStatamicFields();
     }
 }

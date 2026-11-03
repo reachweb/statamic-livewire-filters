@@ -11,7 +11,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 - Faceted counts and dynamic range bounds now find the matching entries once per filter state per request and read each field straight from the Stache index, instead of running one sorted query per filter. On a 5,000-entry collection with 8 filters, the counts request after page load drops from about 1 s to 300 ms, and the requests after filter changes get about 25% faster overall (less when many filters are active). Counts and bounds are the same as before. The Eloquent driver is unchanged.
 - The minimum supported Statamic 5 version is now 5.29.
 - With `enable_filter_values_count` off, filter snapshots no longer carry a placeholder `counts` array, which made up nearly half of a large filter's request. `$this->counts` in views returns the same empty counts as before. A custom view that reads `$statamic_field['counts']` directly must switch to `$this->counts`.
-- Filter option lists are no longer stored in the cache store on every page view, so `lw_computed` cache files stop piling up. Term and entry option labels are now read from the Stache indexes instead of loading every term and entry, which makes mounting a filter over a large taxonomy or collection several times faster.
+- Filter option lists are no longer stored in the cache store on every page view, so `lw_computed` cache files stop piling up. On drivers other than the Stache, `LfTags` still caches its resolved options for the life of the component. Term and entry option labels are now read from the Stache indexes instead of loading every term and entry, which makes mounting a filter over a large taxonomy or collection several times faster.
 
 ## [4.6.1] - 2026-11-02
 
