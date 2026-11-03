@@ -50,4 +50,19 @@ HTML;
             'class' => $this->params->get('class'),
         ])->render();
     }
+
+    public function applyButton(): string
+    {
+        return view('statamic-livewire-filters::livewire.ui.apply-button', [
+            'class' => $this->params->get('class'),
+        ])->render();
+    }
+
+    public function drawer(): string
+    {
+        return view('statamic-livewire-filters::livewire.ui.drawer', [
+            'slot' => $this->isPair ? $this->parse() : '',
+            'class' => $this->params->get('class'),
+        ])->render();
+    }
 }

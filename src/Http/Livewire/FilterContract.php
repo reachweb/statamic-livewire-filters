@@ -12,6 +12,10 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
  *  - `preset-params` with the collection's params keyed like getParamKey(),
  *    sent once when they come from the collection tag or the URL: restore the
  *    selection; handled by setPresetValues().
+ *  - `pending-filters-discarded` with `filters` (a list of `{field, condition,
+ *    modifier}`) and the applied `params`: in deferred mode, a listed filter
+ *    restores its selection from `params`, or clears it when `params` holds
+ *    none of its keys; handled by discardPendingSelection() on LivewireFilter.
  *  - `params-updated` with `(params, boundsQuery)`: only filters that show
  *    counts or dynamic bounds listen (HandleEntriesCount, HandleFieldBounds).
  *    They ignore the plain `params`, which a client controls, and read the

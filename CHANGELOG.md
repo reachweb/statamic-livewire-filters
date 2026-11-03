@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- Deferred filters for mobile. With `defer_filters="true"` on the collection tag, filter changes are queued instead of re-querying the collection on every change, and applied together on an `apply-filters` event. Entries, tags, faceted counts and the URL only update on apply. A `discard-filters` event drops the queue and restores the filters to their applied values. The new `{{ livewire-filters:drawer }}` pair tag wraps filters in an off-canvas panel with a "Filters (n)" trigger and an "Apply (n)" / "Show N results" button, also available on its own as `{{ livewire-filters:apply_button }}`.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security

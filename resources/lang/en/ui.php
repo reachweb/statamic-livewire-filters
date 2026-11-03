@@ -3,11 +3,14 @@
 return [
     // UI Elements
     'all' => 'All',
+    'apply' => 'Apply',
     'clear' => 'Clear',
     'clear_filters' => 'Clear filter',
     'clear_all' => 'Clear all',
+    'close' => 'Close',
     'default' => 'Default',
     'entries' => '{0} entries|{1} entry|[2,*] entries',
+    'filters' => 'Filters',
     'load_more' => 'Load more',
     'loading' => 'Loading…',
     'to' => 'to',
@@ -15,6 +18,8 @@ return [
     'please_select' => 'Please select',
     'search' => 'Search',
     'search_options' => 'Search options',
+    'show_results' => 'Show results',
+    'show_n_results' => '{0} No results|{1} Show 1 result|[2,*] Show :count results',
     'select_date' => 'Select date',
     'no_results' => 'No results found',
 

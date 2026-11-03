@@ -60,4 +60,18 @@ class LoadMoreTest extends TestCase
         $this->assertStringContainsString('Show more cars', $html);
         $this->assertStringContainsString('class="btn btn-primary"', $html);
     }
+
+    public function test_the_drawer_wraps_its_content_with_a_filters_trigger_and_the_apply_button()
+    {
+        $tag = $this->tag();
+        $tag->isPair = true;
+        $tag->setContent('<div id="my-filters"></div>');
+
+        $html = $tag->drawer();
+
+        $this->assertStringContainsString('<div id="my-filters"></div>', $html);
+        $this->assertStringContainsString("Livewire.dispatch('discard-filters')", $html);
+        $this->assertStringContainsString("Livewire.dispatch('apply-filters')", $html);
+        $this->assertStringContainsString('Show 1 result', $html);
+    }
 }

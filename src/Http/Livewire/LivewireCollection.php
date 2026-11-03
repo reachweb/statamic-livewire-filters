@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -71,6 +72,22 @@ class LivewireCollection extends Component
 
     #[Locked]
     public $scrollTo = null;
+
+    #[Locked]
+    public $deferFilters = false;
+
+    /**
+     * Filter changes queued in deferred mode, keyed by filter, each holding the
+     * filter-updated arguments that apply-filters replays. Never in the URL.
+     */
+    #[Locked]
+    public array $pendingParams = [];
+
+    #[Locked]
+    public int $pendingCount = 0;
+
+    /** Request-scoped: true while apply-filters replays the queue, so it is not re-queued. */
+    protected bool $applyingPendingFilters = false;
 
     public function mount($params)
     {
@@ -152,6 +169,12 @@ class LivewireCollection extends Component
     #[On('filter-updated')]
     public function filterUpdated($field, $condition, $payload, $modifier, $boundsSelection = null)
     {
+        if ($this->shouldQueueFilterChanges()) {
+            $this->queueFilterChange($field, $condition, $payload, $modifier, $boundsSelection);
+
+            return;
+        }
+
         $this->rememberBoundsSelectionRevision($boundsSelection);
 
         if ($this->filterUpdateIsRedundant($field, $condition, $payload, $modifier)) {
@@ -181,6 +204,84 @@ class LivewireCollection extends Component
             return;
         }
         $this->handleCondition($field, $condition, $payload);
+    }
+
+    #[On('apply-filters')]
+    public function applyFilters(): void
+    {
+        $pending = $this->pendingParams;
+
+        if ($pending === []) {
+            $this->skipRenderIfCollectionStateUnchanged();
+
+            return;
+        }
+
+        $this->pendingParams = [];
+        $this->applyingPendingFilters = true;
+
+        foreach ($pending as $change) {
+            $this->filterUpdated(...$change);
+        }
+
+        $this->applyingPendingFilters = false;
+        $this->syncPendingCount();
+    }
+
+    /**
+     * Drop the queue and tell the filters that queued a change to restore their
+     * selection from the applied params.
+     */
+    #[On('discard-filters')]
+    public function discardFilters(): void
+    {
+        $this->skipRenderIfCollectionStateUnchanged();
+
+        if ($this->pendingParams === []) {
+            return;
+        }
+
+        $filters = collect($this->pendingParams)
+            ->map(fn ($change) => Arr::only($change, ['field', 'condition', 'modifier']))
+            ->values()
+            ->all();
+
+        $this->pendingParams = [];
+        $this->syncPendingCount();
+
+        $this->dispatch('pending-filters-discarded', filters: $filters, params: $this->params);
+    }
+
+    protected function shouldQueueFilterChanges(): bool
+    {
+        return $this->deferFilters && ! $this->applyingPendingFilters;
+    }
+
+    /**
+     * A later change of the same filter replaces its queued one, and a change
+     * back to the applied value removes it, so pendingCount counts filters that
+     * would change on apply. Queueing never queries or renders.
+     */
+    protected function queueFilterChange($field, $condition, $payload, $modifier, $boundsSelection = null): void
+    {
+        $this->skipRenderIfCollectionStateUnchanged();
+
+        $key = implode('|', [$field, $condition, $modifier ?? '']);
+
+        if ($this->filterPayloadMatchesParams($field, $condition, $payload, $modifier)) {
+            unset($this->pendingParams[$key]);
+        } else {
+            $this->pendingParams[$key] = compact('field', 'condition', 'payload', 'modifier', 'boundsSelection');
+        }
+
+        $this->syncPendingCount();
+    }
+
+    protected function syncPendingCount(): void
+    {
+        $this->pendingCount = count($this->pendingParams);
+
+        $this->dispatch('pending-filters-updated', count: $this->pendingCount);
     }
 
     #[On('sort-updated')]
@@ -225,6 +326,7 @@ class LivewireCollection extends Component
 
     public function clearAll()
     {
+        $this->clearPendingFilters();
         $this->clearAllFilterParams();
         $this->dispatch('clear-all-filters');
     }
@@ -232,7 +334,17 @@ class LivewireCollection extends Component
     #[On('clear-all-filters')]
     public function resetPaginationOnClearAll(): void
     {
+        $this->clearPendingFilters();
         $this->clearAllFilterParams();
+    }
+
+    /** Clear all applies at once; the filters reset themselves, so queued changes are moot. */
+    protected function clearPendingFilters(): void
+    {
+        if ($this->pendingParams !== []) {
+            $this->pendingParams = [];
+            $this->syncPendingCount();
+        }
     }
 
     public function entries()

@@ -58,6 +58,29 @@ Optional parameters: `text` (override the label) and `class` (button classes). P
 
 > Note: the loaded-more state lives in the Livewire component, not the URL, so a full page reload resets the list to the first page.
 
+## Deferred filters (apply button)
+
+On mobile, filters usually live in a drawer, and re-querying the collection on every tap is wasted work. Add `defer_filters="true"` to the collection tag to queue filter changes until the visitor applies them:
+
+```antlers
+{{ livewire-collection:cars paginate="9" defer_filters="true" }}
+```
+
+The filters still update as the visitor uses them, but the collection only queues each change. The entries, tags, faceted counts and URL stay as they are until an `apply-filters` event applies the whole queue in one render. A later change of the same filter replaces its queued change, and a change back to the applied value drops it.
+
+Wrap your filters in the `{{ livewire-filters:drawer }}` tag to get an off-canvas panel with a "Filters (n)" trigger, where n is the number of applied filters, and an apply button in its footer:
+
+```antlers
+{{ livewire-filters:drawer }}
+    {{ livewire:lf-checkbox-filter blueprint="cars.car" field="car_brand" condition="taxonomy" }}
+    {{ livewire:lf-radio-filter blueprint="cars.car" field="transmission" condition="is" }}
+{{ /livewire-filters:drawer }}
+```
+
+While changes are queued the button reads "Apply (n)", n being the number of filters that will change. With nothing queued it reads "Show N results" and only closes the drawer. N is the current result count from `entries-updated`, so it only changes once filters are applied. Closing the drawer without applying (✕, the backdrop or Escape) sends `discard-filters`: the queue is dropped and each filter that queued a change restores its applied value. Render the button anywhere else with `{{ livewire-filters:apply_button }}`. Both tags accept a `class` parameter for their trigger button. To restyle them fully, publish `livewire/ui/drawer.blade.php` and `livewire/ui/apply-button.blade.php`.
+
+Removing a tag, Clear all and sort changes still apply right away. In custom views, dispatch `apply-filters` or `discard-filters` yourself, for example `Livewire.dispatch('apply-filters')`, and listen for `pending-filters-updated`, whose `count` is the number of queued filter changes. Custom filters that don't extend `LivewireFilter` don't restore their value on discard.
+
 ## License 
 
 When you are ready to deploy to production you need to buy a license at the Statamic Marketplace.

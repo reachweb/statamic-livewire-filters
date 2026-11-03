@@ -330,6 +330,22 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_restores_the_applied_selection_when_its_pending_change_is_discarded()
+    {
+        $discarded = [['field' => 'item_options', 'condition' => 'is', 'modifier' => 'any']];
+
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->set('selected', ['option1', 'option2'])
+            ->dispatch('pending-filters-discarded', filters: [['field' => 'title', 'condition' => 'is', 'modifier' => 'any']], params: [])
+            ->assertSet('selected', ['option1', 'option2'])
+            ->dispatch('pending-filters-discarded', filters: $discarded, params: ['item_options:is' => 'option1'])
+            ->assertSet('selected', ['option1'])
+            ->dispatch('pending-filters-discarded', filters: $discarded, params: [])
+            ->assertSet('selected', [])
+            ->assertDispatched('clear-filter');
+    }
+
+    #[Test]
     public function it_calculates_the_count_for_each_entry()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);

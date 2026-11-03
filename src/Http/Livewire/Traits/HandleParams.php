@@ -37,6 +37,7 @@ trait HandleParams
         $this->extractLazyPlaceholder($paramsCollection);
         $this->extractPagination($paramsCollection);
         $this->extractInfiniteScroll($paramsCollection);
+        $this->extractDeferFilters($paramsCollection);
         $this->extractAllowedFilters($paramsCollection);
 
         $this->params = $paramsCollection->all();
@@ -134,6 +135,13 @@ trait HandleParams
         }
     }
 
+    protected function extractDeferFilters($paramsCollection)
+    {
+        if ($paramsCollection->has('defer_filters')) {
+            $this->deferFilters = filter_var($paramsCollection->pull('defer_filters'), FILTER_VALIDATE_BOOLEAN);
+        }
+    }
+
     protected function extractAllowedFilters($paramsCollection)
     {
         if ($paramsCollection->has('allowed_filters')) {
@@ -191,6 +199,12 @@ trait HandleParams
     #[On('clear-filter')]
     public function clearFilter($field, $condition, $modifier, $boundsSelection = null): void
     {
+        if (method_exists($this, 'shouldQueueFilterChanges') && $this->shouldQueueFilterChanges()) {
+            $this->queueFilterChange($field, $condition, null, $modifier, $boundsSelection);
+
+            return;
+        }
+
         $this->rememberBoundsSelectionRevision($boundsSelection);
 
         if (! $this->fieldExistsInParams($field, $condition, $modifier)) {
@@ -424,7 +438,7 @@ trait HandleParams
     {
         return array_diff_key($params, array_flip([
             'from', 'in', 'folder', 'use', 'collection',
-            'view', 'lazy-placeholder', 'paginate', 'infinite_scroll', 'allowed_filters',
+            'view', 'lazy-placeholder', 'paginate', 'infinite_scroll', 'defer_filters', 'allowed_filters',
         ]));
     }
 
@@ -715,10 +729,13 @@ trait HandleParams
      */
     protected function filterUpdateIsRedundant($field, $condition, $payload, $modifier): bool
     {
-        if (! $this->paginationIsReset()) {
-            return false;
-        }
+        return $this->paginationIsReset()
+            && $this->filterPayloadMatchesParams($field, $condition, $payload, $modifier);
+    }
 
+    /** True when applying the payload would leave params unchanged. */
+    protected function filterPayloadMatchesParams($field, $condition, $payload, $modifier): bool
+    {
         if ($payload === '' || $payload === null || $payload === []) {
             return ! $this->fieldExistsInParams($field, $condition, $modifier);
         }
