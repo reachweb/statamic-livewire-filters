@@ -6,10 +6,9 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Statamic\Facades\Site;
 use Statamic\Query\EloquentQueryBuilder;
-use Statamic\Tags\Collection\Entries as StatamicEntries;
 use Statamic\Tags\Collection\NoResultsExpected;
 
-class CountEntries extends StatamicEntries
+class CountEntries extends Entries
 {
     public function pluck(string $column): Collection
     {

@@ -58,6 +58,28 @@ Optional parameters: `text` (override the label) and `class` (button classes). P
 
 > Note: the loaded-more state lives in the Livewire component, not the URL, so a full page reload resets the list to the first page.
 
+## Match any / Match all toggle
+
+A checkbox filter on a taxonomy or a multi-value field can let the visitor choose whether entries must match **any** of the ticked values or **all** of them. Add `logic_toggle="true"`:
+
+```antlers
+{{ livewire:lf-checkbox-filter blueprint="cars.car" field="car_category" condition="taxonomy" logic_toggle="true" }}
+{{ livewire:lf-checkbox-filter blueprint="cars.car" field="special_categories" condition="overlaps" logic_toggle="true" }}
+```
+
+A small "Match any / Match all" switch renders above the options. It moves the filter between two param keys:
+
+| Filter | Match any | Match all |
+|---|---|---|
+| `condition="taxonomy"` | `taxonomy:car_category:any` | `taxonomy:car_category:all` |
+| `condition="overlaps"` | `special_categories:overlaps` | `special_categories:contains_all` |
+
+`contains_all` is a condition the addon adds: an entry matches when its field holds every ticked value. It works with the same drivers as Statamic's `overlaps`. Start a filter in match-all mode with `modifier="all"` (taxonomy) or `condition="contains_all"`. The toggle is ignored on other conditions, such as `taxonomy` with `modifier="not"` or `is`.
+
+The modifier and condition stay locked: the switch calls `setLogic('any'|'all')`, which only ever moves the filter to its own counterpart key. With `enable_filter_values_count` on, match-all counts show what ticking each option would leave, rather than counting as if the filter were unset.
+
+In custom query string mode, an alias for the match-any key also covers its match-all key with an `-all` suffix, so `'brand' => 'taxonomy:car_brand:any'` writes and reads `/search/brand-all/audi,bmw`. An alias you configure for the match-all key yourself takes precedence. If you use `allowed_filters`, list both keys. If you published the `tags` view, update its condition label to the new expression so match-all tags read "Car brand (all): Audi".
+
 ## License 
 
 When you are ready to deploy to production you need to buy a license at the Statamic Marketplace.

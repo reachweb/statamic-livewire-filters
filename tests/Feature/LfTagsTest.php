@@ -179,6 +179,29 @@ class LfTagsTest extends TestCase
     }
 
     #[Test]
+    public function match_all_tags_are_labelled_and_removable()
+    {
+        Livewire::test(LfTags::class, ['fields' => 'colors', 'blueprint' => 'clothes.clothes'])
+            ->dispatch('tags-updated', ['taxonomy:colors:all' => 'red|black'])
+            ->assertSeeText('colors (all): Red')
+            ->assertSeeText('colors (all): Black')
+            ->assertDontSeeText('colorsAll')
+            ->call('removeOption', 'colors', 'red', 'all')
+            ->assertDispatched('clear-option', fn ($name, $params) => $params[0]['condition'] === 'all' && $params[0]['value'] === 'red')
+            ->dispatch('tags-updated', ['taxonomy:colors:any' => 'red'])
+            ->assertSeeText('colors: Red')
+            ->assertDontSeeText('(all)');
+
+        Livewire::test(LfTags::class, ['fields' => 'item_options', 'blueprint' => 'pages.pages'])
+            ->dispatch('tags-updated', ['item_options:contains_all' => 'option1|option2'])
+            ->assertSeeText('Checkbox (all): Option 1')
+            ->assertSeeText('Checkbox (all): Option 2')
+            ->dispatch('tags-updated', ['item_options:overlaps' => 'option1'])
+            ->assertSeeText('Checkbox: Option 1')
+            ->assertDontSeeText('(all)');
+    }
+
+    #[Test]
     public function it_does_not_render_the_tag_when_a_filter_is_not_in_the_fields_array()
     {
         Livewire::test(LfTags::class, ['fields' => 'some_other_option', 'blueprint' => 'pages.pages'])

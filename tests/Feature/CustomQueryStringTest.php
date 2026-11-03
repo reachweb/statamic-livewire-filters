@@ -90,6 +90,71 @@ class CustomQueryStringTest extends TestCase
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
     }
 
+    protected function setUpColors(array $aliases): void
+    {
+        Config::set('statamic-livewire-filters.custom_query_string_aliases', $aliases);
+
+        Facades\Taxonomy::make('colors')->save();
+        foreach (['red', 'black', 'yellow'] as $color) {
+            Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug($color)->data(['title' => ucfirst($color)])->save();
+        }
+        $this->collection->taxonomies(['colors'])->save();
+
+        $this->makeEntry($this->collection, 'red-shirt')->set('title', 'Red Shirt')->set('colors', ['red'])->save();
+        $this->makeEntry($this->collection, 'striped-shirt')->set('title', 'Striped Shirt')->set('colors', ['red', 'black'])->save();
+    }
+
+    #[Test]
+    public function it_restores_a_match_all_key_from_its_all_alias()
+    {
+        $this->setUpColors(['colors' => 'taxonomy:colors:any']);
+
+        $this->withStandardFakeViews();
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection:pages }}');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        $this->get('/filters/colors-all/red,black')
+            ->assertSee('Striped Shirt')
+            ->assertDontSee('Red Shirt');
+
+        $this->assertEquals(['taxonomy:colors:all' => 'red|black'], request()->query('params'));
+
+        $this->get('/filters/colors/red,black')
+            ->assertSee('Striped Shirt')
+            ->assertSee('Red Shirt');
+
+        $this->assertEquals(['taxonomy:colors:any' => 'red|black'], request()->query('params'));
+    }
+
+    #[Test]
+    public function it_writes_the_all_alias_when_the_logic_switches()
+    {
+        $this->setUpColors(['colors' => 'taxonomy:colors:any', 'options' => 'item_options:overlaps']);
+
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages']])
+            ->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red', 'black'], modifier: 'all', logicSwitched: true)
+            ->assertDispatched('update-url', fn ($name, $payload) => str_ends_with($payload['newUrl'], '/filters/colors-all/red,black'))
+            ->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red', 'black'], modifier: 'any', logicSwitched: true)
+            ->assertDispatched('update-url', fn ($name, $payload) => str_ends_with($payload['newUrl'], '/filters/colors/red,black'))
+            ->dispatch('filter-updated', field: 'item_options', condition: 'contains_all', payload: ['option1', 'option2'], modifier: 'any')
+            ->assertDispatched('update-url', fn ($name, $payload) => str_ends_with($payload['newUrl'], '/filters/colors/red,black/options-all/option1,option2'));
+    }
+
+    #[Test]
+    public function an_alias_configured_for_the_match_all_key_wins_over_the_derived_one()
+    {
+        $this->setUpColors(['colors' => 'taxonomy:colors:any', 'every-color' => 'taxonomy:colors:all']);
+
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages']])
+            ->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red'], modifier: 'all')
+            ->assertDispatched('update-url', fn ($name, $payload) => str_ends_with($payload['newUrl'], '/filters/every-color/red'));
+
+        $request = Request::create('/filters/colors-all/red');
+        (new HandleFiltersQueryString)->handle($request, fn () => null);
+
+        $this->assertSame([], $request->input('params'));
+    }
+
     #[Test]
     public function it_can_load_parameters_from_the_url()
     {

@@ -52,6 +52,19 @@ Available filter types:
 </code-snippet>
 @endverbatim
 
+Checkbox filters on a taxonomy (`modifier` `any`/`all`) or an `overlaps` field accept `logic_toggle="true"`, which renders a "Match any / Match all" switch. Match all uses `taxonomy:field:all` or the addon's `field:contains_all` condition; pretty-URL aliases get an `-all` form such as `brand-all`.
+
+@verbatim
+<code-snippet name="Checkbox filter with a match any / match all toggle" lang="antlers">
+{{ livewire:lf-checkbox-filter
+    blueprint="cars.car"
+    field="car_category"
+    condition="taxonomy"
+    logic_toggle="true"
+}}
+</code-snippet>
+@endverbatim
+
 @verbatim
 <code-snippet name="Select filter with search" lang="antlers">
 {{ livewire:lf-select-filter
