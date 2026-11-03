@@ -51,6 +51,8 @@ trait HandleFieldBounds
     public function updateBounds($params, $boundsQuery = null): void
     {
         if (! config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
@@ -59,16 +61,22 @@ trait HandleFieldBounds
         $query = RangeBoundsQuery::decodeForCollection($boundsQuery, $this->collection);
 
         if ($query === null) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
         if ($query['source'] !== null) {
             if ($query['revision'] < ($this->boundsQueryRevisions[$query['source']] ?? 0)) {
+                $this->skipRenderIfFilterStateUnchanged();
+
                 return;
             }
 
             $this->boundsQueryRevisions[$query['source']] = $query['revision'];
         }
+
+        $viewStateBefore = $this->boundsViewState();
 
         $params = $query['params'];
         $fieldHandle = $this->resolveCountFieldHandle();
@@ -138,11 +146,23 @@ trait HandleFieldBounds
             $selectionPayload = $this->selectionEventPayload();
         }
 
+        if ($this->boundsViewState() === $viewStateBefore) {
+            $this->skipRenderIfFilterStateUnchanged();
+        } else {
+            $this->markFilterStateChanged();
+        }
+
         $this->dispatch('range-bounds-updated', ...array_merge(
             ['min' => $min, 'max' => $max],
             $selectionPayload,
             ['disabled' => $disabled],
         ));
+    }
+
+    /** Everything the range views read server-side; the revision/extrema bookkeeping is not rendered. */
+    protected function boundsViewState(): array
+    {
+        return [$this->dynamicMin, $this->dynamicMax, $this->boundsDisabled, $this->selectionEventPayload()];
     }
 
     protected function rememberBoundsSelection(array $params): ?array

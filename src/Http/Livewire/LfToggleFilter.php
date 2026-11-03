@@ -27,6 +27,8 @@ class LfToggleFilter extends LivewireFilter
 
     public function updatedSelected()
     {
+        $this->markFilterStateChanged();
+
         if ($this->selected) {
             $this->dispatchFilterUpdated();
         } else {

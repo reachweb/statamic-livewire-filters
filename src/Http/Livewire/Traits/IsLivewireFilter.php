@@ -31,6 +31,74 @@ trait IsLivewireFilter
     #[Locked]
     public $modifier = 'any';
 
+    /** Set once a render shows a bare `wire:ignore` on the root: the client morph discards every re-render, so none is sent. */
+    #[Locked]
+    public bool $clientRendered = false;
+
+    /** Request-scoped (never persisted): a handler in this request changed state the view may depend on. */
+    protected bool $filterStateChangedThisRequest = false;
+
+    public function hydrateIsLivewireFilter(): void
+    {
+        if ($this->clientRendered) {
+            $this->skipRender();
+        }
+    }
+
+    // A client property update can change what the view prints (including the error bag when
+    // validation then fails), so mark it before any `updated*` hook or `validate()` runs.
+    public function updatingIsLivewireFilter($path, $value): void
+    {
+        $this->markFilterStateChanged();
+    }
+
+    public function renderedIsLivewireFilter($view, $html): void
+    {
+        if (! $this->clientRendered && $this->htmlRootHasWireIgnore((string) $html)) {
+            $this->clientRendered = true;
+        }
+    }
+
+    /**
+     * Only the root start tag is inspected; quoted attribute values (Alpine x-data) are opaque,
+     * and `wire:ignore.self` / `wire:ignore.children` still morph, so only the bare name counts.
+     */
+    protected function htmlRootHasWireIgnore(string $html): bool
+    {
+        $attribute = '[^\s"\'=<>\/]+(?:\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s"\'=<>`]+))?';
+
+        if (! preg_match('/^\s*<[a-zA-Z][\w:-]*((?:\s+'.$attribute.')*)\s*\/?>/', $html, $tag)) {
+            return false;
+        }
+
+        preg_match_all('/\s('.$attribute.')/', $tag[1], $attributes);
+
+        return in_array('wire:ignore', array_map(fn ($a) => preg_split('/\s*=/', $a, 2)[0], $attributes[1]), true);
+    }
+
+    /**
+     * One pooled Livewire request can carry several event calls for this component (e.g. a
+     * foreign `clear-option` plus a real `params-updated`). skipRender() is component-wide for
+     * the request, so a no-op must never suppress the render of a real change handled in the
+     * same request, regardless of call order: the store reset clears a skip set by an earlier
+     * no-op, the flag guards later ones. Client-rendered roots never need the html.
+     */
+    protected function markFilterStateChanged(): void
+    {
+        $this->filterStateChangedThisRequest = true;
+
+        if (! $this->clientRendered) {
+            \Livewire\store($this)->set('skipRender', false);
+        }
+    }
+
+    protected function skipRenderIfFilterStateUnchanged(): void
+    {
+        if (! $this->filterStateChangedThisRequest) {
+            $this->skipRender();
+        }
+    }
+
     public function mountIsLivewireFilter($blueprint)
     {
         [$collection, $blueprint] = explode('.', $blueprint);
