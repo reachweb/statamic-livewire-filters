@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\Attributes\Test;
@@ -208,6 +210,59 @@ class CountEntriesTest extends TestCase
         $entries = new CountEntries(Parameters::make($params, Context::make([])));
 
         return (fn () => $this->countQuery())->call($entries);
+    }
+
+    #[Test]
+    public function it_plucks_json_field_values_from_a_real_eloquent_query()
+    {
+        $countEntries = Mockery::mock(CountEntries::class, [Parameters::make(['from' => 'pages'], Context::make([]))])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $countEntries->shouldReceive('query')->andReturn($this->eloquentEntriesQuery());
+        $countEntries->shouldReceive('isMultisiteCollection')->andReturnFalse();
+
+        $this->assertSame(['red', ['a', 'b'], null, 5], $countEntries->pluck('color')->all());
+    }
+
+    /** An in-memory entries table behind Statamic's Eloquent query builder, as the Eloquent driver uses it. */
+    protected function eloquentEntriesQuery(): EloquentQueryBuilder
+    {
+        config(['database.connections.lf_eloquent' => ['driver' => 'sqlite', 'database' => ':memory:']]);
+
+        Schema::connection('lf_eloquent')->create('entries', function ($table) {
+            $table->string('id');
+            $table->string('title');
+            $table->json('data');
+        });
+
+        $model = new class extends Model
+        {
+            protected $connection = 'lf_eloquent';
+
+            protected $table = 'entries';
+
+            public $timestamps = false;
+
+            protected $guarded = [];
+        };
+
+        foreach ([['a', 'A', ['color' => 'red']], ['b', 'B', ['color' => ['a', 'b']]], ['c', 'C', []], ['d', 'D', ['color' => 5]]] as [$id, $title, $data]) {
+            $model->newQuery()->insert(['id' => $id, 'title' => $title, 'data' => json_encode($data)]);
+        }
+
+        return new class($model->newQuery()->orderBy('title')) extends EloquentQueryBuilder
+        {
+            protected function transform($items, $columns = ['*'])
+            {
+                return $items;
+            }
+
+            protected function column($column)
+            {
+                return $column;
+            }
+        };
     }
 
     protected function makeEntry($collection, $slug)

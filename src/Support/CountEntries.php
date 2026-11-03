@@ -111,7 +111,8 @@ class CountEntries extends StatamicEntries
     protected function eloquentPluck(EloquentQueryBuilder $query, string $column): Collection
     {
         try {
-            $results = $query->toBase()->pluck("data->{$column}");
+            // Without an alias the builder reads the row property "data->{$column}", which doesn't exist.
+            $results = $query->toBase()->pluck("data->{$column} as lf_value");
 
             // JSON-stored arrays come back as strings -- decode them
             return $results->map(function ($value) {
