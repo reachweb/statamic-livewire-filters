@@ -17,6 +17,7 @@ use Reach\StatamicLivewireFilters\Tests\TestCase;
 use Statamic\Facades;
 use Statamic\Query\EloquentQueryBuilder;
 use Statamic\Query\ResolveValue;
+use Statamic\Query\Scopes\Scope;
 use Statamic\Tags\Collection\Entries as StatamicEntries;
 use Statamic\Tags\Context;
 use Statamic\Tags\Parameters;
@@ -151,17 +152,16 @@ class CountQueryPoolTest extends TestCase
     }
 
     #[Test]
-    public function resolved_keys_are_collection_prefixed_for_every_queried_collection()
+    public function resolved_keys_group_the_matching_ids_by_collection()
     {
         $keys = (new CountEntries(Parameters::make(['from' => 'cars|trucks'], Context::make([]))))->resolvedKeys();
 
-        $this->assertSame(
-            ['cars::car-a', 'cars::car-b', 'cars::car-c', 'cars::car-d', 'trucks::truck-a', 'trucks::truck-b'],
-            $keys->sort()->values()->all()
-        );
+        $this->assertSame(['cars', 'trucks'], $keys->keys()->sort()->values()->all());
+        $this->assertSame(['car-a', 'car-b', 'car-c', 'car-d'], $keys['cars']->sort()->values()->all());
+        $this->assertSame(['truck-a', 'truck-b'], $keys['trucks']->sort()->values()->all());
 
         $single = (new CountEntries(Parameters::make(['from' => 'trucks'], Context::make([]))))->resolvedKeys();
-        $this->assertSame(['trucks::truck-a', 'trucks::truck-b'], $single->sort()->values()->all());
+        $this->assertSame(['trucks'], $single->keys()->all());
 
         $none = (new CountEntries(Parameters::make(['from' => 'news', 'show_future' => false, 'show_past' => false], Context::make([]))))->resolvedKeys();
         $this->assertTrue($none->isEmpty());
@@ -176,10 +176,32 @@ class CountQueryPoolTest extends TestCase
         $this->vehicle('nums', '100', ['title' => 'Hundred', 'seats' => 1]);
         $this->vehicle('nums', '200', ['title' => 'Two Hundred', 'seats' => 2]);
 
-        $this->assertSame(['nums::100', 'nums::200'], (new CountEntries(Parameters::make(['from' => 'nums'], Context::make([]))))->resolvedKeys()->sort()->values()->all());
+        $keys = (new CountEntries(Parameters::make(['from' => 'nums'], Context::make([]))))->resolvedKeys();
+        $this->assertEqualsCanonicalizing([100, 200], $keys['nums']->map(fn ($id) => (int) $id)->all());
         $this->assertSame($this->reference(['from' => 'nums'], 'seats'), $this->pooled('nums', [], 'seats'));
         $this->assertSame(['1', '2'], $this->pooled('nums', [], 'seats'));
         $this->assertSame($this->reference(['from' => 'nums|cars'], 'title'), $this->pooled('nums|cars', [], 'title'));
+    }
+
+    #[Test]
+    public function a_scope_that_adds_a_collection_falls_back_to_the_full_query()
+    {
+        CountPoolAddTrucksScope::register();
+        $params = ['query_scope' => 'count_pool_add_trucks', 'published:is' => true];
+
+        $this->assertNull((new CountEntries(Parameters::make(['from' => 'cars'] + $params, Context::make([]))))->resolvedKeys());
+        $this->assertContains('"Truck A"', $this->pooled('cars', $params, 'title'));
+        $this->assertSame($this->reference(['from' => 'cars'] + $params, 'title'), $this->pooled('cars', $params, 'title'));
+    }
+
+    #[Test]
+    public function a_scope_limit_keeps_the_sorted_subset()
+    {
+        CountPoolLimitScope::register();
+        $params = ['query_scope' => 'count_pool_limit', 'sort' => 'title:desc'];
+
+        $this->assertSame(['"Car C"', '"Car D"'], $this->pooled('cars', $params, 'title'));
+        $this->assertSame($this->reference(['from' => 'cars'] + $params, 'title'), $this->pooled('cars', $params, 'title'));
     }
 
     #[Test]
@@ -215,7 +237,6 @@ class CountQueryPoolTest extends TestCase
     {
         $params = Parameters::make(['from' => 'cars'], Context::make([]));
         $builder = Mockery::mock(EloquentQueryBuilder::class);
-        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
         $builder->shouldNotReceive('pluck');
         $builder->shouldNotReceive('get');
 
@@ -276,5 +297,25 @@ class CountQueryPoolTest extends TestCase
     protected function vehicle(string $collection, string $id, array $data, bool $published = true): void
     {
         EntryFactory::id($id)->collection($collection)->slug($id)->data($data)->published($published)->create();
+    }
+}
+
+class CountPoolAddTrucksScope extends Scope
+{
+    protected static $handle = 'count_pool_add_trucks';
+
+    public function apply($query, $values)
+    {
+        $query->whereIn('collection', ['trucks']);
+    }
+}
+
+class CountPoolLimitScope extends Scope
+{
+    protected static $handle = 'count_pool_limit';
+
+    public function apply($query, $values)
+    {
+        $query->limit(2);
     }
 }

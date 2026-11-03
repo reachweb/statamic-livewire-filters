@@ -34,9 +34,9 @@ class CountEntries extends StatamicEntries
     }
 
     /**
-     * Stache only: the "collection::id" keys of the matching entries, so any number
-     * of fields can be read straight from their indexes without re-running the
-     * filter. Null when the driver cannot resolve keys without hydrating entries.
+     * Stache only: the ids of the matching entries grouped by collection handle, so
+     * any number of fields can be read straight from their indexes without re-running
+     * the filter. Null when the driver or a scope-added collection rules that out.
      */
     public function resolvedKeys(): ?Collection
     {
@@ -50,14 +50,6 @@ class CountEntries extends StatamicEntries
             return null;
         }
 
-        $ids = $query->pluck('id');
-
-        if ($this->collections->count() === 1) {
-            $handle = $this->collections->first()->handle();
-
-            return $ids->map(fn ($id) => "{$handle}::{$id}")->values();
-        }
-
         // A keyed pluck would renumber numeric ids, so map each id back to its
         // collection through the stores' own (already loaded) path indexes.
         $owner = [];
@@ -68,45 +60,49 @@ class CountEntries extends StatamicEntries
             }
         }
 
-        $keys = $ids->map(fn ($id) => isset($owner[$id]) ? "{$owner[$id]}::{$id}" : null);
+        $grouped = [];
 
-        return $keys->contains(fn ($key) => $key === null) ? null : $keys->values();
+        foreach ($query->pluck('id') as $id) {
+            if (! isset($owner[$id])) {
+                return null;
+            }
+
+            $grouped[$owner[$id]][] = $id;
+        }
+
+        return collect($grouped)->map(fn ($ids) => collect($ids));
     }
 
     /**
-     * Exactly what the Stache query builder's pluck() does once it holds the keys.
+     * What the Stache query builder's pluck() does once it holds the keys, minus
+     * re-splitting "collection::id" strings for every field.
      */
     public static function valuesForKeys(Collection $keys, string $column): Collection
     {
-        if ($keys->isEmpty()) {
-            return collect();
-        }
-
-        return Stache::store('entries')->getItemValues($keys, $column, null)->values();
+        return $keys
+            ->flatMap(fn ($ids, $handle) => Stache::store('entries')->store($handle)->getItemValues($ids, $column, null))
+            ->values();
     }
 
     /**
-     * Counts and bounds are order-independent, and the Stache pays for the
-     * collection's default sort with a full multisort of every matching key;
-     * keep the ordering only when limit/offset make it select the rows.
+     * Counts and bounds are order-independent, and the Stache pays for the sort
+     * with a full multisort of every matching key, so drop it unless a limit or
+     * offset (from the params or a query scope) makes it select the rows.
      */
     protected function countQuery()
     {
         $query = $this->query();
 
-        $limit = $this->params->int('limit');
-        $offset = $this->params->int('offset');
-
-        if (! $limit && ! $offset) {
-            return $query->reorder();
-        }
-
-        if ($limit) {
+        if ($limit = $this->params->int('limit')) {
             $query->limit($limit);
         }
 
-        if ($offset) {
+        if ($offset = $this->params->int('offset')) {
             $query->offset($offset);
+        }
+
+        if ($query instanceof StacheEntryQueryBuilder && ! (fn () => $this->limit || $this->offset)->call($query)) {
+            $query->reorder();
         }
 
         return $query;

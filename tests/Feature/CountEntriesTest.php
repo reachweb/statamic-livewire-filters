@@ -119,7 +119,6 @@ class CountEntriesTest extends TestCase
     {
         $params = Parameters::make(['from' => 'pages'], Context::make([]));
         $builder = Mockery::mock(EloquentQueryBuilder::class);
-        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
 
         $countEntries = Mockery::mock(CountEntries::class, [$params])
             ->makePartial()
@@ -139,7 +138,6 @@ class CountEntriesTest extends TestCase
     {
         $params = Parameters::make(['from' => 'pages'], Context::make([]));
         $builder = Mockery::mock(EloquentQueryBuilder::class);
-        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
         $builder->shouldReceive('pluck')->once()->with('item_options')->andReturn(collect(['option1']));
 
         $countEntries = Mockery::mock(CountEntries::class, [$params])
@@ -168,7 +166,6 @@ class CountEntriesTest extends TestCase
 
         $params = Parameters::make(['from' => 'pages|localized'], Context::make([]));
         $builder = Mockery::mock(EloquentQueryBuilder::class);
-        $builder->shouldReceive('reorder')->once()->withNoArgs()->andReturnSelf();
         $builder->shouldReceive('pluck')->once()->with('item_options')->andReturn(collect(['inherited-option']));
 
         $countEntries = Mockery::mock(CountEntries::class, [$params])
