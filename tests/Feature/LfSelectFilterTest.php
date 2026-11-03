@@ -257,6 +257,45 @@ class LfSelectFilterTest extends TestCase
             });
     }
 
+    #[Test]
+    public function it_hides_options_with_a_zero_count_but_keeps_the_selected_one()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        Facades\Entry::find('a')->set('item_options', 'option1')->save();
+        Facades\Entry::find('c')->set('item_options', 'option2')->save();
+
+        // "Flutes" only matches entry c (option2), so option1 and option3 both count 0, but option3 is selected.
+        Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'selected' => 'option3'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes']))
+            ->assertDontSee('Option 1')
+            ->assertSee('Option 2')
+            ->assertSee('Option 3');
+    }
+
+    #[Test]
+    public function it_disables_options_with_a_zero_count_but_not_the_selected_one()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+        Facades\Entry::find('a')->set('item_options', 'option1')->save();
+        Facades\Entry::find('c')->set('item_options', 'option2')->save();
+
+        $html = Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'disable', 'selected' => 'option3'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['title:contains' => 'Flutes']))
+            ->assertSee('Option 1')
+            ->html();
+
+        $this->assertSame(['option1'], $this->disabledValues($html));
+    }
+
+    #[Test]
+    public function it_passes_the_zero_count_mode_to_the_advanced_view()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'view' => 'lf-select-advanced'])
+            ->assertSeeHtml("zeroCount: 'hide'");
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

@@ -5,12 +5,13 @@
         wire:model.live="selected"
     >
         <option selected value="">{{ $this->placeholder !== '' ? $this->placeholder : __('statamic-livewire-filters::ui.all') }}</option>
-        @foreach ($this->filter_options as $value => $label)
-            <option 
-                value="{{ $value }}">
+        @php($counts = $this->counts)
+        @php($disabled = array_flip($this->disabled_options))
+        @foreach ($this->visible_options as $value => $label)
+            <option wire:key="{{ $field }}-{{ $value }}" value="{{ $value }}" @disabled(isset($disabled[$value]))>
                 {{ $label }}
-                @if ($this->counts[$value] !== null)
-                <span class="text-gray-500 ml-1">({{ $this->counts[$value] }})</span>
+                @if ($counts[$value] !== null)
+                <span class="text-gray-500 ml-1">({{ $counts[$value] }})</span>
                 @endif
             </option>
         @endforeach
