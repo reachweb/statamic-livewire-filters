@@ -52,8 +52,44 @@ trait IsSortable
                     $this->sortOptionsByValue($sortDirection);
                 }
                 break;
+            case 'count':
+                if (! isset($this->statamic_field['options'])) {
+                    throw new FieldOptionsCannotSortException($sortBy, $fieldHandle);
+                }
+                $this->sortOptionsByCount();
+                break;
             default:
                 $this->sortCustomField($sortBy, $sortDirection);
+        }
+    }
+
+    protected function sortsByCount(): bool
+    {
+        return $this->sort !== null && str_starts_with($this->sort, 'count:');
+    }
+
+    // Counts are null until the first `params-updated`, so every option ties and the label decides.
+    protected function sortOptionsByCount(): void
+    {
+        $sortDirection = explode(':', $this->sort)[1] ?? 'desc';
+        $options = $this->statamic_field['options'];
+        $counts = $this->statamic_field['counts'] ?? [];
+
+        uksort($options, function ($a, $b) use ($options, $counts, $sortDirection) {
+            $byCount = ($counts[$a] ?? 0) <=> ($counts[$b] ?? 0);
+
+            if ($byCount !== 0) {
+                return $sortDirection === 'asc' ? $byCount : -$byCount;
+            }
+
+            return $options[$a] <=> $options[$b];
+        });
+
+        $this->statamic_field['options'] = $options;
+
+        // filterOptions() renders a custom `options` prop instead of the field's options
+        if ($this->hasCustomOptions()) {
+            $this->options = $options;
         }
     }
 

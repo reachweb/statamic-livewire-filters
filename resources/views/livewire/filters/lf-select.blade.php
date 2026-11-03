@@ -7,6 +7,7 @@
         <option selected value="">{{ $this->placeholder !== '' ? $this->placeholder : __('statamic-livewire-filters::ui.all') }}</option>
         @foreach ($this->filter_options as $value => $label)
             <option 
+                wire:key="{{ $field }}-{{ $value }}"
                 value="{{ $value }}">
                 {{ $label }}
                 @if ($this->counts[$value] !== null)

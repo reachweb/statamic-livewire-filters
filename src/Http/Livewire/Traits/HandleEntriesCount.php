@@ -46,7 +46,19 @@ trait HandleEntriesCount
 
         $this->updateCountsWithBatchQuery($baseParams, $fieldHandle, $baseParams['from']);
 
-        $this->dispatch('counts-updated', $this->counts());
+        $event = [$this->counts()];
+
+        // IsSortable is optional: custom filters may use this trait on its own.
+        if (method_exists($this, 'sortsByCount') && $this->sortsByCount()) {
+            $this->sortOptionsByCount();
+            unset($this->filterOptions);
+
+            // JS objects list integer keys first whatever the PHP order, so the views get the order separately.
+            // It goes second and positional, so server-side listeners that only take the counts keep working.
+            $event[] = array_keys($this->statamic_field['options']);
+        }
+
+        $this->dispatch('counts-updated', ...$event);
     }
 
     protected function updateCountsWithBatchQuery($baseParams, $fieldHandle, $collections = null)
