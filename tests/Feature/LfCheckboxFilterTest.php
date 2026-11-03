@@ -733,8 +733,9 @@ class LfCheckboxFilterTest extends TestCase
         ])
             ->assertViewHas('statamic_field', function ($statamic_field) use ($customOptions) {
                 return $statamic_field['options'] === $customOptions
-                    && $statamic_field['counts'] === ['custom1' => null, 'custom2' => null];
+                    && ! array_key_exists('counts', $statamic_field);
             })
+            ->tap(fn ($component) => $this->assertSame(['custom1' => null, 'custom2' => null], $component->instance()->counts()))
             ->assertSee('Custom 1')
             ->assertSee('Custom 2')
             ->assertDontSee('Option 1')

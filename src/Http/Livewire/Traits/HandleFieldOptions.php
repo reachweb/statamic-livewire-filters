@@ -79,6 +79,10 @@ trait HandleFieldOptions
 
     protected function addCountsArrayToConfig($field)
     {
+        if (! config('statamic-livewire-filters.enable_filter_values_count')) {
+            return $field;
+        }
+
         $field->setConfig(array_merge(
             $field->config(),
             ['counts' => array_fill_keys(array_keys($field->get('options')), null)]
@@ -94,29 +98,16 @@ trait HandleFieldOptions
 
     protected function addCustomOptionsToConfig($field)
     {
-        $options = collect($this->options);
-        $field->setConfig(array_merge(
-            $field->config(),
-            [
-                'options' => $this->options,
-                'counts' => array_fill_keys($options->keys()->all(), null),
-            ]
-        ));
+        $field->setConfig(array_merge($field->config(), ['options' => $this->options]));
 
-        return $field;
+        return $this->addCountsArrayToConfig($field);
     }
 
     protected function setFieldOptionsAndCounts($field, array $options)
     {
-        $field->setConfig(array_merge(
-            $field->config(),
-            [
-                'options' => $options,
-                'counts' => array_fill_keys(array_keys($options), null),
-            ]
-        ));
+        $field->setConfig(array_merge($field->config(), ['options' => $options]));
 
-        return $field;
+        return $this->addCountsArrayToConfig($field);
     }
 
     protected function fieldOptionsCacheKey(string $type, $config): string

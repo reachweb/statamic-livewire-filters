@@ -32,7 +32,7 @@ class LfSort extends Component
         $this->fields = $fields;
     }
 
-    #[Computed(persist: true)]
+    #[Computed]
     public function sortOptions()
     {
         return $this->getFieldNames()->flatMap(function ($item) {
