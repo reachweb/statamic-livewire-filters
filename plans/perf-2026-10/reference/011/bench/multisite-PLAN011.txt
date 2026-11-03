@@ -1,7 +1,0 @@
-[PLAN011] --- F4 multi-site: current path per site, pluck alternative equivalence, localization leak attack ---
-[PLAN011] site=en terms={"red":"Red","black":"Black","yellow":"Yellow"} | pluck-alt terms same | entries(origin ids)=["Shirt","Hat","Sock"] pluck-alt same | entries(own ids)=["Shirt","Hat","Sock"] pluck-alt same
-[PLAN011] site=es terms={"red":"Rojo","black":"Negro","yellow":"Amarillo"} | pluck-alt terms same | entries(origin ids)=["Camisa","Solo ES"] pluck-alt same | entries(own ids)=["Camisa","Solo ES"] pluck-alt same
-[PLAN011] site=de terms={"red":"Rot","black":"Schwarz","yellow":"Yellow"} | pluck-alt terms same | entries(origin ids)=[] pluck-alt same | entries(own ids)=[] pluck-alt same
-[PLAN011] after es title edit: en red="Red" (expect Red) | es red="Rojo Nuevo" (expect Rojo Nuevo) | de red="Rot" (expect Rot)
-[PLAN011] after new de localization: de yellow="Gelb" (expect Gelb) | en yellow="Yellow" (expect Yellow)
-[PLAN011] after publishing es draft: es entries=["Camisa","Sombrero","Solo ES"] (expect Camisa, Sombrero, Solo ES)

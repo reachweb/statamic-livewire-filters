@@ -1,6 +1,0 @@
-const { setLabel, settle, summarize } = await import('./lwcap.mjs?v=' + Date.now())
-setLabel(state, 'basic-tag-x')
-await state.page.locator('button:has-text("Audi") div[wire\\:click]').first().click()
-await settle(state.page, state, 2000, 20000)
-console.log(summarize(state, 'basic-tag-x'))
-console.log('Logs:', await getLatestLogs({ page: state.page, sinceLastCall: true }))

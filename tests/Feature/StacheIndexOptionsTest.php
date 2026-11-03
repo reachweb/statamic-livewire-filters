@@ -233,6 +233,35 @@ class StacheIndexOptionsTest extends TestCase
     }
 
     #[Test]
+    public function terms_that_only_exist_through_entries_on_other_sites_are_listed_on_every_site(): void
+    {
+        // Saving these entries syncs "en::green" into the site and id indexes while the
+        // title index holds "es::green", so the indexes disagree on the term's key.
+        Config::set('statamic.system.multisite', true);
+        Site::setSites([
+            'en' => ['name' => 'English', 'url' => '/', 'locale' => 'en_US'],
+            'es' => ['name' => 'Spanish', 'url' => '/es', 'locale' => 'es_ES'],
+        ]);
+        Taxonomy::make('colors')->sites(['en', 'es'])->save();
+        Facades\Term::make()->taxonomy('colors')->inDefaultLocale()->slug('red')->data(['title' => 'Red'])->save();
+        Facades\Collection::make('items')->sites(['en', 'es'])->taxonomies(['colors'])->save();
+        $this->makeBlueprint('items', [
+            ['handle' => 'colors', 'field' => ['type' => 'terms', 'taxonomies' => ['colors'], 'display' => 'Colors']],
+        ]);
+        Entry::make()->collection('items')->locale('es')->slug('verde')->data(['colors' => ['green']])->save();
+        Entry::make()->collection('items')->locale('en')->slug('blue')->data(['colors' => ['blue']])->save();
+
+        foreach (['en', 'es'] as $site) {
+            Site::setCurrent($site);
+
+            $options = $this->mountOptions('items.items', 'colors', 'taxonomy');
+
+            $this->assertSame($this->legacyTerms('colors', $site), $options, "terms on $site");
+            $this->assertEqualsCanonicalizing(['red' => 'Red', 'green' => 'green', 'blue' => 'blue'], $options, "terms on $site");
+        }
+    }
+
+    #[Test]
     public function title_format_collections_match_the_legacy_mapping(): void
     {
         Facades\Collection::make('people')->titleFormats(['en' => '{{ first }} {{ last }}'])->save();

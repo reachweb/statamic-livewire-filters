@@ -26,10 +26,16 @@ trait HandleStatamicQueries
             $query = $taxonomy->queryTerms();
 
             if ($query instanceof TermQueryBuilder) {
-                $indexSite = $taxonomy->sites()->contains($siteHandle) ? $siteHandle : $taxonomy->sites()->first();
+                // Read the title index on its own: for terms that only exist through entry
+                // associations, its "site::slug" keys can differ from the site and id indexes.
+                $defaultSite = $taxonomy->sites()->first();
 
-                return $query->where('site', $indexSite)->pluck('title', 'id')
-                    ->mapWithKeys(fn ($title, $id) => [Str::after($id, '::') => $title]);
+                return Stache::store('terms')->store($taxonomy_handle)->index('title')->items()
+                    ->groupBy(fn ($title, $key) => Str::after($key, '::'), preserveKeys: true)
+                    ->map(fn ($titles, $slug) => $titles[$siteHandle.'::'.$slug]
+                        ?? $titles[$defaultSite.'::'.$slug]
+                        ?? $titles->first()
+                        ?? $slug);
             }
 
             return $query->get()
