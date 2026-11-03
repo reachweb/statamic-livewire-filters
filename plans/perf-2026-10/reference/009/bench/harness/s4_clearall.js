@@ -1,6 +1,0 @@
-const { setLabel, settle, summarize } = await import('./lwcap.mjs?v=' + Date.now())
-setLabel(state, 'clear-all')
-await state.page.evaluate(() => window.Livewire.all().find(c => c.name === 'livewire-collection').$wire.clearAll())
-await settle(state.page, state, 2000, 20000)
-console.log(summarize(state, 'clear-all'))
-console.log('Logs:', await getLatestLogs({ page: state.page, sinceLastCall: true }))

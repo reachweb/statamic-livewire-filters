@@ -1,2 +1,0 @@
-const r = await state.page.evaluate(() => ({ params: window.Livewire.all().find(c => c.name === 'livewire-collection').$wire.params, selected: window.Livewire.all().find(c => c.name === 'lf-checkbox-filter' && c.$wire.field === 'special_categories').$wire.selected, url: location.href, entries: document.querySelectorAll('[wire\\:id] img').length }))
-console.log('(c) state after clearAll:', JSON.stringify(r))
