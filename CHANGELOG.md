@@ -12,7 +12,16 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 - The minimum supported Statamic 5 version is now 5.29.
 - With `enable_filter_values_count` off, filter snapshots no longer carry a placeholder `counts` array, which made up nearly half of a large filter's request. `$this->counts` in views returns the same empty counts as before. A custom view that reads `$statamic_field['counts']` directly must switch to `$this->counts`.
 - Filter option lists are no longer stored in the cache store on every page view, so `lw_computed` cache files stop piling up. On drivers other than the Stache, `LfTags` still caches its resolved options for the life of the component. Term and entry option labels are now read from the Stache indexes instead of loading every term and entry, which makes mounting a filter over a large taxonomy or collection several times faster.
-- Filters no longer send HTML back for renders the browser discards or doesn't need: views with a bare `wire:ignore` on their root (the advanced checkbox and select views), `params-updated` events when counts or bounds are disabled or come back unchanged, and `clear-option` events for another field's tag. On the demo site this cuts the Livewire response bytes of a typical filtering session by 15–25% (gzipped), with every static caching strategy. Data, events, and published views that read `$selected` server-side behave as before. A custom view with a bare `wire:ignore` root gets no HTML after its first render, so it must update itself from `$wire` or browser events.
+- Filters no longer send HTML back for renders the browser discards or doesn't need: views with a bare `wire:ignore` on their root (the advanced checkbox and select views), `params-updated` events when counts or bounds are disabled or come back unchanged, and `clear-option` events for another field's tag. On the demo site this cuts the Livewire response bytes of a typical filtering session by 15–25% (gzipped), with every static caching strategy. Data, events, and published views that read `$selected` server-side behave as before. A custom view with a bare `wire:ignore` root gets no HTML after its first render; Livewire already discarded it, so such views keep updating from `$wire` or browser events as before.
+
+### Upgrading from 4.6
+
+Sites that use the bundled views, or published copies of them, need no changes. Check the following:
+
+- **Statamic 5 before 5.29.** Composer keeps such sites on 4.6 until Statamic is updated, so nothing breaks; update Statamic to get this release.
+- **Custom views that read `$statamic_field['counts']`.** None of the bundled views ever did. With `enable_filter_values_count` off the key is no longer set, so `$statamic_field['counts'][$value]` throws an "Undefined array key" error. Use `$this->counts[$value]` instead, which works with counts on or off.
+- **Custom views with a bare `wire:ignore` on their root.** Livewire already skipped morphing such a root, so the HTML it no longer receives was being thrown away. Nothing changes in the browser.
+- **Leftover cache entries.** `lw_computed.*` entries written by earlier versions are no longer read and expire on their own within an hour.
 
 ## [4.6.1] - 2026-11-02
 
