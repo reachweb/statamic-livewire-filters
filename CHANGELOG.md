@@ -10,6 +10,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 - Filters and `lf-sort` now read the URL's filter params when they mount, in both the custom query string and the Livewire query string modes, so their state matches the URL from the first render. The `lf-checkbox`, `lf-radio`, `lf-select`, `lf-toggle`, `lf-text`, `lf-date`, `lf-range` and `lf-sort` views also show it in the server HTML: checkboxes and radios are `checked`, select options `selected`, and text, date and range inputs carry their `value`. The Alpine-driven `lf-checkbox-advanced`, `lf-select-advanced` and `lf-dual-range` views show it as soon as Livewire starts, without waiting for another request. Before, every control rendered empty and waited for a `preset-params` event in a follow-up request, so the page briefly showed unchecked controls, and `{{ nocache }}` regions returned empty controls. The collection now sends `preset-params` only when a filter param doesn't come from the URL, such as a preset set on the `livewire-collection` tag; it then carries every filter param, URL ones included. It only contains filter keys (`field:condition` style) and `sort`. A custom filter that relied on `preset-params` for a URL param should read `CustomQueryString::urlParams()` at mount; those using the `IsLivewireFilter` trait with a `setPresetValues()` method get this automatically. Published filter views keep working and still skip the follow-up request, but they only show the selection once Livewire starts unless you copy the new `@checked`, `@selected` and `value` attributes into them.
 
+### Fixed
+
+- Under full-measure static caching, `{{ livewire-filters:head }}` now waits for `DOMContentLoaded` before starting Livewire, like Livewire does on its own. Before, it could start Livewire and Alpine while the page was still loading, so `alpine:init` listeners placed after `{{ livewire:scripts }}`, such as ones that register `Alpine.store` or `Alpine.data`, sometimes ran too late. Expressions that used them then threw errors like `Cannot read properties of undefined`. On the demo site this happened on up to 1 in 6 page loads.
+
 ## [4.6.2] - 2026-11-04
 
 ### Changed
