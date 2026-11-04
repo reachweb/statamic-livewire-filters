@@ -84,6 +84,8 @@ class LfDualRangeFilter extends LivewireFilter
 
     public function updatedSelectedMin($value)
     {
+        $this->markFilterStateChanged();
+
         // Ensure min doesn't exceed max - minRange
         if ($value > $this->selectedMax - $this->minRange) {
             $this->selectedMin = $this->selectedMax - $this->minRange;
@@ -94,6 +96,8 @@ class LfDualRangeFilter extends LivewireFilter
 
     public function updatedSelectedMax($value)
     {
+        $this->markFilterStateChanged();
+
         // Ensure max doesn't go below min + minRange
         if ($value < $this->selectedMin + $this->minRange) {
             $this->selectedMax = $this->selectedMin + $this->minRange;
@@ -107,28 +111,41 @@ class LfDualRangeFilter extends LivewireFilter
     {
         $this->selectedMin = $this->min;
         $this->selectedMax = $this->max;
+        $this->markFilterStateChanged();
 
         // Reset to the last known bounds; on clear-all the relay may not trigger another params-updated.
         if ($this->dynamicMin !== null) {
             $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
         }
 
-        $boundsSelection = $this->rememberBoundsSelection([]);
+        $relay = $this->clearAllNeedsRelay(...func_get_args());
+
+        if ($relay) {
+            $boundsSelection = $this->rememberBoundsSelection([]);
+        } else {
+            $this->forgetBoundsSelectionWithoutRelay();
+        }
 
         $this->dispatch('dual-range-preset-values',
             min: $this->selectedMin,
             max: $this->selectedMax,
         );
 
-        $this->clearFilters($boundsSelection);
+        if ($relay) {
+            $this->clearFilters($boundsSelection);
+        }
     }
 
     #[On('clear-option')]
     public function clearOption($tag)
     {
         if ($tag['field'] !== $this->field) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
+
+        $this->markFilterStateChanged();
 
         // Tags from LfTags name their bound in `condition`, which still tells the
         // bounds apart when both hold the same value, e.g. a same-year date range.

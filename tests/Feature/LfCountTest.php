@@ -79,8 +79,54 @@ class LfCountTest extends TestCase
             ->assertSee('1 entry');
     }
 
+    public function test_the_bundled_view_updates_in_the_browser_without_a_server_listener()
+    {
+        $component = Livewire::test(LfCount::class)
+            ->assertSeeHtml('x-on:entries-updated.window')
+            ->assertSeeHtml('detail?.entriesLabel');
+
+        $this->assertNotContains('entries-updated', $component->effects['listeners'] ?? []);
+    }
+
+    /** An event without the label (user code) sets the count from the browser, and the server renders it. */
+    public function test_the_bundled_view_falls_back_to_the_server_for_events_without_a_label()
+    {
+        Livewire::test(LfCount::class)
+            ->assertSeeHtml("\$wire.\$set('count', count)")
+            ->set('count', 3)
+            ->assertSee('3 entries')
+            ->set('count', 1)
+            ->assertSee('1 entry');
+    }
+
+    public function test_a_published_count_view_keeps_the_server_listener()
+    {
+        app('view')->prependNamespace('statamic-livewire-filters', __DIR__.'/../__fixtures__/views/published-count');
+
+        $component = Livewire::test(LfCount::class);
+
+        $this->assertContains('entries-updated', $component->effects['listeners'] ?? []);
+
+        $component->dispatch('entries-updated', count: 3, active: 0, entriesLabel: 'entries')
+            ->assertSet('count', 3)
+            ->assertSee('3 entries');
+    }
+
+    /** A page rendered before the listener moved to the browser still sends the event to the server. */
+    public function test_a_subclass_defining_its_own_hydrate_still_accepts_the_event_after_mount()
+    {
+        Livewire::test(HydratingCount::class)
+            ->dispatch('entries-updated', 3)
+            ->assertSet('count', 3);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
     }
+}
+
+class HydratingCount extends LfCount
+{
+    public function hydrate(): void {}
 }

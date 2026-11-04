@@ -23,7 +23,10 @@ class LfCheckboxFilter extends LivewireFilter
 
     public string $placeholder = '';
 
-    #[Computed(persist: true)]
+    /** Set by the bundled view in the commit whose filter-updated it already sent to the collection. */
+    public bool $syncedByView = false;
+
+    #[Computed]
     public function filterOptions(): array
     {
         if ($this->options !== null && is_array($this->options)) {
@@ -40,6 +43,40 @@ class LfCheckboxFilter extends LivewireFilter
         return [
             'selected' => ['array', Rule::in(array_keys($this->filterOptions()))],
         ];
+    }
+
+    /**
+     * The bundled view dispatches filter-updated from the browser, pooled into this
+     * commit's request, so the server relay (and its extra round trip) is skipped.
+     * A view without the flag, such as one published before it, still relays.
+     */
+    protected function dispatchFilterUpdated(array $extra = []): void
+    {
+        if ($this->syncedByView && $this->dispatchesFromView()) {
+            $this->syncedByView = false;
+            $this->lastSentPayload = null;
+
+            return;
+        }
+
+        parent::dispatchFilterUpdated($extra);
+    }
+
+    /**
+     * The browser can only send `$selected` as is, so a subclass that changes how the
+     * selection becomes filter-updated keeps the server relay, even with the bundled view.
+     */
+    protected function dispatchesFromView(): bool
+    {
+        foreach (['payload', 'updatedSelected', 'dispatchFilterUpdated'] as $method) {
+            $declaringClass = (new \ReflectionMethod($this, $method))->getDeclaringClass()->getName();
+
+            if (! in_array($declaringClass, [self::class, LivewireFilter::class], true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected function emptyValue(): mixed
@@ -61,6 +98,10 @@ class LfCheckboxFilter extends LivewireFilter
         if ($tag['field'] === $this->field && in_array($tag['value'], $this->selected)) {
             $this->selected = array_values(array_diff($this->selected, [$tag['value']]));
             $this->updatedSelected();
+
+            return;
         }
+
+        $this->skipRenderIfFilterStateUnchanged();
     }
 }

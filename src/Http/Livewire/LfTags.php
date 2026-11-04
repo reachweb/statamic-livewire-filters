@@ -3,12 +3,17 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Reach\StatamicLivewireFilters\Support\ParamKey;
+use Statamic\Facades\Entry;
+use Statamic\Facades\Term;
+use Statamic\Stache\Query\EntryQueryBuilder;
+use Statamic\Stache\Query\TermQueryBuilder;
 
 class LfTags extends Component
 {
@@ -40,8 +45,29 @@ class LfTags extends Component
         $this->tags = collect();
     }
 
-    #[Computed(persist: true)]
+    #[Computed]
     public function statamicFields(): Collection
+    {
+        if ($this->optionsComeFromStacheIndexes()) {
+            return $this->resolveStatamicFields();
+        }
+
+        // Other drivers hydrate every term and entry to build the options, so keep
+        // them for the component's lifetime like the former persisted computed did.
+        // Stored as plain arrays so the cache store can unserialize them safely.
+        return collect(Cache::remember(
+            'statamic-livewire-filters.lf-tags.'.$this->getId().'.fields',
+            3600,
+            fn () => $this->resolveStatamicFields()->all()
+        ));
+    }
+
+    protected function optionsComeFromStacheIndexes(): bool
+    {
+        return Entry::query() instanceof EntryQueryBuilder && Term::query() instanceof TermQueryBuilder;
+    }
+
+    protected function resolveStatamicFields(): Collection
     {
         $statamicFields = collect();
         $statamicBlueprint = $this->getStatamicBlueprint();

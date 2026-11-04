@@ -46,6 +46,7 @@ class LfRangeFilter extends LivewireFilter
 
     public function updatedSelected()
     {
+        $this->markFilterStateChanged();
         $this->dispatchEvent();
     }
 
@@ -58,10 +59,17 @@ class LfRangeFilter extends LivewireFilter
     public function clear(): void
     {
         $this->selected = $this->emptyValue();
+        $this->markFilterStateChanged();
 
         // Reset to the last known bounds; on clear-all the relay may not trigger another params-updated.
         if ($this->dynamicMin !== null) {
             $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
+        }
+
+        if (! $this->clearAllNeedsRelay(...func_get_args())) {
+            $this->forgetBoundsSelectionWithoutRelay();
+
+            return;
         }
 
         $this->clearFilters($this->rememberBoundsSelection([]));
@@ -71,10 +79,13 @@ class LfRangeFilter extends LivewireFilter
     public function clearOption($tag)
     {
         if ($tag['field'] !== $this->field) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
         $this->selected = $this->emptyValue();
+        $this->markFilterStateChanged();
         $this->dispatchEvent();
     }
 
