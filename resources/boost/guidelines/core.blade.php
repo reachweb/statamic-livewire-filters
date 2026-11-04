@@ -183,13 +183,16 @@ Add SEO head tags for filtered listings to the layout `<head>`:
 'seo_indexable_filters' => ['brand'],
 // Custom query string mode: send the filter signals as headers
 'seo_filter_headers' => true,
+// Query string names that carry the page number (add each collection's custom page_name)
+'seo_page_names' => ['page'],
 </code-snippet>
 @endverbatim
 
-- Filtered pages (any filter, including `sort`) and pages above 1 get `noindex,follow` and a canonical to the base page, without filter segments or the `params[...]` query.
-- A first page whose filters are all single-valued and listed in `seo_indexable_filters` stays indexable with a self canonical.
+- Filtered pages (any filter, including `sort`) and pages above 1 get `noindex,follow` and a canonical to the base page, without filter segments or the `params[...]` query. Collection settings such as `page_name` and blocked params don't count as filters.
+- A first page whose filters are all single-valued and listed in `seo_indexable_filters` stays indexable with a self canonical. The canonical is rebuilt from the recognized filters in a fixed order, so unknown params, segments and param order don't change it.
+- Filters a tag presets (for example `sort="title"`) also appear in the Livewire mode URL. List them in `seo_indexable_filters` when those URLs should stay indexable.
 - Livewire query string mode and no URL mode: the tag outputs `<link rel="canonical">` and `<meta name="robots">`.
-- Custom query string mode: every filter URL of a page shares the base page's static cache entry, so the tag only outputs the tags for `?page` above 1, which is cached separately. Filter URLs get `X-Robots-Tag: noindex, follow` and `Link: <url>; rel="canonical"` headers instead, when `seo_filter_headers` is on. Headers aren't stored in the cached page, so they stay correct with half and full static caching.
+- Custom query string mode: every filter URL of a page shares the base page's static cache entry, so the tag only outputs tags for pages above 1, which are cached separately; page 1 has no canonical tag. With `seo_filter_headers` on, filter URLs get `X-Robots-Tag: noindex, follow` and `Link: <url>; rel="canonical"` headers instead. Headers aren't stored in the cached page, so they stay correct with half and full static caching.
 
 ### Hooks
 
