@@ -1566,6 +1566,97 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function drawer_mode_applies_live_until_the_drawer_starts_deferring()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'drawer']])
+            ->assertSet('deferMode', 'drawer')
+            ->assertSet('deferFilters', false)
+            // Drawer closed (desktop sidebar): changes apply live
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->assertSet('pendingCount', 0)
+            // Drawer opened: changes queue
+            ->dispatch('start-deferring')
+            ->assertSet('deferFilters', true)
+            ->assertNotDispatched('entries-updated')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red', 'black'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->assertSet('pendingCount', 1)
+            // Closed with Apply: the queue applies and live mode is back
+            ->dispatch('stop-deferring', apply: true)
+            ->assertSet('params', ['taxonomy:colors:any' => 'red|black'])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('deferFilters', false)
+            ->assertDispatched('entries-updated', count: 2)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['yellow'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'yellow']);
+    }
+
+    #[Test]
+    public function drawer_mode_discards_when_the_drawer_closes_without_apply()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'drawer']])
+            ->dispatch('start-deferring')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->dispatch('stop-deferring')
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('deferFilters', false)
+            ->assertDispatched('pending-filters-discarded')
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function start_deferring_only_switches_deferral_in_drawer_mode()
+    {
+        // Live mode: the client cannot turn deferral on
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('start-deferring')
+            ->assertSet('deferFilters', false)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red']);
+
+        // Always mode: closing the drawer does not turn deferral off
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'true']])
+            ->assertSet('deferMode', 'always')
+            ->dispatch('stop-deferring', apply: true)
+            ->assertSet('deferFilters', true)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 1);
+    }
+
+    #[Test]
     public function defer_filters_can_only_be_set_on_the_tag()
     {
         Config::set('statamic-livewire-filters.enable_query_string', true);

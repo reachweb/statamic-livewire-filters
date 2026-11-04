@@ -70,8 +70,18 @@ class LoadMoreTest extends TestCase
         $html = $tag->drawer();
 
         $this->assertStringContainsString('<div id="my-filters"></div>', $html);
-        $this->assertStringContainsString("Livewire.dispatch('discard-filters')", $html);
-        $this->assertStringContainsString("Livewire.dispatch('apply-filters')", $html);
+        $this->assertStringContainsString("Livewire.dispatch('start-deferring')", $html);
+        $this->assertStringContainsString("Livewire.dispatch('stop-deferring', { apply })", $html);
+        $this->assertStringContainsString('const breakpoint = 1280;', $html);
         $this->assertStringContainsString('Show 1 result', $html);
+    }
+
+    public function test_the_drawer_breakpoint_can_be_changed()
+    {
+        $tag = $this->tag([], ['breakpoint' => '768']);
+        $tag->isPair = true;
+        $tag->setContent('');
+
+        $this->assertStringContainsString('const breakpoint = 768;', $tag->drawer());
     }
 }

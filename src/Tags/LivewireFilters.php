@@ -63,6 +63,7 @@ HTML;
         return view('statamic-livewire-filters::livewire.ui.drawer', [
             'slot' => $this->isPair ? $this->parse() : '',
             'class' => $this->params->get('class'),
+            'breakpoint' => $this->params->int('breakpoint', 1280),
         ])->render();
     }
 }

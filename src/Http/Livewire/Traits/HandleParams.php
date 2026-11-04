@@ -137,8 +137,17 @@ trait HandleParams
 
     protected function extractDeferFilters($paramsCollection)
     {
-        if ($paramsCollection->has('defer_filters')) {
-            $this->deferFilters = filter_var($paramsCollection->pull('defer_filters'), FILTER_VALIDATE_BOOLEAN);
+        if (! $paramsCollection->has('defer_filters')) {
+            return;
+        }
+
+        $value = $paramsCollection->pull('defer_filters');
+
+        if ($value === 'drawer') {
+            $this->deferMode = 'drawer';
+        } elseif (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+            $this->deferMode = 'always';
+            $this->deferFilters = true;
         }
     }
 

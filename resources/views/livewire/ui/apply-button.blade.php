@@ -19,8 +19,12 @@
             return this.labels.many.replace('__COUNT__', this.count)
         },
         apply() {
-            if (this.pending > 0) { Livewire.dispatch('apply-filters') }
-            this.$dispatch('lf-close-drawer')
+            // Inside the drawer, closing it applies; on its own the button applies directly.
+            if (this.$el.closest('[data-lf-drawer]')) {
+                this.$dispatch('lf-close-drawer', { apply: true })
+            } else if (this.pending > 0) {
+                Livewire.dispatch('apply-filters')
+            }
         },
     }"
     x-on:pending-filters-updated.window="pending = $event.detail?.count ?? 0"

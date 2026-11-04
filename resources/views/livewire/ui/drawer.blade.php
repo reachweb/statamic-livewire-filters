@@ -1,22 +1,51 @@
-{{-- Off-canvas filters panel for deferred mode (defer_filters="true"). Closing without applying discards the queued changes. --}}
+{{--
+    Filters panel for deferred mode. Below the breakpoint it is an off-canvas drawer with a
+    "Filters (n)" trigger; opening it starts deferring (defer_filters="drawer"), and closing it
+    applies (Apply button) or discards (✕, backdrop, Escape) the queued changes. From the
+    breakpoint up it is a plain sidebar whose filters apply live, unless defer_filters="true".
+--}}
 <div
+    data-lf-drawer
     x-data="{
         open: false,
+        desktop: false,
         active: 0,
         pending: 0,
-        close(discard = true) {
-            if (discard && this.pending > 0) { Livewire.dispatch('discard-filters') }
-            this.open = false
+        init() {
+            const breakpoint = @js((int) ($breakpoint ?? 1280));
+            if (breakpoint < 1) { return }
+            const query = window.matchMedia('(min-width: ' + breakpoint + 'px)');
+            this.desktop = query.matches;
+            query.addEventListener('change', (event) => {
+                // Widening past the breakpoint with the drawer open keeps what was chosen.
+                if (event.matches) { this.close(true) }
+                this.desktop = event.matches;
+            });
+        },
+        show() {
+            this.open = true;
+            Livewire.dispatch('start-deferring');
+        },
+        close(apply = false) {
+            if (this.desktop) {
+                if (apply && this.pending > 0) { Livewire.dispatch('apply-filters') }
+                return;
+            }
+            if (! this.open) { return }
+            this.open = false;
+            Livewire.dispatch('stop-deferring', { apply });
         },
     }"
     x-on:entries-updated.window="active = $event.detail?.active ?? 0"
     x-on:pending-filters-updated.window="pending = $event.detail?.count ?? 0"
-    x-on:lf-close-drawer.window="close(false)"
+    x-on:lf-close-drawer="close($event.detail?.apply ?? false)"
     x-on:keydown.escape.window="open && close()"
 >
     <button
         type="button"
-        x-on:click="open = true"
+        x-cloak
+        x-show="! desktop"
+        x-on:click="show()"
         x-bind:aria-expanded="open"
         class="{{ $class ?? 'w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300' }}"
     >
@@ -28,7 +57,7 @@
 
     <div
         x-cloak
-        x-show="open"
+        x-show="open && ! desktop"
         x-on:click="close()"
         x-transition.opacity
         class="fixed inset-0 z-40 bg-black/50"
@@ -37,19 +66,19 @@
 
     <div
         x-cloak
-        x-show="open"
+        x-show="open || desktop"
         x-transition:enter="transition ease-out duration-300 transform"
         x-transition:enter-start="-translate-x-full"
         x-transition:enter-end="translate-x-0"
         x-transition:leave="transition ease-in duration-200 transform"
         x-transition:leave-start="translate-x-0"
         x-transition:leave-end="-translate-x-full"
-        role="dialog"
-        aria-modal="true"
+        x-bind:role="desktop ? null : 'dialog'"
+        x-bind:aria-modal="desktop ? null : 'true'"
         aria-label="{{ __('statamic-livewire-filters::ui.filters') }}"
-        class="fixed inset-y-0 left-0 z-50 flex flex-col w-[90vw] max-w-md bg-white shadow-2xl"
+        x-bind:class="desktop ? '' : 'fixed inset-y-0 left-0 z-50 flex flex-col w-[90vw] max-w-md bg-white shadow-2xl'"
     >
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div x-show="! desktop" class="flex items-center justify-between p-4 border-b border-gray-200">
             <h2 class="text-lg font-semibold">{{ __('statamic-livewire-filters::ui.filters') }}</h2>
             <button
                 type="button"
@@ -63,11 +92,12 @@
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4">
+        <div x-bind:class="desktop ? '' : 'flex-1 overflow-y-auto p-4'">
             {!! $slot !!}
         </div>
 
-        <div class="p-4 border-t border-gray-200">
+        {{-- On desktop only shown while changes are queued, which happens with defer_filters="true". --}}
+        <div x-show="! desktop || pending > 0" x-bind:class="desktop ? 'pt-4' : 'p-4 border-t border-gray-200'">
             @include('statamic-livewire-filters::livewire.ui.apply-button', ['class' => null])
         </div>
     </div>

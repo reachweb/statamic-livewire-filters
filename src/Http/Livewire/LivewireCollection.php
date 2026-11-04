@@ -73,8 +73,13 @@ class LivewireCollection extends Component
     #[Locked]
     public $scrollTo = null;
 
+    /** 'always' for defer_filters="true", 'drawer' for defer_filters="drawer", null when off. */
     #[Locked]
-    public $deferFilters = false;
+    public ?string $deferMode = null;
+
+    /** Whether filter changes are queued right now. In drawer mode, the drawer turns this on and off. */
+    #[Locked]
+    public bool $deferFilters = false;
 
     /**
      * Filter changes queued in deferred mode, keyed by filter, each holding the
@@ -250,6 +255,40 @@ class LivewireCollection extends Component
         $this->syncPendingCount();
 
         $this->dispatch('pending-filters-discarded', filters: $filters, params: $this->params);
+    }
+
+    /**
+     * Drawer mode: the drawer opened, so queue changes until it closes. Only
+     * changes when the visitor's own filter changes apply, never what they query.
+     */
+    #[On('start-deferring')]
+    public function startDeferring(): void
+    {
+        $this->skipRenderIfCollectionStateUnchanged();
+
+        if ($this->deferMode === 'drawer') {
+            $this->deferFilters = true;
+        }
+    }
+
+    /**
+     * The drawer closed: apply or discard the queue, then, in drawer mode, go
+     * back to applying changes live. In always mode deferral stays on.
+     */
+    #[On('stop-deferring')]
+    public function stopDeferring($apply = false): void
+    {
+        if ($this->deferMode === null) {
+            $this->skipRenderIfCollectionStateUnchanged();
+
+            return;
+        }
+
+        $apply === true ? $this->applyFilters() : $this->discardFilters();
+
+        if ($this->deferMode === 'drawer') {
+            $this->deferFilters = false;
+        }
     }
 
     protected function shouldQueueFilterChanges(): bool

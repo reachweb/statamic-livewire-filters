@@ -60,15 +60,18 @@ Optional parameters: `text` (override the label) and `class` (button classes). P
 
 ## Deferred filters (apply button)
 
-On mobile, filters usually live in a drawer, and re-querying the collection on every tap is wasted work. Add `defer_filters="true"` to the collection tag to queue filter changes until the visitor applies them:
+On mobile, filters usually live in a drawer, and re-querying the collection on every tap is wasted work. Deferred mode queues filter changes until the visitor applies them. Set it on the collection tag:
 
 ```antlers
-{{ livewire-collection:cars paginate="9" defer_filters="true" }}
+{{ livewire-collection:cars paginate="9" defer_filters="drawer" }}
 ```
 
-The filters still update as the visitor uses them, but the collection only queues each change. The entries, tags, faceted counts and URL stay as they are until an `apply-filters` event applies the whole queue in one render. A later change of the same filter replaces its queued change, and a change back to the applied value drops it.
+- `defer_filters="drawer"` (recommended): filters apply live until the drawer opens. While it is open, changes are queued; closing it with Apply applies them, and closing it any other way (✕, the backdrop or Escape) discards them. On desktop, where the drawer is a sidebar, filters stay live.
+- `defer_filters="true"`: changes are always queued, on every screen size, until an Apply button is pressed.
 
-Wrap your filters in the `{{ livewire-filters:drawer }}` tag to get an off-canvas panel with a "Filters (n)" trigger, where n is the number of applied filters, and an apply button in its footer:
+While changes are queued, the entries, tags, faceted counts and URL stay as they are. Apply replays the whole queue in one render. A later change of the same filter replaces its queued change, and a change back to the applied value drops it.
+
+Wrap your filters in the `{{ livewire-filters:drawer }}` tag:
 
 ```antlers
 {{ livewire-filters:drawer }}
@@ -77,9 +80,9 @@ Wrap your filters in the `{{ livewire-filters:drawer }}` tag to get an off-canva
 {{ /livewire-filters:drawer }}
 ```
 
-While changes are queued the button reads "Apply (n)", n being the number of filters that will change. With nothing queued it reads "Show N results" and only closes the drawer. N is the current result count from `entries-updated`, so it only changes once filters are applied. Closing the drawer without applying (✕, the backdrop or Escape) sends `discard-filters`: the queue is dropped and each filter that queued a change restores its applied value. Render the button anywhere else with `{{ livewire-filters:apply_button }}`. Both tags accept a `class` parameter for their trigger button. To restyle them fully, publish `livewire/ui/drawer.blade.php` and `livewire/ui/apply-button.blade.php`.
+Below its breakpoint (`breakpoint="1280"` by default, in pixels; `0` keeps the drawer at every width) it is an off-canvas panel with a "Filters (n)" trigger, where n is the number of applied filters, and an apply button in its footer. From the breakpoint up it renders its content in place as a sidebar; widening the window with the drawer open applies its queued changes. The button reads "Apply (n)" while n filter changes are queued, and "Show N results" otherwise, N being the current result count from `entries-updated`. Render the button anywhere else with `{{ livewire-filters:apply_button }}`. Both tags accept a `class` parameter for their trigger button. To restyle them fully, publish `livewire/ui/drawer.blade.php` and `livewire/ui/apply-button.blade.php`.
 
-Removing a tag, Clear all and sort changes still apply right away. In custom views, dispatch `apply-filters` or `discard-filters` yourself, for example `Livewire.dispatch('apply-filters')`, and listen for `pending-filters-updated`, whose `count` is the number of queued filter changes. Custom filters that don't extend `LivewireFilter` don't restore their value on discard.
+Removing a tag, Clear all and sort changes still apply right away. In custom views, dispatch the events yourself with `Livewire.dispatch()`: `start-deferring` and `stop-deferring` (with `{ apply: true }` to apply) in drawer mode, or `apply-filters` and `discard-filters` directly. Listen for `pending-filters-updated`, whose `count` is the number of queued changes. Custom filters that don't extend `LivewireFilter` don't restore their value on discard.
 
 ## License 
 
