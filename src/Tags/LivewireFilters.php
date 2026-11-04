@@ -46,7 +46,8 @@ HTML;
     public function seo(): string
     {
         $request = request();
-        $page = Seo::page($request);
+        $params = Seo::livewireParams($request);
+        $page = Seo::page($request, $params);
         $noindex = '<meta name="robots" content="noindex,follow">';
 
         // Every custom query string filter URL shares the base page's static cache
@@ -56,15 +57,14 @@ HTML;
             return $page > 1 ? $this->canonical($request->url())."\n".$noindex : '';
         }
 
-        $urlParams = Seo::urlParams($request);
-        $filters = Seo::filters($urlParams);
-        $indexableFilters = Seo::indexableFilters($filters, $urlParams);
+        $filters = Seo::filters($params);
+        $selfCanonical = $page === 1 && Seo::indexableFilters($filters, $params);
 
-        $tags = [$this->canonical($indexableFilters
-            ? $request->url().'?'.http_build_query(['params' => $urlParams])
+        $tags = [$this->canonical($selfCanonical
+            ? $request->url().'?'.http_build_query(['params' => Seo::canonicalParams($filters, $params)])
             : $request->url())];
 
-        if (($filters !== [] && ! $indexableFilters) || $page > 1) {
+        if ($page > 1 || ($filters !== [] && ! $selfCanonical)) {
             $tags[] = $noindex;
         }
 

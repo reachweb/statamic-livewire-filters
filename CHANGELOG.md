@@ -8,8 +8,8 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ### Added
 
-- A `{{ livewire-filters:seo }}` tag for the layout `<head>` that outputs `<link rel="canonical">` to the base listing page and `<meta name="robots" content="noindex,follow">` on filtered pages and pages above 1. Filters listed in the new `seo_indexable_filters` config keep single-value URLs indexable with a self canonical.
-- In custom query-string mode, all filter URLs of a page share one static cache entry, so the tag only outputs page-dependent tags there. Turn on the new `seo_filter_headers` config to send `X-Robots-Tag` and canonical `Link` headers for filter URLs instead. The headers are added after the half measure cache stores the response, so they never leak into the cached page.
+- A `{{ livewire-filters:seo }}` tag for the layout `<head>`. In Livewire query-string mode and without a URL mode, it outputs `<link rel="canonical">` to the base listing page, plus `<meta name="robots" content="noindex,follow">` on filtered pages and pages above 1. Filters listed in the new `seo_indexable_filters` config keep single-value first pages indexable with a self canonical. The new `seo_page_names` config lists the query names that carry the page number.
+- In custom query-string mode, all filter URLs of a page share one static cache entry, so the tag only outputs tags for pages above 1 there. Turn on the new `seo_filter_headers` config to send `X-Robots-Tag` and canonical `Link` headers for filter URLs instead, including the self canonical for `seo_indexable_filters`. The headers are added after Statamic's static cache stores the response, so they never leak into the cached page under half or full measure.
 
 ## [4.6.1] - 2026-11-02
 

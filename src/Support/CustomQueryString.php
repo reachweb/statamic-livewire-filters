@@ -27,6 +27,20 @@ class CustomQueryString
         return is_string($prefix) && $prefix !== '' ? $prefix : false;
     }
 
+    /**
+     * Custom query string aliases mapped to the param key each one sets, plus `sort`.
+     * Query scope aliases map to their `scope:field` key.
+     *
+     * @return array<string, string>
+     */
+    public static function aliases(): array
+    {
+        return collect(config('statamic-livewire-filters.custom_query_string_aliases', []))
+            ->map(fn ($value) => str_contains($value, 'query_scope') ? explode(':', $value, 2)[1] : $value)
+            ->merge(['sort' => 'sort'])
+            ->all();
+    }
+
     public static function enabled(): bool
     {
         return static::prefix() !== false;

@@ -3,8 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Support;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 
 /**
  * Indexing rules for filtered listing URLs, shared by {{ livewire-filters:seo }}
@@ -13,42 +12,52 @@ use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 class Seo
 {
     /**
-     * Filter params that come from the visible URL in the active URL mode.
+     * The `params` query of the Livewire query string mode, the only mode whose
+     * filter state the tag reads from the URL.
      */
-    public static function urlParams(Request $request): array
+    public static function livewireParams(Request $request): array
     {
-        if (CustomQueryString::livewireQueryStringEnabled()) {
-            $params = $request->query('params');
-        } elseif ($request->attributes->has(HandleFiltersQueryString::ORIGINAL_PATH_ATTRIBUTE)) {
-            $params = $request->input('params');
-        } else {
-            return [];
-        }
+        $params = CustomQueryString::livewireQueryStringEnabled() ? $request->query('params') : null;
 
         return is_array($params) ? $params : [];
     }
 
     /**
-     * The active filters among the URL params, without query scope bookkeeping.
+     * The active filters among URL params: blocked keys, collection settings
+     * (Livewire syncs the whole params array to the URL) and empty values are dropped.
      */
-    public static function filters(array $urlParams): array
+    public static function filters(array $params): array
     {
-        return collect($urlParams)
-            ->except('query_scope')
+        return collect(BlockedQueryParams::strip($params))
+            ->except([...LivewireCollection::TAG_ONLY_PARAMS, 'page_name', 'query_scope'])
             ->reject(fn ($value) => $value === '' || $value === null || $value === [])
             ->all();
     }
 
-    public static function page(Request $request): int
+    /**
+     * The highest page number among the `seo_page_names` queries and the
+     * collection's own `page_name`, when the URL carries it.
+     */
+    public static function page(Request $request, array $params = []): int
     {
-        return max(1, (int) $request->query('page', 1));
+        $names = (array) config('statamic-livewire-filters.seo_page_names', ['page']);
+
+        if (is_string($params['page_name'] ?? null)) {
+            $names[] = $params['page_name'];
+        }
+
+        return collect($names)
+            ->filter(fn ($name) => is_string($name) && is_numeric($request->query($name)))
+            ->map(fn ($name) => (int) $request->query($name))
+            ->push(1)
+            ->max();
     }
 
     /**
      * Whether a filtered first page stays indexable: every active filter is
-     * single-valued and listed in `seo_indexable_filters`.
+     * single-valued and listed in `seo_indexable_filters` by alias, key or field.
      */
-    public static function indexableFilters(array $filters, array $urlParams): bool
+    public static function indexableFilters(array $filters, array $params): bool
     {
         $indexable = (array) config('statamic-livewire-filters.seo_indexable_filters', []);
 
@@ -56,24 +65,15 @@ class Seo
             return false;
         }
 
-        $scopes = explode('|', (string) ($urlParams['query_scope'] ?? ''));
-
-        $aliases = collect(config('statamic-livewire-filters.custom_query_string_aliases', []))
-            ->map(fn ($key) => Str::after($key, 'query_scope:'));
+        $scopes = static::scopes($params);
+        $aliases = CustomQueryString::aliases();
 
         foreach ($filters as $key => $value) {
-            if (! is_string($value) || str_contains($value, '|') || str_contains($value, ',')) {
+            if (! is_string($value) || str_contains($value, '|')) {
                 return false;
             }
 
-            $segments = explode(':', (string) $key);
-            $field = $segments[0] === 'taxonomy' || in_array($segments[0], $scopes, true)
-                ? ($segments[1] ?? $segments[0])
-                : $segments[0];
-
-            $names = $aliases->filter(fn ($actualKey) => $actualKey === $key)->keys()
-                ->push($key, $field)
-                ->all();
+            $names = [$key, ParamKey::parse((string) $key, $scopes)->field, ...array_keys($aliases, $key, true)];
 
             if (array_intersect($names, $indexable) === []) {
                 return false;
@@ -81,5 +81,50 @@ class Seo
         }
 
         return true;
+    }
+
+    /**
+     * Filters as the canonical `params` query: sorted, with only the scopes they use.
+     */
+    public static function canonicalParams(array $filters, array $params): array
+    {
+        ksort($filters);
+
+        $usedScopes = collect(array_keys($filters))
+            ->map(fn ($key) => ParamKey::parse((string) $key, static::scopes($params)))
+            ->filter(fn (ParamKey $key) => $key->condition === 'query_scope')
+            ->map(fn (ParamKey $key) => $key->modifier)
+            ->unique()
+            ->sort()
+            ->implode('|');
+
+        return $usedScopes === '' ? $filters : [...$filters, 'query_scope' => $usedScopes];
+    }
+
+    /**
+     * Filters as custom query string segments, in the order of the configured aliases.
+     */
+    public static function canonicalSegments(array $filters): string
+    {
+        return collect(CustomQueryString::aliases())
+            ->unique()
+            ->filter(fn ($key) => array_key_exists($key, $filters))
+            ->map(fn ($key, $alias) => rawurlencode($alias).'/'.rawurlencode($filters[$key]))
+            ->implode('/');
+    }
+
+    /**
+     * Registered query scopes listed in the params, so a crafted `scope:field`
+     * key can't pass as a filter on another field.
+     */
+    protected static function scopes(array $params): array
+    {
+        $scopes = $params['query_scope'] ?? '';
+
+        if (! is_string($scopes)) {
+            return [];
+        }
+
+        return array_values(array_filter(explode('|', $scopes), fn ($scope) => app('statamic.scopes')->has($scope)));
     }
 }

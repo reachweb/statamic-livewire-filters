@@ -85,4 +85,8 @@ return [
     // Send X-Robots-Tag and canonical Link headers for custom query string filter URLs. Their pages
     // share one static cache entry, so these signals can't live in the cached <head>
     'seo_filter_headers' => false,
+
+    // Query string names that carry the page number for the SEO tag and headers. A collection's
+    // own page_name is also read from the URL in Livewire query string mode
+    'seo_page_names' => ['page'],
 ];

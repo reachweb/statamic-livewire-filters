@@ -13,6 +13,15 @@ use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleParams
 {
+    /**
+     * Collection settings that setParameters() extracts into locked properties.
+     * They may only come from the tag, never from the URL.
+     */
+    public const TAG_ONLY_PARAMS = [
+        'from', 'in', 'folder', 'use', 'collection',
+        'view', 'lazy-placeholder', 'paginate', 'infinite_scroll', 'allowed_filters',
+    ];
+
     /** Request-scoped (never persisted): whether this request already applied a real state change. */
     protected bool $collectionStateChangedThisRequest = false;
 
@@ -422,10 +431,7 @@ trait HandleParams
      */
     protected function rejectTagOnlyParams(array $params): array
     {
-        return array_diff_key($params, array_flip([
-            'from', 'in', 'folder', 'use', 'collection',
-            'view', 'lazy-placeholder', 'paginate', 'infinite_scroll', 'allowed_filters',
-        ]));
+        return array_diff_key($params, array_flip(self::TAG_ONLY_PARAMS));
     }
 
     protected function mergeParameters($params, $urlParams): array
@@ -546,17 +552,7 @@ trait HandleParams
 
     protected function getConfigAliases(): array
     {
-        return collect(config('statamic-livewire-filters.custom_query_string_aliases', []))->transform(function ($value, $key) {
-            if (str_contains($value, 'query_scope')) {
-                [$scopeString, $scopeKey] = explode(':', $value, 2);
-
-                return $scopeKey;
-            }
-
-            return $value;
-        })->merge(['sort' => 'sort'])
-            ->flip()
-            ->all();
+        return array_flip(CustomQueryString::aliases());
     }
 
     protected function stripCustomQueryStringPrefix(string $path): string
