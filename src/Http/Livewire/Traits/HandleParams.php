@@ -437,20 +437,20 @@ trait HandleParams
 
     /**
      * Filters and LfSort read the URL's params themselves at mount, so they render
-     * the selection on first paint. Only the filter params they could not read there
-     * (set on the tag, or a URL value the collection replaced) still go out in
-     * `preset-params`, which costs a follow-up request. Tag options without a
-     * `field:condition` key, such as `limit`, have no filter to restore.
+     * the selection on first paint, and `preset-params` (a follow-up request) is only
+     * sent when a filter param did not come from the URL, such as a tag preset. It
+     * then carries every filter param, not just the missing ones: a filter reading
+     * several keys, like a dual-range toggle, must see them in one payload. Tag
+     * options without a `field:condition` key, such as `limit`, have no filter.
      */
     protected function handlePresetParams()
     {
         $urlParams = CustomQueryString::urlParams();
 
         $presets = collect($this->params)
-            ->filter(fn ($value, $key) => is_string($key) && ($key === 'sort' || str_contains($key, ':')))
-            ->reject(fn ($value, $key) => array_key_exists($key, $urlParams) && $urlParams[$key] === $value);
+            ->filter(fn ($value, $key) => is_string($key) && ($key === 'sort' || str_contains($key, ':')));
 
-        if ($presets->isNotEmpty()) {
+        if ($presets->contains(fn ($value, $key) => ! array_key_exists($key, $urlParams) || $urlParams[$key] !== $value)) {
             $this->dispatch('preset-params', $presets->all());
         }
     }

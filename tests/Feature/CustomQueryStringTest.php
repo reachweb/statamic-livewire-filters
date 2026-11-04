@@ -160,7 +160,7 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
-    public function filters_render_the_url_selection_on_page_load_and_only_tag_presets_are_dispatched()
+    public function filters_render_the_url_selection_on_page_load_and_a_tag_preset_sends_every_filter_param()
     {
         \MarcoRieser\Livewire\Tags\Livewire::register();
 
@@ -180,10 +180,11 @@ class CustomQueryStringTest extends TestCase
         $this->assertStringContainsString('I Love Drums', $html);
         $this->assertStringNotContainsString('I Love Guitars', $html);
 
-        // The URL's param is already applied; only the tag's own preset still needs the event.
+        // The tag preset still needs the event, which carries the URL's params too, so
+        // a filter reading several keys sees them together.
         $presets = collect($this->dispatchesIn($html))->where('name', 'preset-params')->values();
         $this->assertCount(1, $presets);
-        $this->assertSame(['title:contains' => 'I Love'], $presets[0]['params'][0]);
+        $this->assertEquals(['item_options:is' => 'option2', 'title:contains' => 'I Love'], $presets[0]['params'][0]);
     }
 
     #[Test]
