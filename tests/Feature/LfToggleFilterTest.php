@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
@@ -502,5 +503,26 @@ class LfToggleFilterTest extends TestCase
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
+    }
+
+    #[Test]
+    public function a_dual_range_toggle_matches_when_one_bound_is_in_the_url_and_the_other_on_the_tag()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+        $url = Livewire::withQueryParams(['params' => ['price:gte' => '50000']]);
+
+        $presets = collect($url->test(LivewireCollection::class, ['params' => ['from' => 'cars', 'price:lte' => '100000']])
+            ->effects['dispatches'] ?? [])
+            ->firstWhere('name', 'preset-params')['params'][0];
+
+        $url->test(LfToggleFilter::class, [
+            'field' => 'price',
+            'blueprint' => 'cars.car',
+            'condition' => 'dual_range',
+            'preset_value' => ['min' => 50000, 'max' => 100000],
+            'label' => 'Mid range',
+        ])
+            ->dispatch('preset-params', $presets)
+            ->assertSet('selected', true);
     }
 }

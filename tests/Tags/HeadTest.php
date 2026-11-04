@@ -49,6 +49,9 @@ class HeadTest extends TestCase
 
         $this->assertStringContainsString('__livewireStarted', $output);
         $this->assertStringContainsString('Livewire.start()', $output);
+
+        // Livewire must not start before the page is parsed, or later alpine:init listeners miss the event.
+        $this->assertStringContainsString("document.addEventListener('DOMContentLoaded', start", $output);
     }
 
     public function test_it_starts_livewire_when_the_csrf_token_was_already_replaced()

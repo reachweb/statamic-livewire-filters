@@ -6,6 +6,29 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+## [4.6.3] - 2026-11-04
+
+### Changed
+
+- Filters and `lf-sort` now read the URL's filter params when they mount, in both the custom query string and the Livewire query string modes, so their state matches the URL from the first render. Before, every control rendered empty and waited for a `preset-params` event in a follow-up request, so the page briefly showed unchecked controls, and `{{ nocache }}` regions returned empty controls.
+- The `lf-checkbox`, `lf-radio`, `lf-select`, `lf-toggle`, `lf-text`, `lf-date`, `lf-range` and `lf-sort` views show the selection in the server HTML: checkboxes and radios are `checked`, select options `selected`, and text, date and range inputs carry their `value`. The Alpine-driven `lf-checkbox-advanced`, `lf-select-advanced` and `lf-dual-range` views show it as soon as Livewire starts, without waiting for another request.
+- The collection now sends `preset-params` only when a filter param doesn't come from the URL, such as a preset set on the `livewire-collection` tag; it then carries every filter param, URL ones included. It only contains filter keys (`field:condition` style) and `sort`.
+
+### Fixed
+
+- Under full-measure static caching, `{{ livewire-filters:head }}` now waits for `DOMContentLoaded` before starting Livewire, like Livewire does on its own. Before, it could start Livewire and Alpine while the page was still loading, so `alpine:init` listeners placed after `{{ livewire:scripts }}`, such as ones that register `Alpine.store` or `Alpine.data`, sometimes ran too late. Expressions that used them then threw errors like `Cannot read properties of undefined`. On the demo site this happened on up to 1 in 6 page loads.
+- With `custom_query_string` and full-measure static caching, filter changes sometimes left the browser URL unchanged, so a reload or shared link lost the filters or page. The URL handler waited for `livewire:initialized`, which had often already fired by the time it loaded. It now registers its listeners as soon as it loads, once per page.
+- With `custom_query_string` and `{{ nocache }}` regions under full-measure static caching, opening or reloading a paginated URL such as `/cars/filters/brand/audi?page=2` now shows that page. Before, the `/!/nocache` request only restored the filter segments from the page URL, so the regions always rendered page 1. The page URL's query string now reaches the regions, as it already did with `enable_query_string`.
+
+### Upgrading from 4.6.2
+
+Sites that use the bundled views need no changes. Check the following:
+
+- **Custom filter components.** A custom filter that relied on `preset-params` for a URL param no longer receives it, because the collection skips the event when every filter param comes from the URL. Read `CustomQueryString::urlParams()` at mount instead. Filters that use the `IsLivewireFilter` trait and define `setPresetValues()` get this automatically.
+- **Custom listeners for keys without a colon.** `preset-params` now only carries filter keys (`field:condition` style) and `sort`. A listener that read another tag option from it, such as `limit`, no longer receives it.
+- **Published filter views.** They keep working and skip the follow-up request, but they only show the selection once Livewire starts. Copy the new `@checked`, `@selected` and `value` attributes from the bundled views to get it in the server HTML.
+- **Published `livewire/utility/url-handler.blade.php`.** Re-publish it or merge in the new script to get the full-caching URL fix.
+
 ## [4.6.2] - 2026-11-04
 
 ### Changed
@@ -219,7 +242,8 @@ If you published `lf-checkbox-advanced.blade.php` or `lf-select-advanced.blade.p
 
 For releases before 4.0.0, see the [GitHub releases](https://github.com/reachweb/statamic-livewire-filters/releases).
 
-[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.2...HEAD
+[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.3...HEAD
+[4.6.3]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.2...v4.6.3
 [4.6.2]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.1...v4.6.2
 [4.6.1]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.0...v4.6.1
 [4.6.0]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.5.1...v4.6.0

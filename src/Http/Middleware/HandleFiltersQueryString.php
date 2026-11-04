@@ -107,6 +107,11 @@ class HandleFiltersQueryString
             return;
         }
 
+        // The page's own query (such as ?page=2) is not part of the filter path, but
+        // the regions must render with it, as they would in a request for the page.
+        // The filter segments below then replace any `params` it carried, as on a GET.
+        $this->hydrateFromOriginalQueryString($request, $parsed);
+
         if (! isset($parsed['path'])) {
             return;
         }

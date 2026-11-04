@@ -52,17 +52,7 @@ trait HandleParams
                 'params.*' => 'string|max:255',
             ])['params'] ?? [];
 
-            return collect($params)
-                ->map(function ($value) {
-                    $value = htmlspecialchars($value);
-                    $value = strip_tags($value);
-                    $value = Str::before($value, '?');
-
-                    // Additional sanitization
-                    return preg_replace('/[<>\'";]/', '', $value);
-                })
-                ->filter()
-                ->all();
+            return CustomQueryString::sanitize($params);
         }
 
         return false;
@@ -445,13 +435,23 @@ trait HandleParams
         return is_array($payload) ? implode('|', $payload) : $payload;
     }
 
+    /**
+     * Filters and LfSort read the URL's params themselves at mount, so they render
+     * the selection on first paint, and `preset-params` (a follow-up request) is only
+     * sent when a filter param did not come from the URL, such as a tag preset. It
+     * then carries every filter param, not just the missing ones: a filter reading
+     * several keys, like a dual-range toggle, must see them in one payload. Tag
+     * options without a `field:condition` key, such as `limit`, have no filter.
+     */
     protected function handlePresetParams()
     {
-        $params = collect($this->params);
-        $collectionKeys = ['from', 'in', 'folder', 'use', 'collection'];
-        $restOfParams = $params->except($collectionKeys);
-        if ($restOfParams->isNotEmpty()) {
-            $this->dispatch('preset-params', $restOfParams->all());
+        $urlParams = CustomQueryString::urlParams();
+
+        $presets = collect($this->params)
+            ->filter(fn ($value, $key) => is_string($key) && ($key === 'sort' || str_contains($key, ':')));
+
+        if ($presets->contains(fn ($value, $key) => ! array_key_exists($key, $urlParams) || $urlParams[$key] !== $value)) {
+            $this->dispatch('preset-params', $presets->all());
         }
     }
 

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -408,6 +409,26 @@ class LfDualRangeFilterTest extends TestCase
             ->assertDispatched('dual-range-preset-values', min: 5, max: 10)
             ->assertSet('selectedMin', 5)
             ->assertSet('selectedMax', 10);
+    }
+
+    #[Test]
+    public function it_restores_a_date_range_from_the_url_at_mount_with_date_comparisons()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        // The URL preset runs before booted(), which used to be the only place setting the date modifier.
+        Livewire::withQueryParams(['params' => ['year:is_after' => '2022-01-01', 'year:is_before' => '2025-12-31']])
+            ->test(LfDualRangeFilter::class, [
+                'field' => 'year',
+                'blueprint' => 'yachts.yachts',
+                'condition' => 'dual_range',
+                'min' => 2018,
+                'max' => 2026,
+                'minRange' => 1,
+            ])
+            ->assertSet('modifier', 'is_after|is_before')
+            ->assertSet('selectedMin', 2022)
+            ->assertSet('selectedMax', 2025);
     }
 
     #[Test]

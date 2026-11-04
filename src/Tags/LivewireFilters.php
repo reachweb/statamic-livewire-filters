@@ -20,6 +20,9 @@ class LivewireFilters extends Tags
         // Statamic swaps the placeholder in the meta tag before firing 'statamic:csrf.replaced',
         // so the script can tell the event already fired when it runs late (e.g. queued behind a
         // stylesheet). The placeholder is split so Statamic's server-side replacement leaves it alone.
+        // Setting livewireScriptConfig turns off Livewire's own start on DOMContentLoaded, so the script
+        // waits for it too: alpine:init listeners later in the page (Alpine.store, Alpine.data) must be
+        // registered before Alpine starts.
         return <<<HTML
 <meta name="livewire-filters-csrf" content="{$token}">
 <script>
@@ -27,6 +30,10 @@ class LivewireFilters extends Tags
     (function () {
         function start() {
             if (window.__livewireStarted) {
+                return;
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', start, { once: true });
                 return;
             }
             if (!window.Livewire) {

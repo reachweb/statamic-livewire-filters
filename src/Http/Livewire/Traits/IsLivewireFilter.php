@@ -5,6 +5,7 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 use Livewire\Attributes\Locked;
 use Reach\StatamicLivewireFilters\Exceptions\TaxonomyFieldHandleMismatchException;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Statamic\Facades\Taxonomy;
 use Statamic\Support\Arr;
@@ -111,6 +112,11 @@ trait IsLivewireFilter
 
         $this->initiateField();
 
+        // Restore the URL's selection before the first render instead of waiting for
+        // the collection's `preset-params`, which arrives in a follow-up request.
+        if (method_exists($this, 'setPresetValues') && ($urlParams = CustomQueryString::urlParams()) !== []) {
+            $this->setPresetValues($urlParams);
+        }
     }
 
     public function initiateField()
