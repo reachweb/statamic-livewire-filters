@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- With `custom_query_string` and `{{ nocache }}` regions under full-measure static caching, opening or reloading a paginated URL such as `/cars/filters/brand/audi?page=2` now shows that page. Before, the `/!/nocache` request only restored the filter segments from the page URL, so the regions always rendered page 1. The page URL's query string now reaches the regions, as it already did with `enable_query_string`.
+
 ## [4.6.2] - 2026-11-04
 
 ### Changed
