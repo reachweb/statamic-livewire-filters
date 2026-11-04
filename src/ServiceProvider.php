@@ -76,6 +76,20 @@ class ServiceProvider extends AddonServiceProvider
 
         RestoreNocacheMemoPath::register();
 
+        // Request-scoped component state, set from global hooks rather than hydrate() or
+        // dehydrate() methods, so a subclass defining its own can't drop it.
+        \Livewire\on('hydrate', static function ($component): void {
+            if ($component instanceof LfCount) {
+                (fn () => $this->hydrated = true)->call($component);
+            }
+        });
+        // The view's flag covers one request, even when failed validation never reached the dispatch.
+        \Livewire\on('dehydrate', static function ($component): void {
+            if ($component instanceof LfCheckboxFilter) {
+                $component->syncedByView = false;
+            }
+        });
+
         // Booted so our dehydrate listener runs after Livewire's url effect is set.
         $this->app->booted(static function (): void {
             SuppressPaginatorUrlHistory::register();

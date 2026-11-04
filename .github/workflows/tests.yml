@@ -24,6 +24,15 @@ jobs:
             os: ubuntu-latest
             framework: "^12.0"
             testbench: "^10.0"
+          # The lowest supported Statamic. It predates Laravel 12, and Composer blocks
+          # installing it (and every Laravel 11 release) over published advisories.
+          - php: 8.4
+            laravel: 11.*
+            statamic: 5.29.*
+            os: ubuntu-latest
+            framework: "^11.0"
+            testbench: "^9.0"
+            allow_insecure: true
           - php: 8.4
             laravel: 12.*
             statamic: 5.*
@@ -67,6 +76,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          if [ -n "${{ matrix.allow_insecure }}" ]; then composer config audit.block-insecure false; fi
           composer require "laravel/framework:${{ matrix.framework }}" "statamic/cms:${{ matrix.statamic }}" --no-interaction --no-update
           if [ -n "${{ matrix.livewire }}" ]; then composer require "livewire/livewire:${{ matrix.livewire }}" --no-interaction --no-update; fi
           composer require "orchestra/testbench:${{ matrix.testbench }}" --dev --no-interaction --no-update

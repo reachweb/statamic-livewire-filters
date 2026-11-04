@@ -102,7 +102,7 @@ class LivewireCollection extends Component
 
         // Dispatched after the init hooks and trust captures so the initial
         // counts/bounds/tags payloads match what the entries query will use.
-        $this->dispatchParamsUpdated();
+        $this->dispatchParamsUpdated(initial: true);
     }
 
     protected function resolveCurrentPath(): string
@@ -223,16 +223,50 @@ class LivewireCollection extends Component
         }
     }
 
+    /**
+     * The sweep removes every runtime param itself. The condition keys it had to keep
+     * (tag- or init-hook-authored) and the params it removed ride along positionally, so
+     * only a filter managing a kept key, or one whose selection the sweep missed, relays
+     * a clear-filter. Listeners without the arguments still work.
+     */
     public function clearAll()
     {
+        $paramsBeforeSweep = $this->params;
+
         $this->clearAllFilterParams();
-        $this->dispatch('clear-all-filters');
+
+        $this->dispatch('clear-all-filters', $this->keptConditionParamKeys(), array_diff_key($paramsBeforeSweep, $this->params));
     }
 
+    /**
+     * @return array<int, string>
+     */
+    protected function keptConditionParamKeys(): array
+    {
+        return collect($this->params)
+            ->keys()
+            ->filter(fn ($key) => is_string($key) && str_contains($key, ':'))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Filters skip their relay unless the event lists their key, but the list only holds
+     * the sending collection's kept keys. A collection that kept other condition keys (a
+     * second collection on the page) re-sends the list with its own keys added, so only the
+     * filters managing those keys relay. The list grows with every re-send and a collection
+     * whose keys are all listed doesn't re-send, so it can't loop. Bare events never re-send.
+     */
     #[On('clear-all-filters')]
     public function resetPaginationOnClearAll(): void
     {
         $this->clearAllFilterParams();
+
+        $keptParamKeys = func_get_args()[0] ?? null;
+
+        if (is_array($keptParamKeys) && array_diff($this->keptConditionParamKeys(), $keptParamKeys) !== []) {
+            $this->dispatch('clear-all-filters', array_values(array_unique([...$keptParamKeys, ...$this->keptConditionParamKeys()])), ...array_slice(func_get_args(), 1));
+        }
     }
 
     public function entries()
@@ -272,6 +306,11 @@ class LivewireCollection extends Component
 
     public function rendered()
     {
-        $this->dispatch('entries-updated', count: $this->entriesCount, active: $this->activeFilters);
+        // The label lets the bundled LfCount view update in the browser with the locale's plural form.
+        $this->dispatch('entries-updated',
+            count: $this->entriesCount,
+            active: $this->activeFilters,
+            entriesLabel: trans_choice('statamic-livewire-filters::ui.entries', (int) $this->entriesCount),
+        );
     }
 }

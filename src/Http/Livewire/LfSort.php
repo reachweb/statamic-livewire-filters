@@ -36,7 +36,7 @@ class LfSort extends Component
         $this->setPresetSort(CustomQueryString::urlParams());
     }
 
-    #[Computed(persist: true)]
+    #[Computed]
     public function sortOptions()
     {
         return $this->getFieldNames()->flatMap(function ($item) {

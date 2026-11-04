@@ -797,7 +797,7 @@ trait HandleParams
         $this->boundsSelectionRevisions[$selection['source']] = $selection['revision'];
     }
 
-    protected function dispatchParamsUpdated(): void
+    protected function dispatchParamsUpdated(bool $initial = false): void
     {
         $this->markCollectionStateChanged();
 
@@ -815,7 +815,22 @@ trait HandleParams
             ));
         }
 
-        // Dispatching to the tags component
+        // LfTags mounts empty, so at mount the event is only needed when there is a tag to show.
+        if ($initial && ! $this->hasTaggableParams()) {
+            return;
+        }
+
         $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
+    }
+
+    /**
+     * Mirrors LfTags::updateTags(): condition keys and the query_scope registry are taggable, sort is not.
+     */
+    protected function hasTaggableParams(): bool
+    {
+        return collect($this->params)
+            ->keys()
+            ->contains(fn ($key) => is_string($key) && $key !== 'sort'
+                && (str_contains($key, ':') || str_starts_with($key, 'query_scope')));
     }
 }
