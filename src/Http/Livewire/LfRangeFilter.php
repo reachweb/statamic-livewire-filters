@@ -66,7 +66,7 @@ class LfRangeFilter extends LivewireFilter
             $this->pinSelectionToBounds($this->dynamicMin, $this->dynamicMax);
         }
 
-        if (! $this->clearAllNeedsRelay(func_get_args()[0] ?? null)) {
+        if (! $this->clearAllNeedsRelay(...func_get_args())) {
             $this->forgetBoundsSelectionWithoutRelay();
 
             return;

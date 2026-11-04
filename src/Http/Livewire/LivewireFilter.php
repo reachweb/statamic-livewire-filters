@@ -62,10 +62,12 @@ abstract class LivewireFilter extends Component implements FilterContract
     /** @param  array<string, mixed>  $extra  Additional named event params, such as `boundsSelection`. */
     protected function dispatchFilterUpdated(array $extra = []): void
     {
+        $this->lastSentPayload = $this->payload();
+
         $this->dispatch('filter-updated', ...[
             'field' => $this->field,
             'condition' => $this->condition,
-            'payload' => $this->payload(),
+            'payload' => $this->lastSentPayload,
             'modifier' => $this->modifier,
             ...$extra,
         ])
@@ -78,7 +80,7 @@ abstract class LivewireFilter extends Component implements FilterContract
         $this->selected = $this->emptyValue();
         $this->markFilterStateChanged();
 
-        if ($this->clearAllNeedsRelay(func_get_args()[0] ?? null)) {
+        if ($this->clearAllNeedsRelay(...func_get_args())) {
             $this->clearFilters();
         }
     }

@@ -35,6 +35,10 @@ trait IsLivewireFilter
     #[Locked]
     public bool $clientRendered = false;
 
+    /** The payload of the last filter-updated, until it is cleared: a clear-all compares it with what its sweep removed. */
+    #[Locked]
+    public mixed $lastSentPayload = null;
+
     /** Request-scoped (never persisted): a handler in this request changed state the view may depend on. */
     protected bool $filterStateChangedThisRequest = false;
 
@@ -177,25 +181,59 @@ trait IsLivewireFilter
     /**
      * A bare clear-all-filters (LfTags, user code) or the per-filter clear button keeps
      * the relay. One from LivewireCollection::clearAll() lists the keys its sweep had to
-     * keep, so only a filter managing one of them needs to relay. clear() reads the list with
-     * func_get_args() and declares no parameter, so subclasses overriding clear() stay compatible.
+     * keep and the params it removed, so a filter only relays when it manages a kept key,
+     * or when the sweep missed its last selection. clear() reads these with func_get_args()
+     * and declares no parameter, so subclasses overriding clear() stay compatible.
+     *
+     * The selection is being cleared, so this also forgets the last sent payload.
      *
      * @param  mixed  $keptParamKeys  The list from clearAll(); anything else counts as a bare event.
+     * @param  mixed  $sweptParams  The params clearAll() removed; without them only the kept keys decide.
      */
-    protected function clearAllNeedsRelay($keptParamKeys): bool
+    protected function clearAllNeedsRelay($keptParamKeys = null, $sweptParams = null): bool
     {
+        $lastSentPayload = $this->lastSentPayload;
+        $this->lastSentPayload = null;
+
         if (! is_array($keptParamKeys)) {
             return true;
         }
 
         $paramKey = $this->getParamKey();
 
-        return collect(is_array($paramKey) ? array_values($paramKey) : [$paramKey])
+        $managesKeptKey = collect(is_array($paramKey) ? array_values($paramKey) : [$paramKey])
             ->contains(fn ($key) => in_array($key, $keptParamKeys, true));
+
+        return $managesKeptKey || (is_array($sweptParams) && $this->sweepMissedPayload($lastSentPayload, $sweptParams));
+    }
+
+    /**
+     * A selection made while the clear-all was on its way reaches the collection after the
+     * sweep, then this filter resets, and only a relay can remove the param that landed. A
+     * false positive just costs the relay, so the params are compared as the collection stores them.
+     *
+     * @param  array<string, mixed>  $sweptParams
+     */
+    protected function sweepMissedPayload(mixed $payload, array $sweptParams): bool
+    {
+        if ($payload === null || $payload === '' || $payload === []) {
+            return false;
+        }
+
+        $paramKey = $this->getParamKey();
+
+        $sentParams = is_array($paramKey)
+            ? [$paramKey['min'] => $payload['min'] ?? null, $paramKey['max'] => $payload['max'] ?? null]
+            : [$paramKey => is_array($payload) ? implode('|', Arr::flatten($payload)) : $payload];
+
+        return collect($sentParams)
+            ->contains(fn ($value, $key) => ! array_key_exists($key, $sweptParams) || $sweptParams[$key] != $value);
     }
 
     public function clearFilters($boundsSelection = null)
     {
+        $this->lastSentPayload = null;
+
         $this->dispatch('clear-filter',
             field: $this->field,
             condition: $this->condition,

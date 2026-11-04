@@ -225,13 +225,17 @@ class LivewireCollection extends Component
 
     /**
      * The sweep removes every runtime param itself. The condition keys it had to keep
-     * (tag- or init-hook-authored) ride along positionally, so only a filter managing
-     * one of them relays a clear-filter, and listeners without the argument still work.
+     * (tag- or init-hook-authored) and the params it removed ride along positionally, so
+     * only a filter managing a kept key, or one whose selection the sweep missed, relays
+     * a clear-filter. Listeners without the arguments still work.
      */
     public function clearAll()
     {
+        $paramsBeforeSweep = $this->params;
+
         $this->clearAllFilterParams();
-        $this->dispatch('clear-all-filters', $this->keptConditionParamKeys());
+
+        $this->dispatch('clear-all-filters', $this->keptConditionParamKeys(), array_diff_key($paramsBeforeSweep, $this->params));
     }
 
     /**
@@ -261,7 +265,7 @@ class LivewireCollection extends Component
         $keptParamKeys = func_get_args()[0] ?? null;
 
         if (is_array($keptParamKeys) && array_diff($this->keptConditionParamKeys(), $keptParamKeys) !== []) {
-            $this->dispatch('clear-all-filters', array_values(array_unique([...$keptParamKeys, ...$this->keptConditionParamKeys()])));
+            $this->dispatch('clear-all-filters', array_values(array_unique([...$keptParamKeys, ...$this->keptConditionParamKeys()])), ...array_slice(func_get_args(), 1));
         }
     }
 

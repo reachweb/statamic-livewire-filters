@@ -12,6 +12,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -226,13 +227,16 @@ class ClearAllRelayTest extends TestCase
     public function only_the_filter_managing_a_kept_key_relays()
     {
         $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red']]);
+        $text = Livewire::test(LfTextFilter::class, ['field' => 'title', 'blueprint' => 'clothes.clothes', 'condition' => 'contains'])
+            ->set('selected', 'Shirt');
+        $this->forwardToCollection($text, $collection, 'filter-updated');
+
         $collection->call('clearAll');
         $kept = $this->clearAllEventParams($collection);
-        $this->assertSame([['taxonomy:colors:any']], $kept);
+        $this->assertSame(['taxonomy:colors:any'], $kept[0]);
+        $this->assertSame(['title:contains' => 'Shirt'], $kept[1]);
 
-        Livewire::test(LfTextFilter::class, ['field' => 'title', 'blueprint' => 'clothes.clothes', 'condition' => 'contains'])
-            ->set('selected', 'Shirt')
-            ->dispatch('clear-all-filters', ...$kept)
+        $text->dispatch('clear-all-filters', ...$kept)
             ->assertSet('selected', '')
             ->assertNotDispatched('clear-filter');
 
@@ -327,8 +331,10 @@ class ClearAllRelayTest extends TestCase
         $other = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red']]);
         $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
             ->set('selected', ['red']);
+        $this->forwardToCollection($filter, $sender, 'filter-updated');
         $unrelated = Livewire::test(LfRangeFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'condition' => 'gte', 'min' => 4, 'max' => 6])
             ->set('selected', 5);
+        $this->forwardToCollection($unrelated, $sender, 'filter-updated');
 
         $sender->call('clearAll');
         $kept = $this->clearAllEventParams($sender);
@@ -337,7 +343,7 @@ class ClearAllRelayTest extends TestCase
 
         $other->dispatch('clear-all-filters', ...$kept)
             ->assertSet('params', ['taxonomy:colors:any' => 'red'])
-            ->assertDispatched('clear-all-filters', fn ($event, $params) => $params === [['taxonomy:colors:any']]);
+            ->assertDispatched('clear-all-filters', fn ($event, $params) => $params === [['taxonomy:colors:any'], $kept[1]]);
         $resent = $this->clearAllEventParams($other);
 
         // Only the filter managing the added key relays, and nobody re-sends again.
@@ -360,9 +366,159 @@ class ClearAllRelayTest extends TestCase
         $second->dispatch('clear-all-filters', ...$this->clearAllEventParams($first));
         $resent = $this->clearAllEventParams($second);
 
-        $this->assertEqualsCanonicalizing([['taxonomy:colors:any', 'max_items:gte']], $resent);
+        $this->assertEqualsCanonicalizing(['taxonomy:colors:any', 'max_items:gte'], $resent[0]);
         $first->dispatch('clear-all-filters', ...$resent)->assertNotDispatched('clear-all-filters');
         $second->dispatch('clear-all-filters', ...$resent)->assertNotDispatched('clear-all-filters');
+    }
+
+    public static function filterSelections(): array
+    {
+        return [
+            'text' => [LfTextFilter::class, ['field' => 'title', 'condition' => 'contains'], 'selected', 'Shirt'],
+            'list of values' => [LfCheckboxFilter::class, ['field' => 'colors', 'condition' => 'taxonomy'], 'selected', ['red', 'black']],
+            'range' => [LfRangeFilter::class, ['field' => 'max_items', 'condition' => 'gte', 'min' => 4, 'max' => 6], 'selected', 5],
+            'dual range' => [LfDualRangeFilter::class, ['field' => 'max_items', 'min' => 4, 'max' => 6, 'minRange' => 1], 'selectedMin', 5],
+            'toggle' => [LfToggleFilter::class, ['field' => 'title', 'condition' => 'is', 'preset_value' => 'Red Shirt'], 'selected', true],
+        ];
+    }
+
+    protected function lastDispatchedFilterUpdate($filter): array
+    {
+        return collect($filter->effects['dispatches'] ?? [])->firstWhere('name', 'filter-updated')['params'];
+    }
+
+    /**
+     * The sweep ran before the selection reached the collection, so its filter-updated lands
+     * after the sweep. Without a relay the param would stick while the filter shows nothing.
+     */
+    #[Test]
+    #[DataProvider('filterSelections')]
+    public function a_selection_the_sweep_missed_does_not_stick(string $component, array $args, string $property, mixed $value)
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test($component, ['blueprint' => 'clothes.clothes', ...$args]);
+
+        $collection->call('clearAll');
+        $clearAll = $this->clearAllEventParams($collection);
+
+        $filter->set($property, $value);
+        $lateUpdate = $this->lastDispatchedFilterUpdate($filter);
+        $filter->dispatch('clear-all-filters', ...$clearAll);
+
+        $collection->dispatch('filter-updated', ...$lateUpdate);
+        $this->assertNotSame([], $collection->get('params'), 'the late update should land after the sweep');
+
+        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'clear-filter'), 'the filter should relay');
+        $collection->assertSet('params', [])->assertSet('entriesCount', 2);
+    }
+
+    /** The saving stays: a selection the sweep removed needs no relay. */
+    #[Test]
+    #[DataProvider('filterSelections')]
+    public function a_selection_the_sweep_removed_needs_no_relay(string $component, array $args, string $property, mixed $value)
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test($component, ['blueprint' => 'clothes.clothes', ...$args])->set($property, $value);
+        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'filter-updated'));
+
+        $collection->call('clearAll')->assertSet('params', []);
+        $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection));
+
+        $this->assertSame(0, $this->forwardToCollection($filter, $collection, 'clear-filter'), 'no relay expected');
+        $filter->assertSet('lastSentPayload', null);
+    }
+
+    /** The sweep removed the old value, but the new one is still on its way. */
+    #[Test]
+    public function a_value_changed_after_the_sweep_read_the_old_one_does_not_stick()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfTextFilter::class, ['field' => 'title', 'blueprint' => 'clothes.clothes', 'condition' => 'contains'])
+            ->set('selected', 'Shirt');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+
+        $collection->call('clearAll');
+        $clearAll = $this->clearAllEventParams($collection);
+        $this->assertSame(['title:contains' => 'Shirt'], $clearAll[1]);
+
+        $filter->set('selected', 'Red');
+        $lateUpdate = $this->lastDispatchedFilterUpdate($filter);
+        $filter->dispatch('clear-all-filters', ...$clearAll);
+        $collection->dispatch('filter-updated', ...$lateUpdate)->assertSet('params', ['title:contains' => 'Red']);
+
+        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'clear-filter'));
+        $collection->assertSet('params', []);
+    }
+
+    /** A filter that already took its selection back has nothing on its way. */
+    #[Test]
+    public function a_selection_taken_back_before_the_clear_needs_no_relay()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+
+        $range = Livewire::test(LfRangeFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'condition' => 'gte', 'min' => 4, 'max' => 6])
+            ->set('selected', 5)
+            ->set('selected', 4)
+            ->assertDispatched('clear-filter')
+            ->assertSet('lastSentPayload', null);
+
+        $text = Livewire::test(LfTextFilter::class, ['field' => 'title', 'blueprint' => 'clothes.clothes', 'condition' => 'contains'])
+            ->set('selected', 'Shirt')
+            ->set('selected', '');
+
+        $collection->call('clearAll');
+        $clearAll = $this->clearAllEventParams($collection);
+
+        foreach ([$range, $text] as $filter) {
+            $filter->dispatch('clear-all-filters', ...$clearAll)->assertNotDispatched('clear-filter');
+        }
+    }
+
+    /** The bundled view sends filter-updated in the commit's own request, so nothing is left on its way. */
+    #[Test]
+    public function a_selection_sent_from_the_bundled_view_needs_no_relay()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
+            ->set('selected', ['black'])
+            ->assertSet('lastSentPayload', ['black'])
+            ->update(updates: ['syncedByView' => true, 'selected' => ['red']])
+            ->assertSet('lastSentPayload', null);
+
+        $collection->call('clearAll');
+        $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertNotDispatched('clear-filter');
+    }
+
+    /** Each clear starts over, so a second clear-all doesn't relay the same selection again. */
+    #[Test]
+    public function a_second_clear_all_does_not_relay_again()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfTextFilter::class, ['field' => 'title', 'blueprint' => 'clothes.clothes', 'condition' => 'contains'])
+            ->set('selected', 'Shirt');
+
+        $collection->call('clearAll');
+        $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertDispatched('clear-filter');
+
+        $collection->call('clearAll');
+        $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertNotDispatched('clear-filter');
+    }
+
+    /** A list without the sweep's params (user code) can't tell, so only the kept keys decide, as before. */
+    #[Test]
+    public function an_event_without_the_swept_params_only_checks_the_kept_keys()
+    {
+        $args = ['field' => 'title', 'blueprint' => 'clothes.clothes', 'condition' => 'contains'];
+
+        Livewire::test(LfTextFilter::class, $args)
+            ->set('selected', 'Shirt')
+            ->dispatch('clear-all-filters', [])
+            ->assertNotDispatched('clear-filter');
+
+        Livewire::test(LfTextFilter::class, $args)
+            ->set('selected', 'Shirt')
+            ->dispatch('clear-all-filters', ['title:contains'])
+            ->assertDispatched('clear-filter');
     }
 }
 

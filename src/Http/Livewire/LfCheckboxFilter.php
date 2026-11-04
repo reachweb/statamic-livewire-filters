@@ -54,6 +54,7 @@ class LfCheckboxFilter extends LivewireFilter
     {
         if ($this->syncedByView && $this->dispatchesFromView()) {
             $this->syncedByView = false;
+            $this->lastSentPayload = null;
 
             return;
         }
