@@ -474,19 +474,39 @@ class ClearAllRelayTest extends TestCase
         }
     }
 
-    /** The bundled view sends filter-updated in the commit's own request, so nothing is left on its way. */
+    /** A tick the bundled view sent before the clear reached the collection, so the sweep removed it. */
     #[Test]
-    public function a_selection_sent_from_the_bundled_view_needs_no_relay()
+    public function a_selection_sent_from_the_bundled_view_and_swept_needs_no_relay()
     {
         $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
         $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy'])
-            ->set('selected', ['black'])
-            ->assertSet('lastSentPayload', ['black'])
-            ->update(updates: ['syncedByView' => true, 'selected' => ['red']])
-            ->assertSet('lastSentPayload', null);
+            ->update(updates: ['syncedByView' => true, 'selected' => ['red']]);
+        $collection->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red'], modifier: 'any');
 
         $collection->call('clearAll');
         $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertNotDispatched('clear-filter');
+    }
+
+    /**
+     * Livewire holds back the view's filter-updated while the collection's clearAll() is in
+     * flight, but not the filter's own commit, so the tick lands after the sweep.
+     */
+    #[Test]
+    public function a_tick_from_the_bundled_view_during_a_clear_all_does_not_stick()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy']);
+
+        $collection->call('clearAll');
+        $clearAll = $this->clearAllEventParams($collection);
+
+        $filter->update(updates: ['syncedByView' => true, 'selected' => ['red']])->assertNotDispatched('filter-updated');
+        $filter->dispatch('clear-all-filters', ...$clearAll);
+        $collection->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['red'], modifier: 'any');
+        $this->assertNotSame([], $collection->get('params'), 'the held-back update should land after the sweep');
+
+        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'clear-filter'), 'the filter should relay');
+        $collection->assertSet('params', [])->assertSet('entriesCount', 2);
     }
 
     /** Each clear starts over, so a second clear-all doesn't relay the same selection again. */
