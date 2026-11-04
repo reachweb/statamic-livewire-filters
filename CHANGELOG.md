@@ -14,6 +14,7 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 - Under full-measure static caching, `{{ livewire-filters:head }}` now waits for `DOMContentLoaded` before starting Livewire, like Livewire does on its own. Before, it could start Livewire and Alpine while the page was still loading, so `alpine:init` listeners placed after `{{ livewire:scripts }}`, such as ones that register `Alpine.store` or `Alpine.data`, sometimes ran too late. Expressions that used them then threw errors like `Cannot read properties of undefined`. On the demo site this happened on up to 1 in 6 page loads.
 - With `custom_query_string` and full-measure static caching, filter changes sometimes left the browser URL unchanged, so a reload or shared link lost the filters or page. The URL handler waited for `livewire:initialized`, which had often already fired by the time it loaded. It now registers its listeners as soon as it loads, once per page. If you published `livewire/utility/url-handler.blade.php`, re-publish it or merge in the new script.
+- With `custom_query_string` and `{{ nocache }}` regions under full-measure static caching, opening or reloading a paginated URL such as `/cars/filters/brand/audi?page=2` now shows that page. Before, the `/!/nocache` request only restored the filter segments from the page URL, so the regions always rendered page 1. The page URL's query string now reaches the regions, as it already did with `enable_query_string`.
 
 ## [4.6.2] - 2026-11-04
 

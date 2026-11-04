@@ -138,6 +138,33 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function a_nocache_region_renders_the_page_number_from_the_url()
+    {
+        Config::set('statamic.static_caching.strategy', 'half');
+
+        $this->withStandardFakeViews();
+        // The fake view factory drops the addon namespace, which the pagination view needs.
+        $this->app['view']->addNamespace('statamic-livewire-filters', __DIR__.'/../../resources/views');
+        $this->viewShouldReturnRaw('default', '{{ nocache }}{{ livewire-collection:pages paginate="1" sort="title:asc" }}{{ /nocache }}');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }}<span>{{ title }}</span>{{ /entries }}</div>');
+
+        $region = function (string $url) {
+            $this->get($url)->assertOk();
+
+            return implode('', $this->post('/!/nocache', ['url' => 'http://localhost'.$url])->assertOk()->json('regions'));
+        };
+
+        // With a filter path: "I Love" matches Drums and Guitars, one per page.
+        $this->assertStringContainsString('<span>I Love Drums</span>', $region('/filters/title/I%20Love'));
+        $page2 = $region('/filters/title/I%20Love?page=2');
+        $this->assertStringContainsString('<span>I Love Guitars</span>', $page2);
+        $this->assertStringNotContainsString('I Love Drums', $page2);
+
+        // Without one, on the unfiltered base page.
+        $this->assertStringContainsString('<span>I Love Drums</span>', $region('/?page=2'));
+    }
+
+    #[Test]
     public function it_decodes_url_encoded_values_on_page_load()
     {
         $this->withStandardFakeViews();
