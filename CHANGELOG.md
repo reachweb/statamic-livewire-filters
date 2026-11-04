@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- With `custom_query_string` and full-measure static caching, filter changes sometimes left the browser URL unchanged, so a reload or shared link lost the filters or page. The URL handler waited for `livewire:initialized`, which had often already fired by the time it loaded. It now registers its listeners as soon as it loads, once per page. If you published `livewire/utility/url-handler.blade.php`, re-publish it or merge in the new script.
+
 ## [4.6.2] - 2026-11-04
 
 ### Changed
