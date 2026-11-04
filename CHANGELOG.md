@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Under full-measure static caching, `{{ livewire-filters:head }}` now waits for `DOMContentLoaded` before starting Livewire, like Livewire does on its own. Before, it could start Livewire and Alpine while the page was still loading, so `alpine:init` listeners placed after `{{ livewire:scripts }}`, such as ones that register `Alpine.store` or `Alpine.data`, sometimes ran too late. Expressions that used them then threw errors like `Cannot read properties of undefined`. On the demo site this happened on up to 1 in 6 page loads.
+
 ## [4.6.2] - 2026-11-04
 
 ### Changed
