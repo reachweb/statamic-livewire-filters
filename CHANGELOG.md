@@ -19,6 +19,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 - `validate_filter_values` still rejects invalid checkbox values and shows the error, but it no longer stops the bundled checkbox view from applying them to the collection, because the view sends the event from the browser. As before, `allowed_filters` and `blocked_query_params` control which params the collection accepts.
 - `entries-updated` now also carries `entriesLabel`, the translated `ui.entries` text for the count. A published `count.blade.php` or a custom `view` on `lf-count` keeps the server listener and works as before. A published `lf-checkbox.blade.php` keeps working through the server relay, without the saved request. `clear-all-filters` from the collection now carries two arguments, the list of condition keys it kept and the params it removed; listeners without parameters are unaffected.
 
+### Fixed
+
+- Under full-measure static caching, `{{ livewire-filters:head }}` now starts Livewire even when it runs after Statamic has replaced the CSRF token. Before, if the tag came after a stylesheet, the browser could hold the inline script back until the CSS loaded. On slow networks Statamic's `statamic:csrf.replaced` event then fired first, `Livewire.start()` was never called, and filters didn't respond. Full-measure pages served without the CSRF script, such as excluded URLs, now start Livewire too. Placing the tag before your stylesheets is now recommended. On pages that never load Livewire, the script now stops checking for it once the page has loaded instead of checking forever.
+
 ### Upgrading from 4.6
 
 Sites that use the bundled views, or published copies of them, need no changes. Check the following:
