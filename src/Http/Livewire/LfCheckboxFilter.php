@@ -54,7 +54,9 @@ class LfCheckboxFilter extends LivewireFilter
     {
         if ($this->syncedByView && $this->dispatchesFromView()) {
             $this->syncedByView = false;
-            $this->lastSentPayload = null;
+            // The browser sent $selected as is (dispatchesFromView() rules out a custom payload).
+            // Its filter-updated waits while a clearAll() is in flight, so a clear-all can still miss it.
+            $this->lastSentPayload = $this->payload();
 
             return;
         }
