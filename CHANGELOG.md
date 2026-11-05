@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- Deferred filters for mobile. With `defer_filters="drawer"` on the collection tag, filters apply live until the new `{{ livewire-filters:drawer }}` opens; changes made in it are queued and applied together with its Apply button, or discarded when it closes otherwise. From its `breakpoint` up (1280px by default) the drawer is a plain sidebar and filters stay live. `defer_filters="true"` queues changes on every screen size. Entries, tags, faceted counts and the URL only update on apply. The drawer has a "Filters (n)" trigger and an "Apply (n)" / "Show N results" button, also available on its own as `{{ livewire-filters:apply_button }}`.
+
 ## [4.6.3] - 2026-11-04
 
 ### Changed

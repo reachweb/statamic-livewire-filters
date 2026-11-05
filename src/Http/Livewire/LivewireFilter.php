@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
+use Illuminate\Support\Arr;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -102,6 +103,35 @@ abstract class LivewireFilter extends Component implements FilterContract
     {
         $this->markFilterStateChanged();
         $this->applyPreset($params);
+    }
+
+    /**
+     * Deferred mode: the collection dropped this filter's queued change, so
+     * restore the selection from the applied params, or clear it when none apply.
+     *
+     * @param  array<int, array{field: string, condition: string, modifier: ?string}>  $filters
+     * @param  array<string, mixed>  $params
+     */
+    #[On('pending-filters-discarded')]
+    public function discardPendingSelection($filters, $params)
+    {
+        $queuedByThisFilter = collect($filters)->contains(fn ($filter) => is_array($filter)
+            && ($filter['field'] ?? null) === $this->field
+            && ($filter['condition'] ?? null) === $this->condition
+            && ($filter['modifier'] ?? null) == $this->modifier);
+
+        if (! $queuedByThisFilter || ! is_array($params)) {
+            $this->skipRenderIfFilterStateUnchanged();
+
+            return;
+        }
+
+        $this->markFilterStateChanged();
+
+        $hasAppliedParams = collect(Arr::wrap($this->getParamKey()))
+            ->contains(fn ($key) => array_key_exists($key, $params));
+
+        $hasAppliedParams ? $this->applyPreset($params) : $this->clear();
     }
 
     public function render()

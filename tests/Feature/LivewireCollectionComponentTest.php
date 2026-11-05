@@ -1389,6 +1389,352 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function deferred_mode_queues_filter_changes_without_applying_or_rendering()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'true']])
+            ->assertSet('deferFilters', true)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 1)
+            ->assertDispatched('pending-filters-updated', count: 1)
+            ->assertNotDispatched('entries-updated')
+            ->assertNotDispatched('tags-updated')
+            ->assertNotDispatched('params-updated')
+            // A later change of the same filter replaces its queued change
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red', 'black'],
+                modifier: 'any',
+            )
+            ->assertSet('pendingCount', 1)
+            ->dispatch('clear-filter',
+                field: 'title',
+                condition: 'is',
+                modifier: 'any',
+            )
+            // Clearing a filter that is not applied changes nothing, so nothing is queued
+            ->assertSet('pendingCount', 1)
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'contains',
+                payload: 'Shirt',
+                modifier: 'any',
+            )
+            ->assertSet('pendingCount', 2)
+            ->assertSet('params', [])
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function deferred_mode_applies_the_queued_changes_on_apply_filters()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'paginate' => 1, 'defer_filters' => true]])
+            ->set('paginators.page', 2)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red', 'black'],
+                modifier: 'any',
+            )
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'contains',
+                payload: 'Red',
+                modifier: 'any',
+            )
+            ->assertSet('paginators.page', 2)
+            ->assertSet('entriesCount', 3)
+            ->dispatch('apply-filters')
+            ->assertSet('params', [
+                'taxonomy:colors:any' => 'red|black',
+                'title:contains' => 'Red',
+            ])
+            ->assertSet('pendingParams', [])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('paginators.page', 1)
+            ->assertSet('entriesCount', 1)
+            ->assertDispatched('entries-updated', count: 1, active: 2)
+            ->assertDispatched('tags-updated')
+            ->assertDispatched('pending-filters-updated', count: 0)
+            ->assertSee('Red Shirt')
+            ->assertDontSee('Black Shirt');
+    }
+
+    #[Test]
+    public function deferred_mode_drops_a_queued_change_that_returns_to_the_applied_value()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => true]])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->dispatch('apply-filters')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red', 'black'],
+                modifier: 'any',
+            )
+            ->assertSet('pendingCount', 1)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('pendingCount', 0)
+            ->assertDispatched('pending-filters-updated', count: 0)
+            // Clearing an applied filter is a real change and is queued
+            ->dispatch('clear-filter',
+                field: 'colors',
+                condition: 'taxonomy',
+                modifier: 'any',
+            )
+            ->assertSet('pendingCount', 1)
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->dispatch('apply-filters')
+            ->assertSet('params', [])
+            ->assertSet('entriesCount', 3);
+    }
+
+    #[Test]
+    public function deferred_mode_discards_the_queued_changes_and_tells_their_filters_to_restore()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => true]])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->dispatch('apply-filters')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['black'],
+                modifier: 'any',
+            )
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'contains',
+                payload: 'Shirt',
+                modifier: 'any',
+            )
+            ->dispatch('discard-filters')
+            ->assertSet('pendingParams', [])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->assertNotDispatched('entries-updated')
+            ->assertDispatched('pending-filters-updated', count: 0)
+            ->assertDispatched('pending-filters-discarded',
+                filters: [
+                    ['field' => 'colors', 'condition' => 'taxonomy', 'modifier' => 'any'],
+                    ['field' => 'title', 'condition' => 'contains', 'modifier' => 'any'],
+                ],
+                params: ['taxonomy:colors:any' => 'red'],
+            )
+            // Nothing is left to apply
+            ->dispatch('apply-filters')
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function deferred_mode_clear_all_applies_at_once_and_drops_the_queue()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => true]])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->dispatch('apply-filters')
+            ->dispatch('filter-updated',
+                field: 'title',
+                condition: 'contains',
+                payload: 'Shirt',
+                modifier: 'any',
+            )
+            ->call('clearAll')
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 0)
+            ->assertDispatched('entries-updated', count: 3);
+    }
+
+    #[Test]
+    public function deferred_mode_applies_the_clear_all_relay_for_a_tag_authored_param_at_once()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red', 'defer_filters' => 'true']])
+            ->assertSet('entriesCount', 1)
+            ->call('clearAll')
+            // The sweep keeps the tag-authored key; the checkbox managing it relays a clear-filter.
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->dispatch('clear-filter', field: 'colors', condition: 'taxonomy', modifier: 'any')
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('entriesCount', 3)
+            // The exemption is used up: the next change of that filter queues again.
+            ->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['black'], modifier: 'any')
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 1);
+    }
+
+    #[Test]
+    public function deferred_mode_applies_the_relay_of_a_removed_dual_range_tag_at_once()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'drawer']])
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => 20, 'max' => 80], modifier: 'any')
+            ->dispatch('start-deferring')
+            // A queued change of the same filter is replaced by the tag removal.
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => 30, 'max' => 80], modifier: 'any')
+            ->assertSet('pendingCount', 1)
+            ->dispatch('clear-option', ['field' => 'price', 'value' => '20', 'condition' => 'gte'])
+            ->assertSet('params', ['price:gte' => 20, 'price:lte' => 80])
+            // LfDualRangeFilter resets the lower bound and relays both bounds.
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => 0, 'max' => 80], modifier: 'any')
+            ->assertSet('params', ['price:gte' => 0, 'price:lte' => 80])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('immediateRelayKeys', []);
+    }
+
+    #[Test]
+    public function deferred_mode_updates_the_url_only_on_apply()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+        Config::set('statamic-livewire-filters.custom_query_string_aliases', [
+            'colors' => 'taxonomy:colors:any',
+        ]);
+
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => true]])
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red', 'black'],
+                modifier: 'any',
+            )
+            ->assertNotDispatched('update-url')
+            ->dispatch('apply-filters')
+            ->assertDispatched('update-url', fn ($name, $payload) => str_ends_with($payload['newUrl'], '/filters/colors/red,black'));
+    }
+
+    #[Test]
+    public function drawer_mode_applies_live_until_the_drawer_starts_deferring()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'drawer']])
+            ->assertSet('deferMode', 'drawer')
+            ->assertSet('deferFilters', false)
+            // Drawer closed (desktop sidebar): changes apply live
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->assertSet('pendingCount', 0)
+            // Drawer opened: changes queue
+            ->dispatch('start-deferring')
+            ->assertSet('deferFilters', true)
+            ->assertNotDispatched('entries-updated')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red', 'black'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->assertSet('pendingCount', 1)
+            // Closed with Apply: the queue applies and live mode is back
+            ->dispatch('stop-deferring', apply: true)
+            ->assertSet('params', ['taxonomy:colors:any' => 'red|black'])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('deferFilters', false)
+            ->assertDispatched('entries-updated', count: 2)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['yellow'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'yellow']);
+    }
+
+    #[Test]
+    public function drawer_mode_discards_when_the_drawer_closes_without_apply()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'drawer']])
+            ->dispatch('start-deferring')
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->dispatch('stop-deferring')
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('deferFilters', false)
+            ->assertDispatched('pending-filters-discarded')
+            ->assertNotDispatched('entries-updated');
+    }
+
+    #[Test]
+    public function start_deferring_only_switches_deferral_in_drawer_mode()
+    {
+        // Live mode: the client cannot turn deferral on
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('start-deferring')
+            ->assertSet('deferFilters', false)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red']);
+
+        // Always mode: closing the drawer does not turn deferral off
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'true']])
+            ->assertSet('deferMode', 'always')
+            ->dispatch('stop-deferring', apply: true)
+            ->assertSet('deferFilters', true)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 1);
+    }
+
+    #[Test]
+    public function defer_filters_can_only_be_set_on_the_tag()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['defer_filters' => 'true']])
+            ->test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->assertSet('deferFilters', false)
+            ->dispatch('filter-updated',
+                field: 'colors',
+                condition: 'taxonomy',
+                payload: ['red'],
+                modifier: 'any',
+            )
+            ->assertSet('params', ['taxonomy:colors:any' => 'red']);
+    }
+
+    #[Test]
     public function infinite_scroll_grows_the_page_size_and_exposes_has_more_pages()
     {
         $params = [

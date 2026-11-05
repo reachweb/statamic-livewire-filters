@@ -60,4 +60,29 @@ class LoadMoreTest extends TestCase
         $this->assertStringContainsString('Show more cars', $html);
         $this->assertStringContainsString('class="btn btn-primary"', $html);
     }
+
+    public function test_the_drawer_wraps_its_content_with_a_filters_trigger_and_the_apply_button()
+    {
+        $tag = $this->tag();
+        $tag->isPair = true;
+        $tag->setContent('<div id="my-filters"></div>');
+
+        $html = $tag->drawer();
+
+        $this->assertStringContainsString('<div id="my-filters"></div>', $html);
+        $this->assertStringContainsString("Livewire.dispatch('start-deferring')", $html);
+        $this->assertStringContainsString("Livewire.dispatch('stop-deferring', { apply: true })", $html);
+        $this->assertStringContainsString("Livewire.dispatch('stop-deferring', { apply: false })", $html);
+        $this->assertStringContainsString('const breakpoint = 1280;', $html);
+        $this->assertStringContainsString('Show 1 result', $html);
+    }
+
+    public function test_the_drawer_breakpoint_can_be_changed()
+    {
+        $tag = $this->tag([], ['breakpoint' => '768']);
+        $tag->isPair = true;
+        $tag->setContent('');
+
+        $this->assertStringContainsString('const breakpoint = 768;', $tag->drawer());
+    }
 }
