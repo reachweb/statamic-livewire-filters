@@ -66,7 +66,7 @@
         @foreach ($this->presetOptions as $preset)
         <button
             type="button"
-            wire:click="applyPreset('{{ $preset }}')"
+            wire:click="selectPreset('{{ $preset }}')"
             wire:key="{{ $field }}-preset-{{ $preset }}"
             @class([
                 'px-3 py-1.5 text-lf rounded-lf border-(length:--lf-border-width) cursor-pointer transition-colors',

@@ -82,6 +82,44 @@ class NocacheMemoPathTest extends TestCase
     }
 
     #[Test]
+    public function a_nocache_region_renders_the_url_selection_and_filtered_entries_in_its_html()
+    {
+        Config::set('statamic.static_caching.strategy', 'half');
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+        Config::set('statamic-livewire-filters.custom_query_string_aliases', ['title' => 'title:is']);
+        \MarcoRieser\Livewire\Tags\Livewire::register();
+
+        Facades\Collection::make('pages')->sites(['en'])->routes('{slug}')->save();
+        Site::setCurrent('en');
+        EntryFactory::id('shop')->collection('pages')->slug('shop')->locale('en')
+            ->data(['title' => 'Shop', 'template' => 'shop'])->create();
+        EntryFactory::id('pants-en')->collection('clothes')->slug('pants')->locale('en')
+            ->data(['title' => 'English Pants'])->create();
+
+        $this->withStandardFakeViews();
+        $this->app['view']->addNamespace('statamic-livewire-filters', __DIR__.'/../../resources/views');
+        $this->viewShouldReturnRaw('shop', '{{ nocache }}'
+            .'{{ livewire:lf-text-filter blueprint="clothes.clothes" field="title" condition="is" }}'
+            .'{{ livewire-collection:clothes }}'
+            .'{{ /nocache }}');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection',
+            '<div>{{ entries }}<span>{{ title }}</span>{{ /entries }}</div>');
+
+        // The page load caches the page and stores its nocache region for this URL.
+        $url = 'http://localhost/shop/filters/title/English%20Pants';
+        $this->get($url, [])->assertOk();
+
+        // nocache.js then posts the page URL and swaps in the rendered regions.
+        $regions = $this->post('/!/nocache', ['url' => $url])->assertOk()->json('regions');
+        $html = implode('', $regions);
+
+        $this->assertStringContainsString('value="English Pants"', $html);
+        $this->assertStringContainsString('<span>English Pants</span>', $html);
+        $this->assertStringNotContainsString('<span>English Shirt</span>', $html);
+        $this->assertStringNotContainsString('&quot;name&quot;:&quot;preset-params&quot;', $html);
+    }
+
+    #[Test]
     public function it_leaves_the_memo_untouched_for_a_regular_request()
     {
         $this->fakeCollectionView();

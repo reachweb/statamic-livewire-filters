@@ -24,6 +24,7 @@
                 step="{{ $step }}"
                 class="w-full h-1 mb-6 bg-gray-200 rounded-lf appearance-none cursor-pointer"
                 wire:model.live="selected"
+                value="{{ $selected }}"
                 @disabled($boundsDisabled)
             >
             <span class="text-sm text-lf-text absolute start-0 -bottom-1">{{ $dynamicMin ?? $min }}</span>

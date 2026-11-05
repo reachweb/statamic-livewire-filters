@@ -3,6 +3,7 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Statamic\Facades\Collection;
 use Statamic\Support\Arr;
 
@@ -36,7 +37,7 @@ trait HandleFieldValuesQuery
                 continue;
             }
 
-            if ($this->condition === 'query_scope' && $key === $this->modifier.':'.$fieldHandle) {
+            if ($this->condition === 'query_scope' && $key === ParamKey::build($fieldHandle, 'query_scope', $this->modifier)) {
                 continue;
             }
 

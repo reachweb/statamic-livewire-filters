@@ -138,6 +138,33 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function a_nocache_region_renders_the_page_number_from_the_url()
+    {
+        Config::set('statamic.static_caching.strategy', 'half');
+
+        $this->withStandardFakeViews();
+        // The fake view factory drops the addon namespace, which the pagination view needs.
+        $this->app['view']->addNamespace('statamic-livewire-filters', __DIR__.'/../../resources/views');
+        $this->viewShouldReturnRaw('default', '{{ nocache }}{{ livewire-collection:pages paginate="1" sort="title:asc" }}{{ /nocache }}');
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }}<span>{{ title }}</span>{{ /entries }}</div>');
+
+        $region = function (string $url) {
+            $this->get($url)->assertOk();
+
+            return implode('', $this->post('/!/nocache', ['url' => 'http://localhost'.$url])->assertOk()->json('regions'));
+        };
+
+        // With a filter path: "I Love" matches Drums and Guitars, one per page.
+        $this->assertStringContainsString('<span>I Love Drums</span>', $region('/filters/title/I%20Love'));
+        $page2 = $region('/filters/title/I%20Love?page=2');
+        $this->assertStringContainsString('<span>I Love Guitars</span>', $page2);
+        $this->assertStringNotContainsString('I Love Drums', $page2);
+
+        // Without one, on the unfiltered base page.
+        $this->assertStringContainsString('<span>I Love Drums</span>', $region('/?page=2'));
+    }
+
+    #[Test]
     public function it_decodes_url_encoded_values_on_page_load()
     {
         $this->withStandardFakeViews();
@@ -157,6 +184,58 @@ class CustomQueryStringTest extends TestCase
 
         // Should match entries containing "I Love" (decoded value)
         $response->assertSee('I Love Guitars')->assertSee('I Love Drums')->assertDontSee('I Hate Flutes');
+    }
+
+    #[Test]
+    public function filters_render_the_url_selection_on_page_load_and_a_tag_preset_sends_every_filter_param()
+    {
+        \MarcoRieser\Livewire\Tags\Livewire::register();
+
+        $this->withStandardFakeViews();
+        $this->app['view']->addNamespace('statamic-livewire-filters', __DIR__.'/../../resources/views');
+
+        // The filter renders before the collection, so it cannot rely on the collection's state.
+        $this->viewShouldReturnRaw('default', '{{ livewire:lf-select-filter blueprint="pages.pages" field="item_options" condition="is" }}'
+            .'{{ livewire-collection:pages title:contains="I Love" }}');
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        $html = $this->get('/filters/item_options/option2')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/value="option2"\s+selected/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value=""\s+selected/', $html);
+        $this->assertStringContainsString('I Love Drums', $html);
+        $this->assertStringNotContainsString('I Love Guitars', $html);
+
+        // The tag preset still needs the event, which carries the URL's params too, so
+        // a filter reading several keys sees them together.
+        $presets = collect($this->dispatchesIn($html))->where('name', 'preset-params')->values();
+        $this->assertCount(1, $presets);
+        $this->assertEquals(['item_options:is' => 'option2', 'title:contains' => 'I Love'], $presets[0]['params'][0]);
+    }
+
+    #[Test]
+    public function the_collection_dispatches_no_preset_params_when_every_filter_param_comes_from_the_url()
+    {
+        $this->withStandardFakeViews();
+
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection:pages limit="5" }}');
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        $html = $this->get('/filters/item_options/option2/title/Drums')->assertOk()->getContent();
+
+        $this->assertStringContainsString('I Love Drums', $html);
+        $this->assertSame([], collect($this->dispatchesIn($html))->where('name', 'preset-params')->all());
+    }
+
+    protected function dispatchesIn(string $html): array
+    {
+        preg_match_all('/wire:effects="([^"]*)"/', $html, $matches);
+
+        return collect($matches[1])
+            ->flatMap(fn ($effects) => json_decode(htmlspecialchars_decode($effects, ENT_QUOTES), true)['dispatches'] ?? [])
+            ->all();
     }
 
     #[Test]

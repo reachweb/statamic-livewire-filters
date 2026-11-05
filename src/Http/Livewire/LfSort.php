@@ -6,6 +6,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 
 class LfSort extends Component
 {
@@ -30,9 +31,12 @@ class LfSort extends Component
         $this->collection = $collection;
         $this->blueprint = $blueprint;
         $this->fields = $fields;
+
+        // The collection only sends `preset-params` for a sort the URL does not carry.
+        $this->setPresetSort(CustomQueryString::urlParams());
     }
 
-    #[Computed(persist: true)]
+    #[Computed]
     public function sortOptions()
     {
         return $this->getFieldNames()->flatMap(function ($item) {

@@ -8,6 +8,7 @@ use Livewire\Attributes\Renderless;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTags;
 use Reach\StatamicLivewireFilters\Support\BlockedQueryParams;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleParams
@@ -51,17 +52,7 @@ trait HandleParams
                 'params.*' => 'string|max:255',
             ])['params'] ?? [];
 
-            return collect($params)
-                ->map(function ($value) {
-                    $value = htmlspecialchars($value);
-                    $value = strip_tags($value);
-                    $value = Str::before($value, '?');
-
-                    // Additional sanitization
-                    return preg_replace('/[<>\'";]/', '', $value);
-                })
-                ->filter()
-                ->all();
+            return CustomQueryString::sanitize($params);
         }
 
         return false;
@@ -142,7 +133,7 @@ trait HandleParams
 
     protected function handleCondition($field, $condition, $payload)
     {
-        $paramKey = $this->generateParamKey($field, $condition);
+        $paramKey = ParamKey::build($field, $condition);
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -150,7 +141,7 @@ trait HandleParams
 
     protected function handleTaxonomyCondition($field, $payload, $modifier)
     {
-        $paramKey = $this->generateParamKey($field, 'taxonomy', $modifier);
+        $paramKey = ParamKey::build($field, 'taxonomy', $modifier);
         $this->params[$paramKey] = $this->toPipeSeparatedString($payload);
 
         $this->dispatchParamsUpdated();
@@ -160,7 +151,7 @@ trait HandleParams
     protected function handleQueryScopeCondition($field, $payload, $modifier)
     {
         $queryScopeKey = 'query_scope';
-        $paramKey = $this->generateParamKey($field, 'query_scope', $modifier);
+        $paramKey = ParamKey::build($field, 'query_scope', $modifier);
 
         if (isset($this->params[$queryScopeKey])) {
             $existingScopes = collect(explode('|', $this->params[$queryScopeKey]));
@@ -179,7 +170,7 @@ trait HandleParams
 
     protected function handleDualRangeCondition($field, $payload, $modifier)
     {
-        $paramKeys = $this->generateParamKey($field, 'dual_range', $modifier);
+        $paramKeys = ParamKey::build($field, 'dual_range', $modifier);
 
         // An empty end leaves the range open on that side (the date range filter).
         foreach (['min', 'max'] as $end) {
@@ -210,7 +201,7 @@ trait HandleParams
         }
 
         if ($condition === 'query_scope') {
-            $paramKey = $this->generateParamKey($field, 'query_scope', $modifier);
+            $paramKey = ParamKey::build($field, 'query_scope', $modifier);
             unset($this->params[$paramKey]);
 
             $this->removeScopeFromRegistryIfUnused($modifier);
@@ -220,7 +211,7 @@ trait HandleParams
             return;
         }
 
-        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+        $paramKey = ParamKey::build($field, $condition, $modifier);
 
         if (is_array($paramKey)) {
             // Handle dual_range case which returns an array of keys
@@ -260,7 +251,7 @@ trait HandleParams
 
     public function fieldExistsInParams($field, $condition, $modifier): bool
     {
-        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+        $paramKey = ParamKey::build($field, $condition, $modifier);
 
         if (is_array($paramKey)) {
             // Handle dual_range case which returns an array of keys
@@ -327,11 +318,12 @@ trait HandleParams
 
         $candidates = [];
 
-        $taxonomyKey = 'taxonomy:'.$field.':'.$condition;
+        $taxonomyKey = ParamKey::build($field, 'taxonomy', $condition);
         if ($this->paramContainsValue($taxonomyKey, $value)) {
             $candidates[] = ['key' => $taxonomyKey, 'scope' => null];
         }
 
+        // A tag's condition is the key's own suffix, not a filter condition to build from
         $conditionKey = $field.':'.$condition;
         if ($this->paramContainsValue($conditionKey, $value) && ! $this->fieldHasMultipleConditionParams($field)) {
             $candidates[] = ['key' => $conditionKey, 'scope' => null];
@@ -352,8 +344,10 @@ trait HandleParams
         $matches = [];
 
         foreach (array_unique(explode('|', $this->params['query_scope'])) as $scope) {
-            if ($this->paramContainsValue($scope.':'.$field, $value)) {
-                $matches[] = ['key' => $scope.':'.$field, 'scope' => $scope];
+            $key = ParamKey::build($field, 'query_scope', $scope);
+
+            if ($this->paramContainsValue($key, $value)) {
+                $matches[] = ['key' => $key, 'scope' => $scope];
             }
         }
 
@@ -447,13 +441,23 @@ trait HandleParams
         return is_array($payload) ? implode('|', $payload) : $payload;
     }
 
+    /**
+     * Filters and LfSort read the URL's params themselves at mount, so they render
+     * the selection on first paint, and `preset-params` (a follow-up request) is only
+     * sent when a filter param did not come from the URL, such as a tag preset. It
+     * then carries every filter param, not just the missing ones: a filter reading
+     * several keys, like a dual-range toggle, must see them in one payload. Tag
+     * options without a `field:condition` key, such as `limit`, have no filter.
+     */
     protected function handlePresetParams()
     {
-        $params = collect($this->params);
-        $collectionKeys = ['from', 'in', 'folder', 'use', 'collection'];
-        $restOfParams = $params->except($collectionKeys);
-        if ($restOfParams->isNotEmpty()) {
-            $this->dispatch('preset-params', $restOfParams->all());
+        $urlParams = CustomQueryString::urlParams();
+
+        $presets = collect($this->params)
+            ->filter(fn ($value, $key) => is_string($key) && ($key === 'sort' || str_contains($key, ':')));
+
+        if ($presets->contains(fn ($value, $key) => ! array_key_exists($key, $urlParams) || $urlParams[$key] !== $value)) {
+            $this->dispatch('preset-params', $presets->all());
         }
     }
 
@@ -578,17 +582,6 @@ trait HandleParams
         return $normalizedQueryString
             ? $normalizedPath.'?'.$normalizedQueryString
             : $normalizedPath;
-    }
-
-    protected function getDualRangeConditions($modifer): array
-    {
-        $modifiers = ['gte', 'lte'];
-
-        if ($modifer === 'any') {
-            return $modifiers;
-        }
-
-        return explode('|', $modifer);
     }
 
     /**
@@ -737,7 +730,7 @@ trait HandleParams
         }
 
         if ($condition === 'dual_range') {
-            $paramKeys = $this->generateParamKey($field, $condition, $modifier);
+            $paramKeys = ParamKey::build($field, $condition, $modifier);
 
             if (! is_array($payload)) {
                 return false;
@@ -759,7 +752,7 @@ trait HandleParams
             return true;
         }
 
-        $paramKey = $this->generateParamKey($field, $condition, $modifier);
+        $paramKey = ParamKey::build($field, $condition, $modifier);
 
         if ($condition === 'query_scope') {
             $expected = $field === 'resrv_availability' ? $payload : $this->toPipeSeparatedString($payload);
@@ -823,7 +816,7 @@ trait HandleParams
         $this->boundsSelectionRevisions[$selection['source']] = $selection['revision'];
     }
 
-    protected function dispatchParamsUpdated(): void
+    protected function dispatchParamsUpdated(bool $initial = false): void
     {
         $this->markCollectionStateChanged();
 
@@ -841,29 +834,22 @@ trait HandleParams
             ));
         }
 
-        // Dispatching to the tags component
+        // LfTags mounts empty, so at mount the event is only needed when there is a tag to show.
+        if ($initial && ! $this->hasTaggableParams()) {
+            return;
+        }
+
         $this->dispatch('tags-updated', $this->params)->to(LfTags::class);
     }
 
-    protected function generateParamKey(string $field, string $condition, ?string $modifier = null): string|array
+    /**
+     * Mirrors LfTags::updateTags(): condition keys and the query_scope registry are taggable, sort is not.
+     */
+    protected function hasTaggableParams(): bool
     {
-        if ($condition === 'query_scope') {
-            return $modifier.':'.$field;
-        }
-
-        if ($condition === 'taxonomy') {
-            return 'taxonomy:'.$field.':'.$modifier;
-        }
-
-        if ($condition === 'dual_range') {
-            [$minModifier, $maxModifier] = $this->getDualRangeConditions($modifier);
-
-            return [
-                'min' => $field.':'.$minModifier,
-                'max' => $field.':'.$maxModifier,
-            ];
-        }
-
-        return $field.':'.$condition;
+        return collect($this->params)
+            ->keys()
+            ->contains(fn ($key) => is_string($key) && $key !== 'sort'
+                && (str_contains($key, ':') || str_starts_with($key, 'query_scope')));
     }
 }

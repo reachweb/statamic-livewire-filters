@@ -6,13 +6,10 @@ use Carbon\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Statamic\Facades\Site;
 
-class LfDateRangeFilter extends Component
+class LfDateRangeFilter extends LivewireFilter
 {
-    use Traits\IsLivewireFilter;
-
     /**
      * gte/lte compare dates as strings, and Statamic's front end stringifies
      * Carbon with the site's date_format, so they can't bound a date range.
@@ -60,7 +57,7 @@ class LfDateRangeFilter extends Component
         $this->dispatchEvent();
     }
 
-    public function applyPreset($preset)
+    public function selectPreset($preset)
     {
         if (! in_array($preset, $this->presetOptions, true)) {
             return;
@@ -86,19 +83,18 @@ class LfDateRangeFilter extends Component
             [$this->selectedFrom, $this->selectedTo] = [$this->selectedTo, $this->selectedFrom];
         }
 
-        $this->dispatch('filter-updated',
-            field: $this->field,
-            condition: $this->condition,
-            payload: [
-                'min' => $this->selectedFrom === '' ? null : self::dateToParam($this->selectedFrom, isStart: true),
-                'max' => $this->selectedTo === '' ? null : self::dateToParam($this->selectedTo, isStart: false),
-            ],
-            modifier: $this->modifier,
-        )
-            ->to(LivewireCollection::class);
+        $this->dispatchFilterUpdated();
     }
 
-    #[Computed(persist: true)]
+    protected function payload(): mixed
+    {
+        return [
+            'min' => $this->selectedFrom === '' ? null : self::dateToParam($this->selectedFrom, isStart: true),
+            'max' => $this->selectedTo === '' ? null : self::dateToParam($this->selectedTo, isStart: false),
+        ];
+    }
+
+    #[Computed]
     public function filterOptions()
     {
         return collect($this->statamic_field)->only(['earliest_date', 'latest_date'])->all();
@@ -135,15 +131,23 @@ class LfDateRangeFilter extends Component
     {
         $this->selectedFrom = '';
         $this->selectedTo = '';
-        $this->clearFilters();
+        $this->markFilterStateChanged();
+
+        if ($this->clearAllNeedsRelay(...func_get_args())) {
+            $this->clearFilters();
+        }
     }
 
     #[On('clear-option')]
     public function clearOption($tag)
     {
-        if ($tag['field'] !== $this->field) {
+        if (($tag['field'] ?? null) !== $this->field) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
+
+        $this->markFilterStateChanged();
 
         $paramKeys = $this->getParamKey();
 
@@ -158,8 +162,10 @@ class LfDateRangeFilter extends Component
         $this->dispatchEvent();
     }
 
-    #[On('preset-params')]
-    public function setPresetValues($params)
+    /**
+     * Restores both ends from URL params (at mount) or tag presets (`preset-params`).
+     */
+    protected function applyPreset(array $params): void
     {
         $paramKeys = $this->getParamKey();
 
@@ -271,10 +277,5 @@ class LfDateRangeFilter extends Component
         return $isStart
             ? $bound->startOfDay()->addDay()->startOfDay()
             : $bound->subSecond()->startOfDay();
-    }
-
-    public function render()
-    {
-        return view('statamic-livewire-filters::livewire.filters.'.$this->view);
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Carbon\Carbon;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -171,14 +172,14 @@ class LfDateRangeFilterTest extends TestCase
         ];
 
         foreach ($expected as $preset => [$from, $to]) {
-            $component->call('applyPreset', $preset)
+            $component->call('selectPreset', $preset)
                 ->assertSet('selectedFrom', $from)
                 ->assertSet('selectedTo', $to);
 
             $this->assertSame($preset, $component->instance()->activePreset);
         }
 
-        $component->call('applyPreset', 'today')
+        $component->call('selectPreset', 'today')
             ->assertDispatched('filter-updated', payload: ['min' => '2026-03-31T20:59:59Z', 'max' => '2026-04-01T21:00:00Z']);
     }
 
@@ -189,7 +190,7 @@ class LfDateRangeFilterTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-01-10 12:00:00', 'Europe/Athens'));
 
         Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events', 'presets' => '30days'])
-            ->call('applyPreset', '30days')
+            ->call('selectPreset', '30days')
             ->assertSet('selectedFrom', '2026-01-01')
             ->assertSet('selectedTo', '2026-01-10')
             ->assertSee('aria-pressed="true"', false);
@@ -199,7 +200,7 @@ class LfDateRangeFilterTest extends TestCase
         Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events', 'presets' => 'this_year|30days'])
             ->assertDontSee('This year')
             ->assertDontSee('Last 30 days')
-            ->call('applyPreset', 'this_year')
+            ->call('selectPreset', 'this_year')
             ->assertSet('selectedFrom', '')
             ->assertNotDispatched('filter-updated');
     }
@@ -276,7 +277,7 @@ class LfDateRangeFilterTest extends TestCase
         Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events', 'presets' => 'today'])
             ->assertSee('Today')
             ->assertDontSee('Last 7 days')
-            ->call('applyPreset', '7days')
+            ->call('selectPreset', '7days')
             ->assertSet('selectedFrom', '')
             ->assertNotDispatched('filter-updated');
     }
@@ -292,6 +293,20 @@ class LfDateRangeFilterTest extends TestCase
             ])
             ->assertSet('selectedFrom', '2026-03-15')
             ->assertSet('selectedTo', '2026-03-20');
+    }
+
+    #[Test]
+    public function it_restores_both_ends_from_the_url_before_the_first_render()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        Livewire::withQueryParams(['params' => ['starts:is_after' => '2026-03-14T21:59:59Z', 'starts:is_before' => '2026-03-20T22:00:00Z']])
+            ->test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events'])
+            ->assertSet('modifier', 'is_after|is_before')
+            ->assertSet('selectedFrom', '2026-03-15')
+            ->assertSet('selectedTo', '2026-03-20')
+            ->assertSee('Clear filter')
+            ->assertNotDispatched('filter-updated');
     }
 
     #[Test]

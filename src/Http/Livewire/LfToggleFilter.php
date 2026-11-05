@@ -2,13 +2,11 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
-use Livewire\Attributes\On;
-use Livewire\Component;
+use Livewire\Attributes\Locked;
 
-class LfToggleFilter extends Component
+class LfToggleFilter extends LivewireFilter
 {
-    use Traits\IsLivewireFilter;
-
+    #[Locked]
     public $view = 'lf-toggle';
 
     public $label = '';
@@ -17,39 +15,28 @@ class LfToggleFilter extends Component
 
     public $preset_value;
 
+    protected function payload(): mixed
+    {
+        return $this->preset_value;
+    }
+
+    protected function emptyValue(): mixed
+    {
+        return false;
+    }
+
     public function updatedSelected()
     {
+        $this->markFilterStateChanged();
+
         if ($this->selected) {
-            $this->dispatch('filter-updated',
-                field: $this->field,
-                condition: $this->condition,
-                payload: $this->preset_value,
-                modifier: $this->modifier,
-            )
-                ->to(LivewireCollection::class);
+            $this->dispatchFilterUpdated();
         } else {
             $this->clearFilters();
         }
     }
 
-    #[On('clear-all-filters')]
-    public function clear()
-    {
-        $this->selected = false;
-        $this->clearFilters();
-    }
-
-    #[On('clear-option')]
-    public function clearOption($tag)
-    {
-        if ($tag['field'] === $this->field) {
-            $this->selected = false;
-            $this->clearFilters();
-        }
-    }
-
-    #[On('preset-params')]
-    public function setPresetValues($params)
+    protected function applyPreset(array $params): void
     {
         $paramKey = $this->getParamKey();
 
@@ -73,10 +60,5 @@ class LfToggleFilter extends Component
                 $this->selected = $params[$paramKey] == $this->preset_value;
             }
         }
-    }
-
-    public function render()
-    {
-        return view('statamic-livewire-filters::livewire.filters.'.$this->view);
     }
 }
