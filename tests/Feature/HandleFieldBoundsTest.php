@@ -1074,7 +1074,7 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
-    public function exclusive_date_endpoints_remain_selectable_at_year_boundaries()
+    public function date_year_bounds_include_the_first_and_last_day_of_each_year()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
         Facades\Entry::find('yacht-a')->set('year', '2020-01-01')->save();
@@ -1082,21 +1082,25 @@ class HandleFieldBoundsTest extends TestCase
 
         $filter = Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
             ->dispatch('params-updated', ...$this->collectionBoundsEvent(['from' => 'yachts']))
-            ->assertSet('dynamicMin', 2019)
-            ->assertSet('dynamicMax', 2025)
-            ->set('selectedMin', 2020)
-            ->set('selectedMax', 2024)
-            ->assertNotDispatched('clear-filter')
-            ->assertDispatched('filter-updated',
-                payload: ['min' => '2020-01-01', 'max' => '2024-12-31'],
-                modifier: 'is_after|is_before',
-            );
-        $update = collect($filter->effects['dispatches'])->firstWhere('name', 'filter-updated')['params'];
+            ->assertSet('dynamicMin', 2020)
+            ->assertSet('dynamicMax', 2024);
 
-        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']])
-            ->dispatch('filter-updated', ...$update)
-            ->assertSet('entriesCount', 1)
-            ->assertSee('Luxury Yacht B');
+        $entriesFor = function (int $min, int $max) use ($filter) {
+            $filter->set('selectedMin', $min)->set('selectedMax', $max);
+            $update = collect($filter->effects['dispatches'])->firstWhere('name', 'filter-updated')['params'];
+
+            return Livewire::test(LivewireCollection::class, ['params' => ['from' => 'yachts']])
+                ->dispatch('filter-updated', ...$update)
+                ->viewData('entries')->map->slug()->sort()->values()->all();
+        };
+
+        // 1 Jan of the first year and 31 Dec of the last year are both inside the range.
+        $this->assertSame(['yacht-a', 'yacht-b'], $entriesFor(2020, 2023));
+        $this->assertSame(['yacht-b', 'yacht-c'], $entriesFor(2021, 2024));
+
+        // The full span covers every entry, so it clears the filter instead.
+        $filter->set('selectedMin', 2020)->set('selectedMax', 2024)
+            ->assertDispatched('clear-filter');
     }
 
     #[Test]

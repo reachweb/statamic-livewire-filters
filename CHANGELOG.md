@@ -15,6 +15,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 - A `dual_range` update with an empty `min` or `max` now removes that end's param instead of storing an empty value.
 - The tags view prints `$tag['conditionLabel']` and `$tag['dateLabel']` when a tag has them, falling back to the condition translation and `optionLabel`. Published `tags.blade.php` views keep working but show date range chips as raw bounds ("is after 2025-12-31T23:59:59Z") until they use the new keys.
 
+### Fixed
+
+- A dual range slider on a date field now includes entries dated on the first day of its first year and the last day of its last year. It sent `is_after` 1 Jan and `is_before` 31 Dec, which are exclusive, so selecting 2022–2024 dropped entries dated 2022-01-01 or 2024-12-31. The bounds are now `is_after 2021-12-31 23:59:59` and `is_before 2025-01-01`. URLs with the old bounds still load as the same years. With `enable_dynamic_range_bounds` on, the slider no longer widens by a year when entries sit on a year boundary.
+
 ## [4.6.3] - 2026-11-04
 
 ### Changed
