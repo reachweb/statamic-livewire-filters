@@ -253,8 +253,10 @@ class LfDateRangeFilter extends LivewireFilter
         $day = Carbon::createFromFormat('!Y-m-d', $date, config('app.timezone'));
 
         // startOfDay() again: where DST skips midnight the day starts at 01:00, and
-        // addDay() would carry that hour into the next day.
-        return ($isStart ? $day->subSecond() : $day->addDay()->startOfDay())->utc()->format(self::PARAM_FORMAT);
+        // addDay() would carry that hour into the next day. The one-second steps here
+        // and in paramToDate() run in UTC: Carbon 2 does them in wall-clock time, which
+        // lands an hour off across a DST gap.
+        return ($isStart ? $day->utc()->subSecond() : $day->addDay()->startOfDay()->utc())->format(self::PARAM_FORMAT);
     }
 
     /**
@@ -276,6 +278,6 @@ class LfDateRangeFilter extends LivewireFilter
 
         return $isStart
             ? $bound->startOfDay()->addDay()->startOfDay()
-            : $bound->subSecond()->startOfDay();
+            : $bound->utc()->subSecond()->setTimezone(config('app.timezone'))->startOfDay();
     }
 }
