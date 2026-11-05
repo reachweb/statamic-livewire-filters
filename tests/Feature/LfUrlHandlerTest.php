@@ -21,5 +21,9 @@ class LfUrlHandlerTest extends TestCase
         $this->assertStringContainsString("history.pushState(markedHistoryState(), '', nextUrl);", $html);
         $this->assertStringContainsString("window.addEventListener('popstate', (event) => {", $html);
         $this->assertStringContainsString('window.location.reload();', $html);
+
+        // Under full-measure static caching livewire:initialized can fire before this
+        // script runs, so the listeners must not wait for it.
+        $this->assertStringNotContainsString('livewire:initialized', $html);
     }
 }

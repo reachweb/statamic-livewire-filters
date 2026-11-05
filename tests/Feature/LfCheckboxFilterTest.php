@@ -346,6 +346,37 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_the_livewire_query_string_selection_checked_on_first_render()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $html = Livewire::withQueryParams(['params' => ['item_options:is' => 'option1|option3', 'title:is' => 'x']])
+            ->test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is'])
+            ->assertSet('selected', ['option1', 'option3'])
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value="option1"\s+checked/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="option2"\s+checked/', $html);
+        $this->assertMatchesRegularExpression('/value="option3"\s+checked/', $html);
+    }
+
+    #[Test]
+    public function it_renders_the_custom_query_string_selection_checked_on_first_render()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+
+        // On a GET, HandleFiltersQueryString merges the URL's filter segments into the query as `params`.
+        $html = Livewire::withQueryParams(['params' => ['taxonomy:colors:any' => 'black|yellow']])
+            ->test(LfCheckboxFilter::class, ['field' => 'colors', 'blueprint' => 'clothes.clothes', 'condition' => 'taxonomy', 'modifier' => 'any'])
+            ->assertSet('selected', ['black', 'yellow'])
+            ->html();
+
+        $this->assertDoesNotMatchRegularExpression('/value="red"\s+checked/', $html);
+        $this->assertMatchesRegularExpression('/value="black"\s+checked/', $html);
+        $this->assertMatchesRegularExpression('/value="yellow"\s+checked/', $html);
+    }
+
+    #[Test]
     public function it_calculates_the_count_for_each_entry()
     {
         Config::set('statamic-livewire-filters.enable_filter_values_count', true);
@@ -749,8 +780,9 @@ class LfCheckboxFilterTest extends TestCase
         ])
             ->assertViewHas('statamic_field', function ($statamic_field) use ($customOptions) {
                 return $statamic_field['options'] === $customOptions
-                    && $statamic_field['counts'] === ['custom1' => null, 'custom2' => null];
+                    && ! array_key_exists('counts', $statamic_field);
             })
+            ->tap(fn ($component) => $this->assertSame(['custom1' => null, 'custom2' => null], $component->instance()->counts()))
             ->assertSee('Custom 1')
             ->assertSee('Custom 2')
             ->assertDontSee('Option 1')

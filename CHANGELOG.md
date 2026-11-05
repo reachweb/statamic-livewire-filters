@@ -10,6 +10,60 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 - Deferred filters for mobile. With `defer_filters="drawer"` on the collection tag, filters apply live until the new `{{ livewire-filters:drawer }}` opens; changes made in it are queued and applied together with its Apply button, or discarded when it closes otherwise. From its `breakpoint` up (1280px by default) the drawer is a plain sidebar and filters stay live. `defer_filters="true"` queues changes on every screen size. Entries, tags, faceted counts and the URL only update on apply. The drawer has a "Filters (n)" trigger and an "Apply (n)" / "Show N results" button, also available on its own as `{{ livewire-filters:apply_button }}`.
 
+## [4.6.3] - 2026-11-04
+
+### Changed
+
+- Filters and `lf-sort` now read the URL's filter params when they mount, in both the custom query string and the Livewire query string modes, so their state matches the URL from the first render. Before, every control rendered empty and waited for a `preset-params` event in a follow-up request, so the page briefly showed unchecked controls, and `{{ nocache }}` regions returned empty controls.
+- The `lf-checkbox`, `lf-radio`, `lf-select`, `lf-toggle`, `lf-text`, `lf-date`, `lf-range` and `lf-sort` views show the selection in the server HTML: checkboxes and radios are `checked`, select options `selected`, and text, date and range inputs carry their `value`. The Alpine-driven `lf-checkbox-advanced`, `lf-select-advanced` and `lf-dual-range` views show it as soon as Livewire starts, without waiting for another request.
+- The collection now sends `preset-params` only when a filter param doesn't come from the URL, such as a preset set on the `livewire-collection` tag; it then carries every filter param, URL ones included. It only contains filter keys (`field:condition` style) and `sort`.
+
+### Fixed
+
+- Under full-measure static caching, `{{ livewire-filters:head }}` now waits for `DOMContentLoaded` before starting Livewire, like Livewire does on its own. Before, it could start Livewire and Alpine while the page was still loading, so `alpine:init` listeners placed after `{{ livewire:scripts }}`, such as ones that register `Alpine.store` or `Alpine.data`, sometimes ran too late. Expressions that used them then threw errors like `Cannot read properties of undefined`. On the demo site this happened on up to 1 in 6 page loads.
+- With `custom_query_string` and full-measure static caching, filter changes sometimes left the browser URL unchanged, so a reload or shared link lost the filters or page. The URL handler waited for `livewire:initialized`, which had often already fired by the time it loaded. It now registers its listeners as soon as it loads, once per page.
+- With `custom_query_string` and `{{ nocache }}` regions under full-measure static caching, opening or reloading a paginated URL such as `/cars/filters/brand/audi?page=2` now shows that page. Before, the `/!/nocache` request only restored the filter segments from the page URL, so the regions always rendered page 1. The page URL's query string now reaches the regions, as it already did with `enable_query_string`.
+
+### Upgrading from 4.6.2
+
+Sites that use the bundled views need no changes. Check the following:
+
+- **Custom filter components.** A custom filter that relied on `preset-params` for a URL param no longer receives it, because the collection skips the event when every filter param comes from the URL. Read `CustomQueryString::urlParams()` at mount instead. Filters that use the `IsLivewireFilter` trait and define `setPresetValues()` get this automatically.
+- **Custom listeners for keys without a colon.** `preset-params` now only carries filter keys (`field:condition` style) and `sort`. A listener that read another tag option from it, such as `limit`, no longer receives it.
+- **Published filter views.** They keep working and skip the follow-up request, but they only show the selection once Livewire starts. Copy the new `@checked`, `@selected` and `value` attributes from the bundled views to get it in the server HTML.
+- **Published `livewire/utility/url-handler.blade.php`.** Re-publish it or merge in the new script to get the full-caching URL fix.
+
+## [4.6.2] - 2026-11-04
+
+### Changed
+
+- Faceted counts and dynamic range bounds now find the matching entries once per filter state per request and read each field straight from the Stache index, instead of running one sorted query per filter. On a 5,000-entry collection with 8 filters, the counts request after page load drops from about 1 s to 300 ms, and the requests after filter changes get about 25% faster overall (less when many filters are active). Counts and bounds are the same as before. The Eloquent driver is unchanged.
+- The minimum supported Statamic 5 version is now 5.29.
+- With `enable_filter_values_count` off, filter snapshots no longer carry a placeholder `counts` array, which made up nearly half of a large filter's request. `$this->counts` in views returns the same empty counts as before. A custom view that reads `$statamic_field['counts']` directly must switch to `$this->counts`.
+- Filter option lists are no longer stored in the cache store on every page view, so `lw_computed` cache files stop piling up. On drivers other than the Stache, `LfTags` still caches its resolved options for the life of the component. Term and entry option labels are now read from the Stache indexes instead of loading every term and entry, which makes mounting a filter over a large taxonomy or collection several times faster.
+- Filters no longer send HTML back for renders the browser discards or doesn't need: views with a bare `wire:ignore` on their root (the advanced checkbox and select views), `params-updated` events when counts or bounds are disabled or come back unchanged, and `clear-option` events for another field's tag. On the demo site this cuts the Livewire response bytes of a typical filtering session by 15–25% (gzipped), with every static caching strategy. Data, events, and published views that read `$selected` server-side behave as before. A custom view with a bare `wire:ignore` root gets no HTML after its first render; Livewire already discarded it, so such views keep updating from `$wire` or browser events as before.
+- Filtering needs fewer Livewire requests. The bundled checkbox view sends its `filter-updated` event from the browser, in the same request as its own update, so ticking a checkbox takes one request fewer. The bundled `lf-count` view updates from the `entries-updated` browser event instead of a server request, and the collection no longer sends `tags-updated` on page load when there is no tag to show, so with counts and bounds off a page without preset filters makes no Livewire request on load. Clear all from the collection (`$wire.clearAll()`) no longer makes every filter send a `clear-filter` back; only a filter that manages a param set on the tag or by an `init` hook still does, or one whose selection changed while the clear was on its way, so that selection can't stay applied after the filter resets. On the demo site, a filtering session makes 19% fewer requests with counts and bounds on and 35% fewer with them off, with every static caching strategy. That saves about 150 ms per checkbox tick or clear all on a slow mobile connection.
+- `validate_filter_values` still rejects invalid checkbox values and shows the error, but it no longer stops the bundled checkbox view from applying them to the collection, because the view sends the event from the browser. As before, `allowed_filters` and `blocked_query_params` control which params the collection accepts.
+- `entries-updated` now also carries `entriesLabel`, the translated `ui.entries` text for the count. A published `count.blade.php` or a custom `view` on `lf-count` keeps the server listener and works as before. A published `lf-checkbox.blade.php` keeps working through the server relay, without the saved request. `clear-all-filters` from the collection now carries two arguments, the list of condition keys it kept and the params it removed; listeners without parameters are unaffected.
+
+### Fixed
+
+- Under full-measure static caching, `{{ livewire-filters:head }}` now starts Livewire even when it runs after Statamic has replaced the CSRF token. Before, if the tag came after a stylesheet, the browser could hold the inline script back until the CSS loaded. On slow networks Statamic's `statamic:csrf.replaced` event then fired first, `Livewire.start()` was never called, and filters didn't respond. Full-measure pages served without the CSRF script, such as excluded URLs, now start Livewire too. Placing the tag before your stylesheets is now recommended. On pages that never load Livewire, the script now stops checking for it once the page has loaded instead of checking forever.
+
+### Upgrading from 4.6
+
+Sites that use the bundled views, or published copies of them, need no changes. Check the following:
+
+- **Statamic 5 before 5.29.** Composer keeps such sites on 4.6 until Statamic is updated, so nothing breaks; update Statamic to get this release.
+- **Custom views that read `$statamic_field['counts']`.** None of the bundled views ever did. With `enable_filter_values_count` off the key is no longer set, so `$statamic_field['counts'][$value]` throws an "Undefined array key" error. Use `$this->counts[$value]` instead, which works with counts on or off.
+- **Custom views with a bare `wire:ignore` on their root.** Livewire already skipped morphing such a root, so the HTML it no longer receives was being thrown away. Nothing changes in the browser.
+- **Leftover cache entries.** `lw_computed.*` entries written by earlier versions are no longer read and expire on their own within an hour.
+- **`validate_filter_values`.** With the bundled checkbox view, an invalid value still shows the validation error but now reaches the collection too. Don't rely on validation to keep values out of the query; a visitor could always send `filter-updated` directly.
+- **Subclasses of `LfCheckboxFilter`.** A subclass that defines its own `payload()`, `updatedSelected()` or `dispatchFilterUpdated()` keeps the server relay and works as before, without the saved request.
+- **Published `lf-checkbox.blade.php`.** It keeps working through the server relay. Merge in the new bundled markup, or re-publish it, to get the saved request.
+- **Published `ui/count.blade.php`.** Any published copy, re-published ones included, keeps the server listener and works as before. Delete it to get the saved request.
+- **Custom `clear-all-filters` listeners.** When the collection's "Clear all" sends the event, it now passes two arguments, the list of condition keys it kept and the params it removed. A listener that declares parameters receives them in that order.
+
 ## [4.6.1] - 2026-11-02
 
 ### Security
@@ -192,7 +246,9 @@ If you published `lf-checkbox-advanced.blade.php` or `lf-select-advanced.blade.p
 
 For releases before 4.0.0, see the [GitHub releases](https://github.com/reachweb/statamic-livewire-filters/releases).
 
-[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.1...HEAD
+[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.3...HEAD
+[4.6.3]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.2...v4.6.3
+[4.6.2]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.1...v4.6.2
 [4.6.1]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.0...v4.6.1
 [4.6.0]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.5.1...v4.6.0
 [4.5.1]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.5.0...v4.5.1

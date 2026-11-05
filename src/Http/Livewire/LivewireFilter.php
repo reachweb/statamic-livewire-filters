@@ -16,6 +16,12 @@ use Livewire\Component;
  * applyPreset() assume a `$selected` property. A filter without one, like
  * LfDualRangeFilter with `selectedMin`/`selectedMax`, must override clear(),
  * payload() and applyPreset().
+ *
+ * Listeners skip the render when nothing the view prints changed in the request.
+ * An override of clear(), the owning branch of clearOption(), or any other handler
+ * that changes rendered state outside a client property update must call
+ * markFilterStateChanged(), or a no-op event pooled into the same request will
+ * suppress its render.
  */
 abstract class LivewireFilter extends Component implements FilterContract
 {
@@ -43,6 +49,10 @@ abstract class LivewireFilter extends Component implements FilterContract
 
     public function updatedSelected()
     {
+        // Server-side callers such as clearOption() bypass the updating hook; mark before
+        // validate() can throw so the new selection and its error still render.
+        $this->markFilterStateChanged();
+
         if (method_exists($this, 'rules') && config('statamic-livewire-filters.validate_filter_values')) {
             $this->validate();
         }
@@ -53,10 +63,12 @@ abstract class LivewireFilter extends Component implements FilterContract
     /** @param  array<string, mixed>  $extra  Additional named event params, such as `boundsSelection`. */
     protected function dispatchFilterUpdated(array $extra = []): void
     {
+        $this->lastSentPayload = $this->payload();
+
         $this->dispatch('filter-updated', ...[
             'field' => $this->field,
             'condition' => $this->condition,
-            'payload' => $this->payload(),
+            'payload' => $this->lastSentPayload,
             'modifier' => $this->modifier,
             ...$extra,
         ])
@@ -67,7 +79,11 @@ abstract class LivewireFilter extends Component implements FilterContract
     public function clear()
     {
         $this->selected = $this->emptyValue();
-        $this->clearFilters();
+        $this->markFilterStateChanged();
+
+        if ($this->clearAllNeedsRelay(...func_get_args())) {
+            $this->clearFilters();
+        }
     }
 
     #[On('clear-option')]
@@ -75,12 +91,17 @@ abstract class LivewireFilter extends Component implements FilterContract
     {
         if ($tag['field'] === $this->field) {
             $this->clear();
+
+            return;
         }
+
+        $this->skipRenderIfFilterStateUnchanged();
     }
 
     #[On('preset-params')]
     public function setPresetValues($params)
     {
+        $this->markFilterStateChanged();
         $this->applyPreset($params);
     }
 
@@ -100,10 +121,12 @@ abstract class LivewireFilter extends Component implements FilterContract
             && ($filter['modifier'] ?? null) == $this->modifier);
 
         if (! $queuedByThisFilter || ! is_array($params)) {
-            $this->skipRender();
+            $this->skipRenderIfFilterStateUnchanged();
 
             return;
         }
+
+        $this->markFilterStateChanged();
 
         $hasAppliedParams = collect(Arr::wrap($this->getParamKey()))
             ->contains(fn ($key) => array_key_exists($key, $params));

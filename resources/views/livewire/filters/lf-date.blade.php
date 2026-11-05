@@ -13,6 +13,7 @@
                 id="{{ $field }}"
                 aria-label="{{ __('statamic-livewire-filters::ui.select_date') }}"
                 wire:model.live.debounce.300ms="selected"
+                value="{{ is_scalar($selected) ? $selected : '' }}"
                 @if ($placeholder !== '')
                 placeholder="{{ $placeholder }}"
                 @endif

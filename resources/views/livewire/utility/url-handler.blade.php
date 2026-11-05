@@ -1,61 +1,67 @@
 <div>
     @script
     <script>
-        document.addEventListener('livewire:initialized', () => {
-            const historyStateKey = 'statamicLivewireFilters';
+        // The listeners live on window, so register them once per page even
+        // when wire:navigate starts a new handler instance.
+        if (window.statamicLivewireFiltersUrlHandlerBound) {
+            return;
+        }
 
-            const normalizeUrl = (value) => {
-                const url = new URL(value, window.location.origin);
-                const normalizedParams = Array.from(url.searchParams.entries())
-                    .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
-                        if (leftKey === rightKey) {
-                            return leftValue.localeCompare(rightValue);
-                        }
+        window.statamicLivewireFiltersUrlHandlerBound = true;
 
-                        return leftKey.localeCompare(rightKey);
-                    });
+        const historyStateKey = 'statamicLivewireFilters';
 
-                return JSON.stringify({
-                    origin: url.origin,
-                    pathname: url.pathname,
-                    hash: url.hash,
-                    searchParams: normalizedParams,
+        const normalizeUrl = (value) => {
+            const url = new URL(value, window.location.origin);
+            const normalizedParams = Array.from(url.searchParams.entries())
+                .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+                    if (leftKey === rightKey) {
+                        return leftValue.localeCompare(rightValue);
+                    }
+
+                    return leftKey.localeCompare(rightKey);
                 });
-            };
 
-            const markedHistoryState = () => ({
-                ...(history.state ?? {}),
-                [historyStateKey]: true,
+            return JSON.stringify({
+                origin: url.origin,
+                pathname: url.pathname,
+                hash: url.hash,
+                searchParams: normalizedParams,
             });
+        };
 
-            Livewire.on('update-url', ({ newUrl, replace = false }) => {
-                const currentUrl = new URL(window.location.href);
-                const nextUrl = new URL(newUrl, window.location.origin);
+        const markedHistoryState = () => ({
+            ...(history.state ?? {}),
+            [historyStateKey]: true,
+        });
 
-                if (normalizeUrl(currentUrl) === normalizeUrl(nextUrl)) {
-                    return;
-                }
+        Livewire.on('update-url', ({ newUrl, replace = false }) => {
+            const currentUrl = new URL(window.location.href);
+            const nextUrl = new URL(newUrl, window.location.origin);
 
-                // Canonicalize initial page loads in place. This also heals history
-                // entries containing paginator property paths from older releases.
-                if (replace) {
-                    history.replaceState(markedHistoryState(), '', nextUrl);
+            if (normalizeUrl(currentUrl) === normalizeUrl(nextUrl)) {
+                return;
+            }
 
-                    return;
-                }
+            // Canonicalize initial page loads in place. This also heals history
+            // entries containing paginator property paths from older releases.
+            if (replace) {
+                history.replaceState(markedHistoryState(), '', nextUrl);
 
-                // Mark both sides of the transition and retain any Livewire state.
-                history.replaceState(markedHistoryState(), '', currentUrl);
-                history.pushState(markedHistoryState(), '', nextUrl);
-            });
+                return;
+            }
 
-            window.addEventListener('popstate', (event) => {
-                if (! event.state?.[historyStateKey]) {
-                    return;
-                }
+            // Mark both sides of the transition and retain any Livewire state.
+            history.replaceState(markedHistoryState(), '', currentUrl);
+            history.pushState(markedHistoryState(), '', nextUrl);
+        });
 
-                window.location.reload();
-            });
+        window.addEventListener('popstate', (event) => {
+            if (! event.state?.[historyStateKey]) {
+                return;
+            }
+
+            window.location.reload();
         });
     </script>
     @endscript

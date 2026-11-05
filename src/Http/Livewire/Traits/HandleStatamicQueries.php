@@ -2,13 +2,17 @@
 
 namespace Reach\StatamicLivewireFilters\Http\Livewire\Traits;
 
+use Illuminate\Support\Str;
 use Reach\StatamicLivewireFilters\Exceptions\BlueprintNotFoundException;
 use Reach\StatamicLivewireFilters\Exceptions\FieldNotFoundException;
 use Statamic\Facades\Blink;
 use Statamic\Facades\Blueprint;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
+use Statamic\Facades\Stache;
 use Statamic\Facades\Taxonomy;
+use Statamic\Stache\Query\EntryQueryBuilder;
+use Statamic\Stache\Query\TermQueryBuilder;
 
 trait HandleStatamicQueries
 {
@@ -19,7 +23,22 @@ trait HandleStatamicQueries
         return Blink::once("statamic-livewire-filters.taxonomy-terms.{$siteHandle}.{$taxonomy_handle}", function () use ($taxonomy_handle, $siteHandle) {
             $taxonomy = Taxonomy::findByHandle($taxonomy_handle);
 
-            return $taxonomy->queryTerms()->get()
+            $query = $taxonomy->queryTerms();
+
+            if ($query instanceof TermQueryBuilder) {
+                // Read the title index on its own: for terms that only exist through entry
+                // associations, its "site::slug" keys can differ from the site and id indexes.
+                $defaultSite = $taxonomy->sites()->first();
+
+                return Stache::store('terms')->store($taxonomy_handle)->index('title')->items()
+                    ->groupBy(fn ($title, $key) => Str::after($key, '::'), preserveKeys: true)
+                    ->map(fn ($titles, $slug) => $titles[$siteHandle.'::'.$slug]
+                        ?? $titles[$defaultSite.'::'.$slug]
+                        ?? $titles->first()
+                        ?? $slug);
+            }
+
+            return $query->get()
                 ->unique(fn ($term) => $term->inDefaultLocale()->slug())
                 ->mapWithKeys(function ($term) use ($siteHandle) {
                     $default = $term->inDefaultLocale();
@@ -43,10 +62,28 @@ trait HandleStatamicQueries
         );
 
         return Blink::once($cacheKey, function () use ($collection_handle, $siteHandle, $useOriginId) {
-            return Entry::query()
+            $query = Entry::query()
                 ->where('collection', $collection_handle)
                 ->where('site', $siteHandle)
-                ->whereStatus('published')
+                ->whereStatus('published');
+
+            // Read titles from the collection's own store: a keyed pluck through the
+            // aggregate entries store would renumber numeric entry ids.
+            if ($query instanceof EntryQueryBuilder) {
+                $ids = $query->pluck('id');
+                $store = Stache::store('entries')->store($collection_handle);
+                $titles = $store->getItemValues($ids, 'title', 'id');
+
+                if (! $useOriginId) {
+                    return $titles;
+                }
+
+                $origins = $store->getItemValues($ids, 'origin', 'id');
+
+                return $titles->mapWithKeys(fn ($title, $id) => [($origins[$id] ?? null) ?: $id => $title]);
+            }
+
+            return $query
                 ->get()
                 ->mapWithKeys(function ($entry) use ($useOriginId) {
                     if ($useOriginId) {

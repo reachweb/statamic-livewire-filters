@@ -39,6 +39,9 @@ trait HandleFieldBounds
     #[Locked]
     public array $boundsQueryRevisions = [];
 
+    /** Request-scoped: an accepted bounds event was handled in this request. */
+    protected bool $boundsEventHandledThisRequest = false;
+
     abstract protected function minimumBoundsSpan(): int|float;
 
     abstract protected function clampedSelectionPayload($min, $max): array;
@@ -51,6 +54,8 @@ trait HandleFieldBounds
     public function updateBounds($params, $boundsQuery = null): void
     {
         if (! config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
@@ -59,16 +64,24 @@ trait HandleFieldBounds
         $query = RangeBoundsQuery::decodeForCollection($boundsQuery, $this->collection);
 
         if ($query === null) {
+            $this->skipRenderIfFilterStateUnchanged();
+
             return;
         }
 
         if ($query['source'] !== null) {
             if ($query['revision'] < ($this->boundsQueryRevisions[$query['source']] ?? 0)) {
+                $this->skipRenderIfFilterStateUnchanged();
+
                 return;
             }
 
             $this->boundsQueryRevisions[$query['source']] = $query['revision'];
         }
+
+        $this->boundsEventHandledThisRequest = true;
+
+        $viewStateBefore = $this->boundsViewState();
 
         $params = $query['params'];
         $fieldHandle = $this->resolveCountFieldHandle();
@@ -138,11 +151,23 @@ trait HandleFieldBounds
             $selectionPayload = $this->selectionEventPayload();
         }
 
+        if ($this->boundsViewState() === $viewStateBefore) {
+            $this->skipRenderIfFilterStateUnchanged();
+        } else {
+            $this->markFilterStateChanged();
+        }
+
         $this->dispatch('range-bounds-updated', ...array_merge(
             ['min' => $min, 'max' => $max],
             $selectionPayload,
             ['disabled' => $disabled],
         ));
+    }
+
+    /** Everything the range views read server-side; the revision/extrema bookkeeping is not rendered. */
+    protected function boundsViewState(): array
+    {
+        return [$this->dynamicMin, $this->dynamicMax, $this->boundsDisabled, $this->selectionEventPayload()];
     }
 
     protected function rememberBoundsSelection(array $params): ?array
@@ -156,6 +181,21 @@ trait HandleFieldBounds
         return ['source' => $this->getId(), 'revision' => ++$this->boundsSelectionRevision];
     }
 
+    /**
+     * A clear-all the collection already swept sends no relay, so no acknowledgement will
+     * come for a new revision. When the sweep's own bounds event was already handled in this
+     * request (the collection dispatches it before clear-all-filters), the params can be
+     * trusted again: older events are dropped by their query revision. Otherwise an empty
+     * pending selection (rather than null, which trusts the event's params) keeps an older
+     * bounds event that still carries the cleared selection from re-activating the slider
+     * until an event with no selection for this filter arrives.
+     */
+    protected function forgetBoundsSelectionWithoutRelay(): void
+    {
+        $this->pendingBoundsSelection = config('statamic-livewire-filters.enable_dynamic_range_bounds')
+            && ! $this->boundsEventHandledThisRequest ? [] : null;
+    }
+
     protected function boundsSelectionParams(array $params, array $selections): array
     {
         if ($this->pendingBoundsSelection === null) {
@@ -165,7 +205,7 @@ trait HandleFieldBounds
         $appliedSelection = array_intersect_key($params, array_flip($this->currentFilterParamKeys()));
 
         // Equal values may belong to an older selection before a clear/reselect.
-        if (($selections[$this->getId()] ?? null) === $this->boundsSelectionRevision
+        if (($selections[$this->getId()] ?? 0) === $this->boundsSelectionRevision
             && $appliedSelection == $this->pendingBoundsSelection) {
             $this->pendingBoundsSelection = null;
 
@@ -254,7 +294,12 @@ trait HandleFieldBounds
             ->filter(fn ($value) => $value !== null && $value !== '');
 
         if (($this->statamic_field['type'] ?? null) === 'date') {
+            // Stache indexes hold Carbon instances already; only Eloquent hands back strings
             $values = $values->map(function ($value) {
+                if ($value instanceof \DateTimeInterface) {
+                    return $value->getTimestamp();
+                }
+
                 try {
                     return Carbon::parse($value)->timestamp;
                 } catch (\Throwable $exception) {

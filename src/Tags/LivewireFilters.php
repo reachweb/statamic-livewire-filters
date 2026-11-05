@@ -15,8 +15,16 @@ class LivewireFilters extends Tags
         }
 
         $csrf = json_encode(csrf_token());
+        $token = e(csrf_token());
 
+        // Statamic swaps the placeholder in the meta tag before firing 'statamic:csrf.replaced',
+        // so the script can tell the event already fired when it runs late (e.g. queued behind a
+        // stylesheet). The placeholder is split so Statamic's server-side replacement leaves it alone.
+        // Setting livewireScriptConfig turns off Livewire's own start on DOMContentLoaded, so the script
+        // waits for it too: alpine:init listeners later in the page (Alpine.store, Alpine.data) must be
+        // registered before Alpine starts.
         return <<<HTML
+<meta name="livewire-filters-csrf" content="{$token}">
 <script>
     window.livewireScriptConfig = window.livewireScriptConfig || { csrf: {$csrf} };
     (function () {
@@ -24,8 +32,15 @@ class LivewireFilters extends Tags
             if (window.__livewireStarted) {
                 return;
             }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', start, { once: true });
+                return;
+            }
             if (!window.Livewire) {
-                setTimeout(start, 50);
+                // Every script has run once the page has loaded, so a page without Livewire stops polling.
+                if (document.readyState !== 'complete') {
+                    setTimeout(start, 50);
+                }
                 return;
             }
             window.__livewireStarted = true;
@@ -33,6 +48,12 @@ class LivewireFilters extends Tags
         }
 
         document.addEventListener('statamic:csrf.replaced', start, { once: true });
+
+        var token = document.querySelector('meta[name="livewire-filters-csrf"]').content;
+        if (token && token !== 'STATAMIC_' + 'CSRF_TOKEN') {
+            window.livewireScriptConfig.csrf = token;
+            start();
+        }
     })();
 </script>
 HTML;
