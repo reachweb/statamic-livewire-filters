@@ -9,7 +9,7 @@
             'results' => __('statamic-livewire-filters::ui.show_results'),
             'zero' => trans_choice('statamic-livewire-filters::ui.show_n_results', 0),
             'one' => trans_choice('statamic-livewire-filters::ui.show_n_results', 1),
-            'many' => trans_choice('statamic-livewire-filters::ui.show_n_results', 2, ['count' => '__COUNT__']),
+            'many' => trans_choice('statamic-livewire-filters::ui.show_n_results', 2, ['total' => '__COUNT__']),
         ]),
         get label() {
             if (this.pending > 0) { return this.labels.apply + ' (' + this.pending + ')' }

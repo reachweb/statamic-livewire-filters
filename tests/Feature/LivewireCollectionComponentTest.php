@@ -1571,6 +1571,42 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function deferred_mode_applies_the_clear_all_relay_for_a_tag_authored_param_at_once()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'taxonomy:colors:any' => 'red', 'defer_filters' => 'true']])
+            ->assertSet('entriesCount', 1)
+            ->call('clearAll')
+            // The sweep keeps the tag-authored key; the checkbox managing it relays a clear-filter.
+            ->assertSet('params', ['taxonomy:colors:any' => 'red'])
+            ->dispatch('clear-filter', field: 'colors', condition: 'taxonomy', modifier: 'any')
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('entriesCount', 3)
+            // The exemption is used up: the next change of that filter queues again.
+            ->dispatch('filter-updated', field: 'colors', condition: 'taxonomy', payload: ['black'], modifier: 'any')
+            ->assertSet('params', [])
+            ->assertSet('pendingCount', 1);
+    }
+
+    #[Test]
+    public function deferred_mode_applies_the_relay_of_a_removed_dual_range_tag_at_once()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes', 'defer_filters' => 'drawer']])
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => 20, 'max' => 80], modifier: 'any')
+            ->dispatch('start-deferring')
+            // A queued change of the same filter is replaced by the tag removal.
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => 30, 'max' => 80], modifier: 'any')
+            ->assertSet('pendingCount', 1)
+            ->dispatch('clear-option', ['field' => 'price', 'value' => '20', 'condition' => 'gte'])
+            ->assertSet('params', ['price:gte' => 20, 'price:lte' => 80])
+            // LfDualRangeFilter resets the lower bound and relays both bounds.
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => 0, 'max' => 80], modifier: 'any')
+            ->assertSet('params', ['price:gte' => 0, 'price:lte' => 80])
+            ->assertSet('pendingCount', 0)
+            ->assertSet('immediateRelayKeys', []);
+    }
+
+    #[Test]
     public function deferred_mode_updates_the_url_only_on_apply()
     {
         Config::set('statamic-livewire-filters.custom_query_string', 'filters');

@@ -9,6 +9,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 use Reach\StatamicLivewireFilters\Support\Nocache;
+use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Statamic\Support\Traits\Hookable;
 use Statamic\Tags\Collection\Entries;
 
@@ -91,8 +92,15 @@ class LivewireCollection extends Component
     #[Locked]
     public int $pendingCount = 0;
 
-    /** Request-scoped: true while apply-filters replays the queue, so it is not re-queued. */
-    protected bool $applyingPendingFilters = false;
+    /**
+     * Deferred mode: param keys whose next filter relay applies at once instead of
+     * queueing, because a tag removal or Clear all already applied without waiting.
+     */
+    #[Locked]
+    public array $immediateRelayKeys = [];
+
+    /** Request-scoped: true while a change applies without queueing, so it is not re-queued. */
+    protected bool $applyingWithoutQueue = false;
 
     public function mount($params)
     {
@@ -174,12 +182,17 @@ class LivewireCollection extends Component
     #[On('filter-updated')]
     public function filterUpdated($field, $condition, $payload, $modifier, $boundsSelection = null)
     {
-        if ($this->shouldQueueFilterChanges()) {
+        if ($this->shouldQueueFilterChanges($field, $condition, $modifier)) {
             $this->queueFilterChange($field, $condition, $payload, $modifier, $boundsSelection);
 
             return;
         }
 
+        $this->withoutQueueing(fn () => $this->applyFilterUpdate($field, $condition, $payload, $modifier, $boundsSelection));
+    }
+
+    protected function applyFilterUpdate($field, $condition, $payload, $modifier, $boundsSelection = null): void
+    {
         $this->rememberBoundsSelectionRevision($boundsSelection);
 
         if ($this->filterUpdateIsRedundant($field, $condition, $payload, $modifier)) {
@@ -223,13 +236,13 @@ class LivewireCollection extends Component
         }
 
         $this->pendingParams = [];
-        $this->applyingPendingFilters = true;
 
-        foreach ($pending as $change) {
-            $this->filterUpdated(...$change);
-        }
+        $this->withoutQueueing(function () use ($pending) {
+            foreach ($pending as $change) {
+                $this->applyFilterUpdate(...$change);
+            }
+        });
 
-        $this->applyingPendingFilters = false;
         $this->syncPendingCount();
     }
 
@@ -288,12 +301,67 @@ class LivewireCollection extends Component
 
         if ($this->deferMode === 'drawer') {
             $this->deferFilters = false;
+            $this->immediateRelayKeys = [];
         }
     }
 
-    protected function shouldQueueFilterChanges(): bool
+    /**
+     * A relay for a key in immediateRelayKeys applies at once, once, and replaces any
+     * change of that filter still queued.
+     */
+    protected function shouldQueueFilterChanges($field, $condition, $modifier): bool
     {
-        return $this->deferFilters && ! $this->applyingPendingFilters;
+        if (! $this->deferFilters || $this->applyingWithoutQueue) {
+            return false;
+        }
+
+        if (! is_string($field) || ! is_string($condition) || ! (is_string($modifier) || $modifier === null)) {
+            return true;
+        }
+
+        $keys = Arr::wrap(ParamKey::build($field, $condition, $modifier));
+
+        if (array_intersect($keys, $this->immediateRelayKeys) === []) {
+            return true;
+        }
+
+        $this->immediateRelayKeys = array_values(array_diff($this->immediateRelayKeys, $keys));
+
+        if (isset($this->pendingParams[$this->pendingParamKey($field, $condition, $modifier)])) {
+            unset($this->pendingParams[$this->pendingParamKey($field, $condition, $modifier)]);
+            $this->syncPendingCount();
+        }
+
+        return false;
+    }
+
+    /** @param  array<int, mixed>  $keys */
+    protected function allowImmediateRelays(array $keys): void
+    {
+        if (! $this->deferFilters) {
+            return;
+        }
+
+        $keys = array_filter($keys, 'is_string');
+
+        $this->immediateRelayKeys = array_values(array_unique([...$this->immediateRelayKeys, ...$keys]));
+    }
+
+    protected function withoutQueueing(callable $callback): void
+    {
+        $applying = $this->applyingWithoutQueue;
+        $this->applyingWithoutQueue = true;
+
+        try {
+            $callback();
+        } finally {
+            $this->applyingWithoutQueue = $applying;
+        }
+    }
+
+    protected function pendingParamKey($field, $condition, $modifier): string
+    {
+        return implode('|', [$field, $condition, $modifier ?? '']);
     }
 
     /**
@@ -305,7 +373,7 @@ class LivewireCollection extends Component
     {
         $this->skipRenderIfCollectionStateUnchanged();
 
-        $key = implode('|', [$field, $condition, $modifier ?? '']);
+        $key = $this->pendingParamKey($field, $condition, $modifier);
 
         if ($this->filterPayloadMatchesParams($field, $condition, $payload, $modifier)) {
             unset($this->pendingParams[$key]);
@@ -376,6 +444,9 @@ class LivewireCollection extends Component
 
         $this->clearAllFilterParams();
 
+        // Filters managing a kept key relay a clear-filter that must not be queued.
+        $this->allowImmediateRelays($this->keptConditionParamKeys());
+
         $this->dispatch('clear-all-filters', $this->keptConditionParamKeys(), array_diff_key($paramsBeforeSweep, $this->params));
     }
 
@@ -403,6 +474,7 @@ class LivewireCollection extends Component
     {
         $this->clearPendingFilters();
         $this->clearAllFilterParams();
+        $this->allowImmediateRelays($this->keptConditionParamKeys());
 
         $keptParamKeys = func_get_args()[0] ?? null;
 

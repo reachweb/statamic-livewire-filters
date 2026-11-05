@@ -71,7 +71,8 @@ class LoadMoreTest extends TestCase
 
         $this->assertStringContainsString('<div id="my-filters"></div>', $html);
         $this->assertStringContainsString("Livewire.dispatch('start-deferring')", $html);
-        $this->assertStringContainsString("Livewire.dispatch('stop-deferring', { apply })", $html);
+        $this->assertStringContainsString("Livewire.dispatch('stop-deferring', { apply: true })", $html);
+        $this->assertStringContainsString("Livewire.dispatch('stop-deferring', { apply: false })", $html);
         $this->assertStringContainsString('const breakpoint = 1280;', $html);
         $this->assertStringContainsString('Show 1 result', $html);
     }

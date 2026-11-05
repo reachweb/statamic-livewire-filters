@@ -178,11 +178,13 @@ class LfDualRangeFilter extends LivewireFilter
     {
         $this->useDateComparisons();
         $paramKeys = $this->getParamKey();
-        if (isset($params[$paramKeys['min']])) {
-            $this->selectedMin = $this->sliderValueFromParam($params[$paramKeys['min']]) ?? $this->min;
-        }
-        if (isset($params[$paramKeys['max']])) {
-            $this->selectedMax = $this->sliderValueFromParam($params[$paramKeys['max']]) ?? $this->max;
+        $hasMin = isset($params[$paramKeys['min']]);
+        $hasMax = isset($params[$paramKeys['max']]);
+
+        // With one bound applied, the other is unbounded, so it goes back to its end of the slider.
+        if ($hasMin || $hasMax) {
+            $this->selectedMin = $hasMin ? ($this->sliderValueFromParam($params[$paramKeys['min']]) ?? $this->min) : ($this->dynamicMin ?? $this->min);
+            $this->selectedMax = $hasMax ? ($this->sliderValueFromParam($params[$paramKeys['max']]) ?? $this->max) : ($this->dynamicMax ?? $this->max);
         }
         $this->dispatch('dual-range-preset-values',
             min: $this->selectedMin,

@@ -19,7 +19,7 @@ return [
     'search' => 'Search',
     'search_options' => 'Search options',
     'show_results' => 'Show results',
-    'show_n_results' => '{0} No results|{1} Show 1 result|[2,*] Show :count results',
+    'show_n_results' => '{0} No results|{1} Show 1 result|[2,*] Show :total results',
     'select_date' => 'Select date',
     'no_results' => 'No results found',
 

@@ -198,7 +198,7 @@ trait HandleParams
     #[On('clear-filter')]
     public function clearFilter($field, $condition, $modifier, $boundsSelection = null): void
     {
-        if (method_exists($this, 'shouldQueueFilterChanges') && $this->shouldQueueFilterChanges()) {
+        if (method_exists($this, 'shouldQueueFilterChanges') && $this->shouldQueueFilterChanges($field, $condition, $modifier)) {
             $this->queueFilterChange($field, $condition, null, $modifier, $boundsSelection);
 
             return;
@@ -291,6 +291,13 @@ trait HandleParams
     #[On('clear-option')]
     public function clearOptionParam($tag): void
     {
+        // Deferred mode: the owning filter's relay finishes the removal (range bounds
+        // reset to values only it knows), so that relay must apply instead of queueing.
+        if (method_exists($this, 'allowImmediateRelays') && is_array($tag)
+            && is_string($tag['field'] ?? null) && is_string($tag['condition'] ?? null)) {
+            $this->allowImmediateRelays([$tag['field'].':'.$tag['condition']]);
+        }
+
         $target = is_array($tag) ? $this->resolveTagParamTarget($tag) : null;
 
         if ($target === null) {

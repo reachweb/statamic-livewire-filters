@@ -394,6 +394,28 @@ class LfDualRangeFilterTest extends TestCase
     }
 
     #[Test]
+    public function discarding_a_pending_change_resets_a_bound_the_applied_params_leave_open()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'cabins',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2,
+            'max' => 10,
+            'minRange' => 2,
+        ])
+            ->dispatch('preset-params', ['cabins:gte' => 4])
+            ->set('selectedMax', 8)
+            ->dispatch('pending-filters-discarded',
+                filters: [['field' => 'cabins', 'condition' => 'dual_range', 'modifier' => 'any']],
+                params: ['cabins:gte' => 4],
+            )
+            ->assertSet('selectedMin', 4)
+            ->assertSet('selectedMax', 10)
+            ->assertDispatched('dual-range-preset-values', min: 4, max: 10);
+    }
+
+    #[Test]
     public function it_loads_preset_params_with_custom_modifier_correctly()
     {
         Livewire::test(LfDualRangeFilter::class, [

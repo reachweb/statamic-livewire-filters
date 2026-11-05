@@ -11,7 +11,19 @@
         desktop: false,
         active: 0,
         pending: 0,
+        pendingStop: null,
         init() {
+            // Counts Livewire requests in flight, so a discard can wait for a filter change already on its way.
+            if (! window.__lfRequests) {
+                const requests = window.__lfRequests = { inFlight: 0, lastActivity: 0 };
+                const done = () => { requests.inFlight = Math.max(0, requests.inFlight - 1); requests.lastActivity = performance.now() };
+                Livewire.hook('request', ({ succeed, fail }) => {
+                    requests.inFlight++;
+                    requests.lastActivity = performance.now();
+                    succeed(done);
+                    fail(done);
+                });
+            }
             const breakpoint = @js((int) ($breakpoint ?? 1280));
             if (breakpoint < 1) { return }
             const query = window.matchMedia('(min-width: ' + breakpoint + 'px)');
@@ -23,6 +35,9 @@
             });
         },
         show() {
+            // Reopened before a discard was sent: the queued changes are still there to apply.
+            clearTimeout(this.pendingStop);
+            this.pendingStop = null;
             this.open = true;
             Livewire.dispatch('start-deferring');
         },
@@ -33,7 +48,30 @@
             }
             if (! this.open) { return }
             this.open = false;
-            Livewire.dispatch('stop-deferring', { apply });
+            if (apply) {
+                Livewire.dispatch('stop-deferring', { apply: true });
+                return;
+            }
+            this.discardWhenSettled();
+        },
+        // A filter change made just before closing reaches the collection one round trip later
+        // (or after the bundled text and date filters' 300ms debounce). Discarding first would end
+        // deferral and let it apply, so wait until those requests have settled.
+        discardWhenSettled() {
+            const requests = window.__lfRequests;
+            const closedAt = performance.now();
+            const check = () => {
+                const now = performance.now();
+                const settled = now - closedAt >= 350 && requests.inFlight === 0 && now - requests.lastActivity >= 100;
+                if (! settled && now - closedAt < 10000) {
+                    this.pendingStop = setTimeout(check, 50);
+                    return;
+                }
+                this.pendingStop = null;
+                Livewire.dispatch('stop-deferring', { apply: false });
+            };
+            clearTimeout(this.pendingStop);
+            this.pendingStop = setTimeout(check, 50);
         },
     }"
     x-on:entries-updated.window="active = $event.detail?.active ?? 0"
