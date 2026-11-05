@@ -106,6 +106,7 @@ class LfTags extends Component
         $this->parseQueryScopes();
         $this->parseTaxonomyTerms();
         $this->parseConditions();
+        $this->labelDateRangeTags();
     }
 
     public function parseConditions()
@@ -200,23 +201,50 @@ class LfTags extends Component
             'condition' => $condition,
         ];
 
-        $this->tags->push($this->withDateRangeLabel($tag));
+        $this->tags->push($tag);
     }
 
     /**
-     * Registration can arrive after the initial tags, so relabel any already built.
+     * Registration can arrive before or after the tags, so label any already built.
      */
     #[On('date-range-filter-registered')]
     public function registerDateRangeFilter($field, $format): void
     {
-        // The format comes from the client and isoFormat() is quadratic in its length:
-        // real formats are a handful of tokens, so refuse anything longer.
-        if (! is_string($field) || ! is_string($format) || $format === '' || mb_strlen($format) > 64 || $this->isNotTaggable($field)) {
+        // The event can come from any client, so accept only the plain day, month and
+        // year tokens the calendar itself understands: macros such as LLLL or x make
+        // every isoFormat() call expensive.
+        if (! is_string($field) || ! is_string($format) || ! preg_match('/^[DMY\/.,\- ]{1,32}$/', $format) || $this->isNotTaggable($field)) {
             return;
         }
 
         $this->dateRangeFormats[$field] = $format;
-        $this->tags = $this->tags->map(fn ($tag) => $this->withDateRangeLabel($tag));
+        $this->labelDateRangeTags();
+    }
+
+    /**
+     * A date range has one bound per end, so only the first tag of each field and
+     * condition is labelled: a crafted param holding thousands of `|` values must
+     * not cost a date parse and format each.
+     */
+    protected function labelDateRangeTags(): void
+    {
+        if ($this->dateRangeFormats === []) {
+            return;
+        }
+
+        $labelled = [];
+
+        $this->tags = $this->tags->map(function ($tag) use (&$labelled) {
+            $key = $tag['field'].':'.$tag['condition'];
+
+            if (isset($labelled[$key]) || isset($tag['dateLabel'])) {
+                return $tag;
+            }
+
+            $labelled[$key] = true;
+
+            return $this->withDateRangeLabel($tag);
+        });
     }
 
     /**

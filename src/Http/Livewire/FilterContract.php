@@ -26,7 +26,8 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
  *
  * A filter emits to LivewireCollection:
  *  - `filter-updated` with `field`, `condition`, `payload` (a scalar, a list,
- *    or `{min, max}` for dual_range; '', null or [] clears),
+ *    or `{min, max}` for dual_range, where a null or '' end leaves that side
+ *    open; '', null or [] clears),
  *    `modifier`, and optionally `boundsSelection`.
  *  - `clear-filter` with `field`, `condition`, `modifier`, `boundsSelection`.
  */

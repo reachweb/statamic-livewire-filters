@@ -334,6 +334,17 @@ class HandleFieldBoundsTest extends TestCase
     }
 
     #[Test]
+    public function it_excludes_its_own_inclusive_year_bounds_when_computing_bounds()
+    {
+        Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);
+
+        Livewire::test(LfDualRangeFilter::class, $this->dateDualRangeArguments())
+            ->dispatch('params-updated', ...$this->boundsEventArguments(['year:is_after' => '2021-12-31 23:59:59', 'year:is_before' => '2025-01-01']))
+            ->assertSet('dynamicMin', 2020)
+            ->assertSet('dynamicMax', 2024);
+    }
+
+    #[Test]
     public function it_computes_year_bounds_for_date_fields()
     {
         Config::set('statamic-livewire-filters.enable_dynamic_range_bounds', true);

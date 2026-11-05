@@ -38,11 +38,28 @@ class LfDateRangeFilter extends LivewireFilter
     #[Locked]
     public $format = 'DD/MM/YYYY';
 
+    /** Set once lf-tags has been told this field's chip format. */
+    #[Locked]
+    public bool $registeredWithTags = false;
+
     public function mount()
     {
         $this->condition = 'dual_range';
         $this->modifier = self::MODIFIER;
+    }
 
+    /**
+     * lf-tags only needs the format once there is a chip to label, so this goes out
+     * with the first selection or restored range, in the same browser tick as the
+     * request it already causes, never as an extra request on page load.
+     */
+    protected function registerWithTags(): void
+    {
+        if ($this->registeredWithTags) {
+            return;
+        }
+
+        $this->registeredWithTags = true;
         $this->dispatch('date-range-filter-registered', field: $this->field, format: $this->format)
             ->to(LfTags::class);
     }
@@ -63,6 +80,7 @@ class LfDateRangeFilter extends LivewireFilter
             return;
         }
 
+        $this->markFilterStateChanged();
         [$this->selectedFrom, $this->selectedTo] = $this->presetRange($preset);
 
         $this->dispatchEvent();
@@ -83,6 +101,7 @@ class LfDateRangeFilter extends LivewireFilter
             [$this->selectedFrom, $this->selectedTo] = [$this->selectedTo, $this->selectedFrom];
         }
 
+        $this->registerWithTags();
         $this->dispatchFilterUpdated();
     }
 
@@ -150,12 +169,14 @@ class LfDateRangeFilter extends LivewireFilter
         $this->markFilterStateChanged();
 
         $paramKeys = $this->getParamKey();
+        $condition = $tag['condition'] ?? null;
 
-        if ($paramKeys['min'] === $tag['field'].':'.$tag['condition']) {
+        // A tag without a condition (user code) can't name its end: clear the range.
+        if (! is_string($condition) || $paramKeys['min'] === $this->field.':'.$condition) {
             $this->selectedFrom = '';
         }
 
-        if ($paramKeys['max'] === $tag['field'].':'.$tag['condition']) {
+        if (! is_string($condition) || $paramKeys['max'] === $this->field.':'.$condition) {
             $this->selectedTo = '';
         }
 
@@ -180,6 +201,10 @@ class LfDateRangeFilter extends LivewireFilter
         // The calendars drop a day outside the blueprint limits, and a reversed range,
         // which would leave an empty input over an active filter: fix the range and
         // send it, so the query matches what the inputs show.
+        if ($this->selectedFrom !== '' || $this->selectedTo !== '') {
+            $this->registerWithTags();
+        }
+
         $from = $this->clampDate($this->selectedFrom);
         $to = $this->clampDate($this->selectedTo);
 

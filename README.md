@@ -73,11 +73,13 @@ Optional parameters: `text` (override the label) and `class` (button classes). P
 
 - Both days are inclusive, in `config('app.timezone')`, for date-only and time-enabled fields. Either end can be left empty for an open range.
 - `presets` (optional) adds buttons that set both ends: `today`, `7days` and `30days` (ending today), `this_month` and `this_year` (the whole month or year). Presets are clamped to `earliest_date`/`latest_date`, and a preset entirely outside them is hidden.
-- `format` (default `DD/MM/YYYY`) uses Alpine Calendar tokens (`D`, `DD`, `M`, `MM`, `MMM`, `MMMM`, `YY`, `YYYY`) for the inputs and the `lf-tags` chips.
+- `format` (default `DD/MM/YYYY`) uses Alpine Calendar tokens (`D`, `DD`, `M`, `MM`, `MMM`, `MMMM`, `YY`, `YYYY`) for the inputs and the `lf-tags` chips. Separate them with spaces, `/`, `.`, `,` or `-`; a format with any other character makes the chips show the raw bounds.
 - The calendars are limited to the field's `earliest_date` and `latest_date` from the blueprint.
 - `lf-tags` shows one chip per end ("Starts from 1 Jan 2026", "Starts to 31 Dec 2026"); removing a chip clears only that end.
 
 The range is stored as an `is_after`/`is_before` pair of UTC timestamps: the second before the first day and the midnight after the last day (e.g. `starts:is_after=2025-12-31T23:59:59Z` and `starts:is_before=2027-01-01T00:00:00Z` for 2026 in UTC), which is also what appears in the query string. `gte`/`lte` can't be used for dates: Statamic compares those as strings, and on the front end it turns dates into strings using the site's `date_format`.
+
+Use one range filter per field: a date range filter and an `lf-dual-range-filter` on the same date field write the same `is_after`/`is_before` params and overwrite each other.
 
 ## License 
 

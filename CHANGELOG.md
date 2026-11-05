@@ -13,11 +13,20 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 ### Changed
 
 - A `dual_range` update with an empty `min` or `max` now removes that end's param instead of storing an empty value.
-- The tags view prints `$tag['conditionLabel']` and `$tag['dateLabel']` when a tag has them, falling back to the condition translation and `optionLabel`. Published `tags.blade.php` views keep working but show date range chips as raw bounds ("is after 2025-12-31T23:59:59Z") until they use the new keys.
+- The tags view prints `$tag['conditionLabel']` and `$tag['dateLabel']` when a tag has them, falling back to the condition translation and `optionLabel`.
 
 ### Fixed
 
 - A dual range slider on a date field now includes entries dated on the first day of its first year and the last day of its last year. It sent `is_after` 1 Jan and `is_before` 31 Dec, which are exclusive, so selecting 2022–2024 dropped entries dated 2022-01-01 or 2024-12-31. The bounds are now `is_after 2021-12-31 23:59:59` and `is_before 2025-01-01`. URLs with the old bounds still load as the same years. With `enable_dynamic_range_bounds` on, the slider no longer widens by a year when entries sit on a year boundary.
+
+### Upgrading from 4.6.3
+
+Sites that use the bundled views need no changes. Check the following:
+
+- **Published `tags.blade.php`.** It keeps working but shows date range chips as raw bounds ("is after 2025-12-31T23:59:59Z"). Copy the `conditionLabel` and `dateLabel` fallbacks from the bundled view to show "from"/"to" dates.
+- **Year slider chips.** A dual range slider on a date field stores the new bounds, so its chips now read "is after 2021-12-31 23:59:59" / "is before 2025-01-01" instead of the 1 Jan / 31 Dec dates.
+- **Hard-coded year bounds.** Links and `livewire-collection` tag presets with the old bounds (`year:is_after="2022-01-01"`) load in the slider as the same years, but the query still excludes entries dated on 1 Jan of the first year and 31 Dec of the last until the visitor moves the slider. Change them to the new form, e.g. `year:is_after="2021-12-31 23:59:59"` and `year:is_before="2025-01-01"`.
+- **Custom `filter-updated` listeners.** A `dual_range` payload can now carry a null or empty `min` or `max` for an open end.
 
 ## [4.6.3] - 2026-11-04
 

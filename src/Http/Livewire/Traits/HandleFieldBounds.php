@@ -269,7 +269,7 @@ trait HandleFieldBounds
         return $values->isEmpty() ? null : [$values->min(), $values->max()];
     }
 
-    protected function boundValueFromParam($value, ?string $paramKey = null): int|float|null
+    protected function boundValueFromParam($value, string $paramKey): int|float|null
     {
         if (($this->statamic_field['type'] ?? null) === 'date') {
             // Carbon reads a bare "2022" as the time 20:22 today.
@@ -278,7 +278,8 @@ trait HandleFieldBounds
             }
 
             try {
-                $date = Carbon::parse($value);
+                // A `Z` value (the date range filter's bounds) stays in UTC unless moved.
+                $date = Carbon::parse($value)->setTimezone(date_default_timezone_get());
             } catch (\Throwable $exception) {
                 return null;
             }
@@ -286,7 +287,7 @@ trait HandleFieldBounds
             // is_after/is_before are exclusive: the year is the first or last one the
             // bound lets through, e.g. is_before 2025-01-01 ends with 2024. Older
             // Jan 1 / Dec 31 bounds still read as their own year.
-            return match ($paramKey ? ParamKey::parse($paramKey)->condition : null) {
+            return match (ParamKey::parse($paramKey)->condition) {
                 'is_after' => $date->addSecond()->year,
                 'is_before' => $date->subSecond()->year,
                 default => $date->year,
