@@ -252,6 +252,17 @@ class LfDateRangeFilterTest extends TestCase
     }
 
     #[Test]
+    public function bounds_inside_a_day_are_rounded_to_whole_days_and_resent()
+    {
+        // Noon in Athens on the 15th and the 20th: neither day is whole inside the range.
+        Livewire::test(LfDateRangeFilter::class, ['field' => 'starts', 'blueprint' => 'events.events'])
+            ->dispatch('preset-params', ['starts:is_after' => '2026-03-15T10:00:00Z', 'starts:is_before' => '2026-03-20T10:00:00Z'])
+            ->assertSet('selectedFrom', '2026-03-16')
+            ->assertSet('selectedTo', '2026-03-19')
+            ->assertDispatched('filter-updated', payload: ['min' => '2026-03-15T21:59:59Z', 'max' => '2026-03-19T22:00:00Z']);
+    }
+
+    #[Test]
     public function values_without_a_zone_are_read_as_exclusive_bounds_in_the_app_timezone()
     {
         // Statamic treats `is_after 2026-03-15` as after local midnight, so the 16th is the first full day.

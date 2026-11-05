@@ -189,13 +189,20 @@ class LfDateRangeFilter extends LivewireFilter
     protected function applyPreset(array $params): void
     {
         $paramKeys = $this->getParamKey();
+        $resend = false;
 
-        if (isset($params[$paramKeys['min']])) {
-            $this->selectedFrom = self::paramToDate($params[$paramKeys['min']], isStart: true)?->toDateString() ?? '';
-        }
+        foreach (['min' => 'selectedFrom', 'max' => 'selectedTo'] as $end => $property) {
+            if (! isset($params[$paramKeys[$end]])) {
+                continue;
+            }
 
-        if (isset($params[$paramKeys['max']])) {
-            $this->selectedTo = self::paramToDate($params[$paramKeys['max']], isStart: false)?->toDateString() ?? '';
+            $value = $params[$paramKeys[$end]];
+            $this->{$property} = self::paramToDate($value, isStart: $end === 'min')?->toDateString() ?? '';
+
+            // A bound inside a day (a hand-written URL or tag preset) can't be shown as a
+            // whole day: send the day shown, so the query matches the input.
+            $resend = $resend || ($this->{$property} !== ''
+                && ! Carbon::parse(self::dateToParam($this->{$property}, $end === 'min'))->equalTo(Carbon::parse($value, config('app.timezone'))));
         }
 
         // The calendars drop a day outside the blueprint limits, and a reversed range,
@@ -208,7 +215,7 @@ class LfDateRangeFilter extends LivewireFilter
         $from = $this->clampDate($this->selectedFrom);
         $to = $this->clampDate($this->selectedTo);
 
-        if ($from !== $this->selectedFrom || $to !== $this->selectedTo || ($from !== '' && $to !== '' && $from > $to)) {
+        if ($resend || $from !== $this->selectedFrom || $to !== $this->selectedTo || ($from !== '' && $to !== '' && $from > $to)) {
             [$this->selectedFrom, $this->selectedTo] = [$from, $to];
             $this->dispatchEvent();
         }
@@ -286,7 +293,7 @@ class LfDateRangeFilter extends LivewireFilter
 
     /**
      * The first (is_after) or last (is_before) local day an exclusive bound lets
-     * through. Values without a zone, such as a tag's `field:is_after="2026-01-01"`,
+     * through whole. Values without a zone, such as a tag's `field:is_after="2026-01-01"`,
      * are read in the app timezone like Statamic reads them.
      */
     public static function paramToDate($value, bool $isStart): ?Carbon
@@ -303,6 +310,6 @@ class LfDateRangeFilter extends LivewireFilter
 
         return $isStart
             ? $bound->startOfDay()->addDay()->startOfDay()
-            : $bound->utc()->subSecond()->setTimezone(config('app.timezone'))->startOfDay();
+            : $bound->startOfDay()->subDay()->startOfDay();
     }
 }
