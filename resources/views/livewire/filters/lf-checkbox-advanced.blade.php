@@ -25,7 +25,7 @@
             }
         },
         isZeroCount(value) {
-            return this.zeroCount !== 'show' && this.counts[value] === 0 && ! this.selectedOptions.includes(value);
+            return this.zeroCount !== 'show' && this.counts[value] === 0 && ! this.selectedOptions.some((selected) => String(selected) === value);
         },
         getFilteredOptions(query) {
             this.query = query
@@ -54,7 +54,7 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="getFilteredOptions(''); $watch('selectedOptions', () => updateSelectedLabels());"
+    x-init="getFilteredOptions(''); $watch('selectedOptions', () => { updateSelectedLabels(); if (zeroCount === 'hide') getFilteredOptions(query); });"
     x-on:counts-updated="counts = Object.values($event.detail)[0]; if (zeroCount === 'hide') getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selectedOptions"

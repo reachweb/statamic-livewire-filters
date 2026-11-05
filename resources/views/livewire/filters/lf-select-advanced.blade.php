@@ -58,7 +58,7 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="getFilteredOptions(''); $watch('selected', () => updateSelectedLabel());"
+    x-init="getFilteredOptions(''); $watch('selected', () => { updateSelectedLabel(); if (zeroCount === 'hide') getFilteredOptions(query); });"
     x-on:counts-updated="counts = Object.values($event.detail)[0]; if (zeroCount === 'hide') getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selected"
