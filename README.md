@@ -33,7 +33,7 @@ Main features:
 - Query string support for your filters, enhancing usability.
 - Minimal styling using TailwindCSS.
 - Multiple view options for each component, offering flexibility in presentation.
-- No JavaScript required, except for Flatpickr for the Date filter, simplifying integration.
+- No JavaScript required, except for Flatpickr for the Date filter and Alpine Calendar for the Date range filter (both bundled), simplifying integration.
 
 ## Infinite scroll
 
@@ -57,6 +57,29 @@ Each load grows the page size by the initial `paginate` value, and the size rese
 Optional parameters: `text` (override the label) and `class` (button classes). Publish `vendor/statamic-livewire-filters/livewire/ui/load-more.antlers.html` to fully restyle it.
 
 > Note: the loaded-more state lives in the Livewire component, not the URL, so a full page reload resets the list to the first page.
+
+## Date range filter
+
+`lf-date-range-filter` filters a date field between two days, picked with two [Alpine Calendar](https://github.com/reachweb/alpine-calendar) popups ("from" and "to"):
+
+```antlers
+{{ livewire:lf-date-range-filter
+    blueprint="events.event"
+    field="starts"
+    presets="today|7days|30days|this_month|this_year"
+    format="D MMM YYYY"
+}}
+```
+
+- Both days are inclusive, in `config('app.timezone')`, for date-only and time-enabled fields. Either end can be left empty for an open range.
+- `presets` (optional) adds buttons that set both ends: `today`, `7days` and `30days` (ending today), `this_month` and `this_year` (the whole month or year). Presets are clamped to `earliest_date`/`latest_date`, and a preset entirely outside them is hidden.
+- `format` (default `DD/MM/YYYY`) uses Alpine Calendar tokens (`D`, `DD`, `M`, `MM`, `MMM`, `MMMM`, `YY`, `YYYY`) for the inputs and the `lf-tags` chips. Separate them with spaces, `/`, `.`, `,` or `-`; a format with any other character makes the chips show the raw bounds.
+- The calendars are limited to the field's `earliest_date` and `latest_date` from the blueprint.
+- `lf-tags` shows one chip per end ("Starts from 1 Jan 2026", "Starts to 31 Dec 2026"); removing a chip clears only that end.
+
+The range is stored as an `is_after`/`is_before` pair of UTC timestamps: the second before the first day and the midnight after the last day (e.g. `starts:is_after=2025-12-31T23:59:59Z` and `starts:is_before=2027-01-01T00:00:00Z` for 2026 in UTC), which is also what appears in the query string. `gte`/`lte` can't be used for dates: Statamic compares those as strings, and on the front end it turns dates into strings using the site's `date_format`.
+
+Use one range filter per field: a date range filter and an `lf-dual-range-filter` on the same date field write the same `is_after`/`is_before` params and overwrite each other.
 
 ## License 
 

@@ -261,15 +261,15 @@ trait HandleFieldBounds
     protected function activeSelectionBounds($params): ?array
     {
         $values = collect($this->currentFilterParamKeys())
-            ->map(fn ($key) => $params[$key] ?? null)
+            ->mapWithKeys(fn ($key) => [$key => $params[$key] ?? null])
             ->filter(fn ($value) => $value !== null && $value !== '')
-            ->map(fn ($value) => $this->boundValueFromParam($value))
+            ->map(fn ($value, $key) => $this->boundValueFromParam($value, $key))
             ->filter(fn ($value) => $value !== null);
 
         return $values->isEmpty() ? null : [$values->min(), $values->max()];
     }
 
-    protected function boundValueFromParam($value): int|float|null
+    protected function boundValueFromParam($value, string $paramKey): int|float|null
     {
         if (($this->statamic_field['type'] ?? null) === 'date') {
             // Carbon reads a bare "2022" as the time 20:22 today.
@@ -278,10 +278,20 @@ trait HandleFieldBounds
             }
 
             try {
-                return Carbon::parse($value)->year;
+                // A `Z` value (the date range filter's bounds) stays in UTC unless moved.
+                $date = Carbon::parse($value)->setTimezone(date_default_timezone_get());
             } catch (\Throwable $exception) {
                 return null;
             }
+
+            // is_after/is_before are exclusive: the year is the first or last one the
+            // bound lets through, e.g. is_before 2025-01-01 ends with 2024. Older
+            // Jan 1 / Dec 31 bounds still read as their own year.
+            return match (ParamKey::parse($paramKey)->condition) {
+                'is_after' => $date->addSecond()->year,
+                'is_before' => $date->subSecond()->year,
+                default => $date->year,
+            };
         }
 
         return is_numeric($value) ? $value + 0 : null;
@@ -343,8 +353,9 @@ trait HandleFieldBounds
             'gte', 'greater_than_or_equal_to' => $value <= $this->fieldMin,
             'lt', 'less_than' => $value > $this->fieldMax,
             'lte', 'less_than_or_equal_to' => $value >= $this->fieldMax,
-            'is_after' => Carbon::createFromDate($value)->startOfYear()->timestamp < $this->fieldMin,
-            'is_before' => Carbon::createFromDate($value)->endOfYear()->startOfDay()->timestamp > $this->fieldMax,
+            // A year bound includes its whole year (see LfDualRangeFilter::payload()).
+            'is_after' => Carbon::createFromDate($value)->startOfYear()->timestamp <= $this->fieldMin,
+            'is_before' => Carbon::createFromDate($value + 1)->startOfYear()->timestamp > $this->fieldMax,
             default => false,
         };
     }

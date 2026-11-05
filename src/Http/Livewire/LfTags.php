@@ -11,6 +11,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Statamic\Facades\Entry;
+use Statamic\Facades\Site;
 use Statamic\Facades\Term;
 use Statamic\Stache\Query\EntryQueryBuilder;
 use Statamic\Stache\Query\TermQueryBuilder;
@@ -35,6 +36,10 @@ class LfTags extends Component
 
     #[Locked]
     public $tags;
+
+    /** Field handle => display format, registered by date range filters. */
+    #[Locked]
+    public array $dateRangeFormats = [];
 
     public function mount($blueprint, $fields)
     {
@@ -101,6 +106,7 @@ class LfTags extends Component
         $this->parseQueryScopes();
         $this->parseTaxonomyTerms();
         $this->parseConditions();
+        $this->labelDateRangeTags();
     }
 
     public function parseConditions()
@@ -196,6 +202,75 @@ class LfTags extends Component
         ];
 
         $this->tags->push($tag);
+    }
+
+    /**
+     * Registration can arrive before or after the tags, so label any already built.
+     */
+    #[On('date-range-filter-registered')]
+    public function registerDateRangeFilter($field, $format): void
+    {
+        // The event can come from any client, so accept only the plain day, month and
+        // year tokens the calendar itself understands: macros such as LLLL or x make
+        // every isoFormat() call expensive.
+        if (! is_string($field) || ! is_string($format) || ! preg_match('/^[DMY\/.,\- ]{1,32}$/', $format) || $this->isNotTaggable($field)) {
+            return;
+        }
+
+        $this->dateRangeFormats[$field] = $format;
+        $this->labelDateRangeTags();
+    }
+
+    /**
+     * A date range has one bound per end, so only the first tag of each field and
+     * condition is labelled: a crafted param holding thousands of `|` values must
+     * not cost a date parse and format each.
+     */
+    protected function labelDateRangeTags(): void
+    {
+        if ($this->dateRangeFormats === []) {
+            return;
+        }
+
+        $labelled = [];
+
+        $this->tags = $this->tags->map(function ($tag) use (&$labelled) {
+            $key = $tag['field'].':'.$tag['condition'];
+
+            if (isset($labelled[$key]) || isset($tag['dateLabel'])) {
+                return $tag;
+            }
+
+            $labelled[$key] = true;
+
+            return $this->withDateRangeLabel($tag);
+        });
+    }
+
+    /**
+     * Date range ends are stored as exclusive UTC bounds; label them as "from"/"to"
+     * local dates. New keys only, so published views that print `optionLabel` after
+     * the condition still show the raw (accurate) bound.
+     */
+    protected function withDateRangeLabel(array $tag): array
+    {
+        $format = $this->dateRangeFormats[$tag['field']] ?? null;
+
+        if ($format === null || ! in_array($tag['condition'], ['is_after', 'is_before'], true)) {
+            return $tag;
+        }
+
+        $isStart = $tag['condition'] === 'is_after';
+
+        if (! $date = LfDateRangeFilter::paramToDate($tag['value'], $isStart)) {
+            return $tag;
+        }
+
+        return [
+            ...$tag,
+            'conditionLabel' => trans('statamic-livewire-filters::ui.'.($isStart ? 'date_from' : 'date_to')),
+            'dateLabel' => $date->locale(Site::current()->locale())->isoFormat($format),
+        ];
     }
 
     public function removeOption($field, $value, $condition = null)

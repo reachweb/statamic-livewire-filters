@@ -232,7 +232,9 @@ trait IsLivewireFilter
             ? [$paramKey['min'] => $payload['min'] ?? null, $paramKey['max'] => $payload['max'] ?? null]
             : [$paramKey => is_array($payload) ? implode('|', Arr::flatten($payload)) : $payload];
 
+        // An empty end of a one-sided dual_range was never stored, so it can't be missed.
         return collect($sentParams)
+            ->reject(fn ($value) => $value === null || $value === '')
             ->contains(fn ($value, $key) => ! array_key_exists($key, $sweptParams) || $sweptParams[$key] != $value);
     }
 

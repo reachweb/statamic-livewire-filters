@@ -323,7 +323,7 @@ class LfDualRangeFilterTest extends TestCase
             ->assertDispatched('filter-updated',
                 field: 'year',
                 condition: 'dual_range',
-                payload: ['min' => '2020-01-01', 'max' => '2024-12-31'],
+                payload: ['min' => '2019-12-31 23:59:59', 'max' => '2025-01-01'],
                 modifier: 'is_after|is_before',
             );
     }
@@ -450,9 +450,51 @@ class LfDualRangeFilterTest extends TestCase
             ->assertDispatched('filter-updated',
                 field: 'year',
                 condition: 'dual_range',
-                payload: ['min' => '2019-01-01', 'max' => '2025-12-31'],
+                payload: ['min' => '2018-12-31 23:59:59', 'max' => '2026-01-01'],
                 modifier: 'is_after|is_before',
             );
+    }
+
+    #[Test]
+    public function it_reads_utc_bounds_as_years_in_the_app_timezone()
+    {
+        // The date range filter's bounds for 2022-2025 in Athens are UTC instants.
+        date_default_timezone_set('Europe/Athens');
+
+        try {
+            Livewire::test(LfDualRangeFilter::class, [
+                'field' => 'year',
+                'blueprint' => 'yachts.yachts',
+                'condition' => 'dual_range',
+                'min' => 2018,
+                'max' => 2026,
+                'minRange' => 1,
+            ])
+                ->dispatch('preset-params', ['year:is_after' => '2021-12-31T21:59:59Z', 'year:is_before' => '2025-12-31T22:00:00Z'])
+                ->assertSet('selectedMin', 2022)
+                ->assertSet('selectedMax', 2025);
+        } finally {
+            date_default_timezone_set('UTC');
+        }
+    }
+
+    #[Test]
+    public function it_loads_its_own_inclusive_year_bounds_back_as_years()
+    {
+        Livewire::test(LfDualRangeFilter::class, [
+            'field' => 'year',
+            'blueprint' => 'yachts.yachts',
+            'condition' => 'dual_range',
+            'min' => 2018,
+            'max' => 2026,
+            'minRange' => 1,
+        ])
+            ->dispatch('preset-params', ['year:is_after' => '2021-12-31 23:59:59', 'year:is_before' => '2026-01-01'])
+            ->assertSet('selectedMin', 2022)
+            ->assertSet('selectedMax', 2025)
+            ->dispatch('clear-option', ['field' => 'year', 'value' => '2026-01-01'])
+            ->assertSet('selectedMin', 2022)
+            ->assertSet('selectedMax', 2026);
     }
 
     #[Test]
@@ -473,7 +515,7 @@ class LfDualRangeFilterTest extends TestCase
             ->assertDispatched('filter-updated',
                 field: 'year',
                 condition: 'dual_range',
-                payload: ['min' => '2018-01-01', 'max' => '2025-12-31'],
+                payload: ['min' => '2017-12-31 23:59:59', 'max' => '2026-01-01'],
                 modifier: 'is_after|is_before',
             );
     }
