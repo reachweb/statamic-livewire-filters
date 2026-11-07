@@ -116,8 +116,9 @@ trait HandleEntriesCount
             }
 
             foreach ($buckets as $key => $bucket) {
-                if (($bucket['min'] === null || $passes((float) $value, $minComparison, (float) $bucket['min']))
-                    && ($bucket['max'] === null || $passes((float) $value, $maxComparison, (float) $bucket['max']))) {
+                // Uncast, like Statamic's own where() comparisons, so counts match the entries query.
+                if (($bucket['min'] === null || $passes($value, $minComparison, $bucket['min']))
+                    && ($bucket['max'] === null || $passes($value, $maxComparison, $bucket['max']))) {
                     $this->statamic_field['counts'][$key]++;
                 }
             }
