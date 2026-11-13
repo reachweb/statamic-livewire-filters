@@ -29,10 +29,10 @@ trait HandleEntriesCount
     public function visibleOptions(): array
     {
         if ($this->zeroCountMode() !== 'hide') {
-            return $this->filterOptions();
+            return $this->filter_options;
         }
 
-        return array_diff_key($this->filterOptions(), array_flip($this->zeroCountOptions()));
+        return array_diff_key($this->filter_options, array_flip($this->zeroCountOptions()));
     }
 
     /** @return list<string|int> The option keys to render disabled with `zero_count="disable"`. */
