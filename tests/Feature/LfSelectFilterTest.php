@@ -366,6 +366,14 @@ class LfSelectFilterTest extends TestCase
             ->assertSeeHtml("zeroCount: 'hide'");
     }
 
+    #[Test]
+    public function it_renders_the_no_results_row_in_the_advanced_view_without_searchable()
+    {
+        Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'view' => 'lf-select-advanced'])
+            ->assertSet('searchable', false)
+            ->assertSee('No results found');
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();

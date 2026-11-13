@@ -441,6 +441,14 @@ class LfCheckboxFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_the_no_results_row_in_the_advanced_view_without_searchable()
+    {
+        Livewire::test(LfCheckboxFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'zero_count' => 'hide', 'view' => 'lf-checkbox-advanced'])
+            ->assertSet('searchable', false)
+            ->assertSee('No results found');
+    }
+
+    #[Test]
     public function it_rejects_an_unknown_zero_count_mode()
     {
         $this->expectExceptionMessage('Invalid zero_count [hidden]');

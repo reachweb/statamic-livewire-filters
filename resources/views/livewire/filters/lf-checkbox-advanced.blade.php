@@ -121,11 +121,9 @@
                 x-on:keydown.up.prevent="$focus.wrap().previous()" 
                 x-trap="openedWithKeyboard"
             >
-                @if ($this->searchable)
                 <li class="hidden px-4 py-2 text-sm text-on-surface" x-ref="noResultsMessage">
                     <span>{{ __('statamic-livewire-filters::ui.no_results') }}</span>
                 </li>
-                @endif
                 
                 <template x-for="[value, label] in options" x-bind:key="value">
                     <li role="option">
