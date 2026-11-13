@@ -136,12 +136,12 @@
                 
                 <template x-for="([value, label], index) in options" x-bind:key="value">
                     <li 
-                        class="inline-flex justify-between gap-6 bg-lf-input-bg px-4 py-2 text-lf text-lf-text hover:bg-lf-subtle focus-visible:bg-lf-subtle focus-visible:outline-hidden cursor-pointer" 
+                        class="inline-flex justify-between gap-6 bg-lf-input-bg px-4 py-2 text-lf text-lf-text hover:bg-lf-subtle focus-visible:bg-lf-subtle focus-visible:outline-hidden" 
                         role="option" 
                         x-on:click="isDisabled(value) || setSelectedOption(value)" 
                         x-on:keydown.enter="isDisabled(value) || setSelectedOption(value)" 
                         x-bind:id="'option-' + index" 
-                        x-bind:class="isDisabled(value) ? 'opacity-50 cursor-not-allowed' : null"
+                        x-bind:class="isDisabled(value) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
                         x-bind:aria-disabled="isDisabled(value)"
                         x-bind:tabindex="isDisabled(value) ? -1 : 0"
                     >
