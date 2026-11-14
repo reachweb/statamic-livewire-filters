@@ -6,21 +6,22 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+## [4.7.0] - 2026-11-14
+
 ### Added
 
-- Checkbox, radio and select filters take a `zero_count` property to choose what happens to options whose count drops to zero: `show` (default) keeps them, `hide` removes them and `disable` disables them. It only applies when `enable_filter_values_count` is on, and selected options are always kept usable. The advanced checkbox and select views apply it in the browser whenever the counts update, and show "No results found" when no option is left, now also without `searchable`. An unknown value throws `InvalidZeroCountModeException`. Published copies of the `lf-checkbox`, `lf-radio`, `lf-select`, `lf-checkbox-advanced` and `lf-select-advanced` views ignore `zero_count` until you re-publish them or merge in the new markup.
-- A `{{ livewire-filters:seo }}` tag for the layout `<head>`. In Livewire query-string mode and without a URL mode, it outputs a `<link rel="canonical">` on every page and `<meta name="robots" content="noindex,follow">` on filtered pages. Filtered pages point to the base listing page. Unfiltered pages above 1 stay indexable, with a canonical that keeps the page number. Filters listed in the new `seo_indexable_filters` config keep single-value first pages indexable with a self canonical. The new `seo_page_names` config lists the query names that carry the page number. Use `canonical="false"` on the tag to output only the robots tag when the layout already has a canonical, such as the one from SEO Pro.
-- In custom query-string mode, all filter URLs of a page share one static cache entry, so the tag only outputs the canonical of pages above 1 there. Turn on the new `seo_filter_headers` config to send `X-Robots-Tag` and canonical `Link` headers for filter URLs instead, including the self canonical for `seo_indexable_filters`. The headers are added after Statamic's static cache stores the response, so they never leak into the cached page under half or full measure.
-- Range list: `LfRadioFilter` takes a `buckets` parameter, such as `buckets="0-100|100-200|200-"`, and renders each bucket as a radio option ("Under 100", "100 to 200", "Over 200"), plus an "All" option. With `enable_filter_values_count` on, each bucket shows its entry count. A bucket filters the field with the `dual_range` condition's `gte`/`lte` pair (or the comparisons in `modifier`); an open side leaves that param out. Bounds from the URL or a tag preset that match no bucket leave every option unchecked, so choosing "All" clears them; the select views show them as "Custom range" (the `range_custom` language key), so their empty option clears them too. Pass `options` keyed by bucket, such as `'0-100' => 'Up to €100'`, to replace a generated label. A malformed bucket or a bucket whose min is above its max throws `InvalidRangeListBucketException`, and a `modifier` other than `gt` or `gte` followed by `lt` or `lte` throws `InvalidRangeListModifierException`. The new view is `lf-range-list.blade.php`; it follows `zero_count` and shows a bucket from the URL as `checked` in the server HTML. `LfSelectFilter` takes `buckets` too and renders them in its own view. Published copies of the `lf-select` and `lf-select-advanced` views need the new markup to show "Custom range"; without it the plain select shows its empty option for such bounds and can't clear them.
-- Dependent filters ([#72](https://github.com/reachweb/statamic-livewire-filters/issues/72)): add `depends_on="parent_field"` to a checkbox, radio or select filter and, while the parent filter has a value, it only offers the options that appear in the entries matching the active filters. When the parent value changes, a selected option is unselected if no entry has it with the new parent value; one that another filter merely narrows away stays selected, and so does a selection loaded from the URL or the tag. With no parent value every option is shown. For a chain of filters, list every filter above with `depends_on="car_brand|car_model"`. The filter then fires a `dependent-selection-cleared` browser event with the `field` and the removed `values` and `labels`, so a site can tell the visitor. Unavailable options are hidden, or disabled with `unavailable="disable"`; an unknown value throws `InvalidUnavailableModeException`. A range list (`buckets`) can't use `depends_on` and throws `InvalidDependsOnException`. Turn on the new `enable_dependent_filters` config option so the collection sends its filter state to the filters. The query is the same one the faceted counts run, so with `enable_filter_values_count` on it adds none. Published filter views need no change if they already loop `$this->visible_options` and read `$this->disabled_options`. See [Dependent filters](https://livewirefilters.com/usage/dependent-filters).
-
-### Changed
-
-- The collection now also sends `params-updated` when only `enable_dependent_filters` is on.
+- **Hide or disable empty options.** Checkbox, radio and select filters take `zero_count="hide"` or `zero_count="disable"` for options with no results. It works when `enable_filter_values_count` is on. See [Options without results](https://livewirefilters.com/usage/filters#options-without-results).
+- **Range lists.** Radio and select filters can show ranges such as "Under 100", "100 to 200" and "Over 200" with `buckets="0-100|100-200|200-"`. See [Range list](https://livewirefilters.com/usage/range-filter#range-list).
+- **Dependent filters.** Add `depends_on="car_brand"` to a filter so it only shows options that match the parent filter, such as the models of the chosen brand. Turn on the new `enable_dependent_filters` config option. See [Dependent filters](https://livewirefilters.com/usage/dependent-filters).
+- **SEO tag for filtered pages.** Add `{{ livewire-filters:seo }}` to your layout's `<head>` so search engines index your listing pages but not every filter combination. New config options: `seo_indexable_filters`, `seo_page_names` and `seo_filter_headers`. See [SEO for filtered pages](https://livewirefilters.com/advanced/seo).
 
 ### Fixed
 
-- In custom query string mode, a filter value of `0` in the URL, such as `/filters/price-from/0`, is no longer dropped when the page loads. Before, the collection and the filters ignored it, so a range that starts at 0 lost its lower bound after a reload.
+- In custom query string mode, a `0` in the URL, such as `/filters/price-from/0`, is no longer lost when the page loads.
+
+### Upgrading from 4.6.3
+
+No changes are needed. If you published the filter views, re-publish them or copy in the new markup to use `zero_count` and dependent filters, and to show "Custom range" in the select views.
 
 ## [4.6.3] - 2026-11-04
 
@@ -258,7 +259,8 @@ If you published `lf-checkbox-advanced.blade.php` or `lf-select-advanced.blade.p
 
 For releases before 4.0.0, see the [GitHub releases](https://github.com/reachweb/statamic-livewire-filters/releases).
 
-[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.3...HEAD
+[Unreleased]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.7.0...HEAD
+[4.7.0]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.3...v4.7.0
 [4.6.3]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.2...v4.6.3
 [4.6.2]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.1...v4.6.2
 [4.6.1]: https://github.com/reachweb/statamic-livewire-filters/compare/v4.6.0...v4.6.1

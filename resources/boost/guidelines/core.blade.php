@@ -105,6 +105,41 @@ Available filter types:
 </code-snippet>
 @endverbatim
 
+### Options Without Results
+
+With `enable_filter_values_count` on, checkbox, radio and select filters take `zero_count="show|hide|disable"` for options whose count is zero. `show` is the default. Selected options always stay usable.
+
+@verbatim
+<code-snippet name="Hide options without results" lang="antlers">
+{{ livewire:lf-checkbox-filter
+    blueprint="cars.car"
+    field="car_brand"
+    condition="taxonomy"
+    zero_count="hide"
+}}
+</code-snippet>
+@endverbatim
+
+### Dependent Filters
+
+A checkbox, radio or select filter with `depends_on` only offers the options found in the entries that match the active filters, while the parent filter has a value. Turn on `'enable_dependent_filters' => true` in the config.
+
+@verbatim
+<code-snippet name="Dependent filter" lang="antlers">
+{{ livewire:lf-select-filter
+    blueprint="cars.car"
+    field="car_model"
+    condition="is"
+    depends_on="car_brand"
+}}
+</code-snippet>
+@endverbatim
+
+- For a chain, list every filter above: `depends_on="car_brand|car_model"`.
+- Unavailable options are hidden; `unavailable="disable"` shows them disabled instead.
+- When a parent change removes a selection, the filter fires the `dependent-selection-cleared` browser event with `field`, `values` and `labels`.
+- A range list (`buckets`) can't use `depends_on`.
+
 ### Sorting
 
 @verbatim
