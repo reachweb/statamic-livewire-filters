@@ -228,8 +228,9 @@ trait IsLivewireFilter
 
         $paramKey = $this->getParamKey();
 
+        // A null bound (an open-ended range list bucket) sets no param, so the sweep has nothing to miss.
         $sentParams = is_array($paramKey)
-            ? [$paramKey['min'] => $payload['min'] ?? null, $paramKey['max'] => $payload['max'] ?? null]
+            ? array_filter([$paramKey['min'] => $payload['min'] ?? null, $paramKey['max'] => $payload['max'] ?? null], fn ($value) => $value !== null)
             : [$paramKey => is_array($payload) ? implode('|', Arr::flatten($payload)) : $payload];
 
         return collect($sentParams)

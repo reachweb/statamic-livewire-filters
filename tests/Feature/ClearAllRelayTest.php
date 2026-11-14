@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
@@ -485,6 +486,26 @@ class ClearAllRelayTest extends TestCase
 
         $collection->call('clearAll');
         $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertNotDispatched('clear-filter');
+    }
+
+    /** An open-ended range list bucket sets one param only; the missing bound is not a param the sweep missed. */
+    #[Test]
+    public function an_open_ended_range_list_bucket_the_sweep_removed_needs_no_relay()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfRadioFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'buckets' => '0-5|5-'])
+            ->set('selected', '5-');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:gte' => '5']);
+
+        $collection->call('clearAll')->assertSet('params', []);
+        $clearAll = $this->clearAllEventParams($collection);
+        $filter->dispatch('clear-all-filters', ...$clearAll)->assertSet('selected', '')->assertNotDispatched('clear-filter');
+
+        // A bucket picked after the sweep is one the sweep missed, so it still relays.
+        $filter->set('selected', '5-')
+            ->dispatch('clear-all-filters', $clearAll[0], [])
+            ->assertDispatched('clear-filter', field: 'max_items', condition: 'dual_range');
     }
 
     /**
