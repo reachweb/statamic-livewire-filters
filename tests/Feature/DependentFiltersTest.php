@@ -79,25 +79,26 @@ class DependentFiltersTest extends TestCase
     #[DataProvider('modelFilters')]
     public function it_narrows_its_options_to_the_values_that_co_occur_with_the_parent(string $filter)
     {
+        // Options are matched by their value attribute: a label such as "Q3" can occur in Livewire's random component id.
         $component = Livewire::test($filter, $this->modelArguments())
-            ->assertSee('Q3')
-            ->assertSee('X5')
+            ->assertSeeHtml('value="q3"')
+            ->assertSeeHtml('value="x5"')
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'bmw']))
             ->assertSet('availableOptions', ['x1', 'x5'])
             ->assertDispatched('available-options-updated', ['x1', 'x5'])
-            ->assertSee('X1')
-            ->assertSee('X5')
-            ->assertDontSee('A3')
-            ->assertDontSee('Q3')
-            ->assertDontSee('M3');
+            ->assertSeeHtml('value="x1"')
+            ->assertSeeHtml('value="x5"')
+            ->assertDontSeeHtml('value="a3"')
+            ->assertDontSeeHtml('value="q3"')
+            ->assertDontSeeHtml('value="m3"');
 
         // Several parent values widen the list; no parent value shows every option.
         $component->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:in' => 'audi|citroen']))
             ->assertSet('availableOptions', ['a3', 'q3', 'c4'])
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['fuel:is' => 'diesel']))
             ->assertSet('availableOptions', null)
-            ->assertSee('Q3')
-            ->assertSee('X1');
+            ->assertSeeHtml('value="q3"')
+            ->assertSeeHtml('value="x1"');
     }
 
     #[Test]
@@ -162,7 +163,7 @@ class DependentFiltersTest extends TestCase
             ->assertSet('selected', 'q3')
             ->assertNotDispatched('clear-filter')
             ->assertNotDispatched('dependent-selection-cleared')
-            ->assertSee('Q3');
+            ->assertSeeHtml('value="q3"');
     }
 
     #[Test]
@@ -290,9 +291,9 @@ class DependentFiltersTest extends TestCase
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'audi']))
             ->assertSet('availableOptions', ['a3', 'q3'])
             ->assertDispatched('counts-updated', ['a3' => 2, 'q3' => 1, 'x1' => 0, 'x5' => 0, 'm3' => 0, 'c4' => 0])
-            ->assertSee('A3')
+            ->assertSeeHtml('value="a3"')
             ->assertSee('(2)')
-            ->assertDontSee('X1');
+            ->assertDontSeeHtml('value="x1"');
     }
 
     #[Test]
@@ -329,9 +330,9 @@ class DependentFiltersTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/value="a3"\s+disabled/', $component->html());
 
         $component->dispatch('params-updated', ...$this->paramsUpdatedArguments(['fuel:is' => 'petrol', 'car_brand:is' => 'audi']))
-            ->assertSee('A3')
-            ->assertDontSee('Q3')
-            ->assertDontSee('X1');
+            ->assertSeeHtml('value="a3"')
+            ->assertDontSeeHtml('value="q3"')
+            ->assertDontSeeHtml('value="x1"');
     }
 
     #[Test]
@@ -425,7 +426,7 @@ class DependentFiltersTest extends TestCase
                 ->dispatch('params-updated', ...$this->paramsUpdatedArguments($params))
                 ->assertSet('selected', 'q3')
                 ->assertNotDispatched('clear-filter')
-                ->assertSee('Q3');
+                ->assertSeeHtml('value="q3"');
         }
     }
 
