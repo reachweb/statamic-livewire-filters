@@ -20,6 +20,7 @@ return [
     'range_under' => 'Under :max',
     'range_between' => ':min to :max',
     'range_over' => 'Over :min',
+    'range_custom' => 'Custom range',
 
     // Conditions
     'any' => ':',

@@ -69,6 +69,21 @@ class LfRadioFilter extends LivewireFilter
         }
     }
 
+    /**
+     * The option the select views show while `$selected` is UNMATCHED_RANGE, keyed by that
+     * value. Empty without buckets. A select has to show some option as chosen, and with
+     * none for this value it falls back to its placeholder, which then can't be chosen.
+     *
+     * @return array<string, string>
+     */
+    #[Computed]
+    public function unmatchedRangeOption(): array
+    {
+        return $this->rangeBuckets()
+            ? [self::UNMATCHED_RANGE => __('statamic-livewire-filters::ui.range_custom')]
+            : [];
+    }
+
     public function rules()
     {
         return [

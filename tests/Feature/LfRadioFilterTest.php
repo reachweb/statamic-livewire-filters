@@ -360,6 +360,41 @@ class LfRadioFilterTest extends TestCase
     }
 
     #[Test]
+    public function the_select_views_show_url_bounds_without_a_bucket_as_an_option_of_their_own()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $url = ['params' => ['price:gte' => '150', 'price:lte' => '200']];
+        $args = ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'];
+
+        $select = Livewire::withQueryParams($url)
+            ->test(LfSelectFilter::class, $args)
+            ->assertSet('selected', LfRadioFilter::UNMATCHED_RANGE);
+
+        // With the placeholder shown as chosen, the browser fires no change when it is picked.
+        $this->assertMatchesRegularExpression('/value="custom"\s+selected\s+disabled\s+hidden>\s*Custom range/', $select->html());
+        $this->assertDoesNotMatchRegularExpression('/value=""\s+selected/', $select->html());
+
+        $select->set('selected', '')
+            ->assertDispatched('clear-filter', field: 'price', condition: 'dual_range')
+            ->assertDontSee('Custom range');
+
+        Livewire::withQueryParams($url)
+            ->test(LfSelectFilter::class, [...$args, 'view' => 'lf-select-advanced'])
+            ->assertSet('selected', LfRadioFilter::UNMATCHED_RANGE)
+            ->assertSee('Custom range');
+
+        // Only a range list has the option: a bucket has its own, and a plain select never gets one.
+        Livewire::withQueryParams(['params' => ['price:gte' => '200']])
+            ->test(LfSelectFilter::class, $args)
+            ->assertSet('selected', '200-')
+            ->assertDontSee('Custom range');
+
+        Livewire::test(LfSelectFilter::class, ['field' => 'item_options', 'blueprint' => 'pages.pages', 'condition' => 'is', 'selected' => 'custom'])
+            ->assertDontSee('Custom range');
+    }
+
+    #[Test]
     public function it_labels_a_bucket_from_options_keyed_by_bucket()
     {
         Livewire::test(LfRadioFilter::class, [
