@@ -373,6 +373,53 @@ class LfRadioFilterTest extends TestCase
             ->assertSeeHtml('<span class="text-lf-muted ml-1">(1)</span>');
     }
 
+    #[Test]
+    public function it_hides_buckets_with_a_zero_count_but_keeps_the_selected_one()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        // option2 only holds the 250 entry, so both lower buckets count 0, but 0-100 is selected.
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-', 'zero_count' => 'hide', 'selected' => '0-100'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['item_options:is' => 'option2']))
+            ->assertSee('All')
+            ->assertSee('Under 100')
+            ->assertDontSee('100 to 200')
+            ->assertSee('Over 200');
+    }
+
+    #[Test]
+    public function it_disables_buckets_with_a_zero_count_but_not_the_all_option()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $html = Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-', 'zero_count' => 'disable'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['item_options:is' => 'option2']))
+            ->assertSee('Under 100')
+            ->html();
+
+        $this->assertSame(['0-100', '100-200'], $this->disabledValues($html));
+    }
+
+    #[Test]
+    public function it_renders_the_url_bucket_checked_on_first_render_and_all_without_one()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $html = Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value=""\s+checked/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="[^"]+"\s+checked/', $html);
+
+        $html = Livewire::withQueryParams(['params' => ['price:gte' => '100', 'price:lte' => '200']])
+            ->test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->assertSet('selected', '100-200')
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value="100-200"\s+checked/', $html);
+        $this->assertDoesNotMatchRegularExpression('/value="(|0-100|200-)"\s+checked/', $html);
+    }
+
     protected function makeEntry($collection, $slug)
     {
         return EntryFactory::id($slug)->collection($collection)->slug($slug)->make();
