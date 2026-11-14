@@ -6,6 +6,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 
 ## [Unreleased]
 
+### Added
+
+- Checkbox, radio and select filters take a `zero_count` property to choose what happens to options whose count drops to zero: `show` (default) keeps them, `hide` removes them and `disable` disables them. It only applies when `enable_filter_values_count` is on, and selected options are always kept usable. The advanced checkbox and select views apply it in the browser whenever the counts update, and show "No results found" when no option is left, now also without `searchable`. An unknown value throws `InvalidZeroCountModeException`. Published copies of the `lf-checkbox`, `lf-radio`, `lf-select`, `lf-checkbox-advanced` and `lf-select-advanced` views ignore `zero_count` until you re-publish them or merge in the new markup.
+
 ## [4.6.3] - 2026-11-04
 
 ### Changed
