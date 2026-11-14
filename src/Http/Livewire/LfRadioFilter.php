@@ -34,8 +34,19 @@ class LfRadioFilter extends LivewireFilter
             return;
         }
 
+        // The counts only know these comparisons, so anything else must fail here, not in a counts request.
+        if ($this->modifier !== null && $this->modifier !== 'any' && ! preg_match('/^gte?\|lte?$/', (string) $this->modifier)) {
+            throw new InvalidArgumentException("Invalid range list modifier [{$this->modifier}]. Use gt or gte for the min and lt or lte for the max, such as gte|lt.");
+        }
+
+        $labels = array_map(fn ($bucket) => $this->bucketLabel($bucket), $this->rangeBuckets());
+
+        // `options` keyed by bucket replaces the generated labels, e.g. to add a currency.
+        $this->options = is_array($this->options)
+            ? array_replace($labels, array_intersect_key($this->options, $labels))
+            : $labels;
+
         $this->condition = 'dual_range';
-        $this->options = array_map(fn ($bucket) => $this->bucketLabel($bucket), $this->rangeBuckets());
 
         if ($this->view === 'lf-radio') {
             $this->view = 'lf-range-list';
@@ -81,10 +92,14 @@ class LfRadioFilter extends LivewireFilter
                 throw new InvalidArgumentException("Invalid range list bucket [{$bucket}]. Use min-max, min- or -max.");
             }
 
-            $buckets[$bucket] = [
-                'min' => ($matches[1] ?? '') === '' ? null : $matches[1],
-                'max' => ($matches[2] ?? '') === '' ? null : $matches[2],
-            ];
+            $min = ($matches[1] ?? '') === '' ? null : $matches[1];
+            $max = ($matches[2] ?? '') === '' ? null : $matches[2];
+
+            if ($min !== null && $max !== null && $min > $max) {
+                throw new InvalidArgumentException("Invalid range list bucket [{$bucket}]. The min is greater than the max.");
+            }
+
+            $buckets[$bucket] = ['min' => $min, 'max' => $max];
         }
 
         return $buckets;
@@ -124,14 +139,15 @@ class LfRadioFilter extends LivewireFilter
 
         $paramKeys = $this->getParamKey();
 
-        if (! isset($params[$paramKeys['min']]) && ! isset($params[$paramKeys['max']])) {
+        // `preset-params` can come from the client, so a non-scalar bound counts as missing.
+        $preset = array_map(
+            fn ($key) => is_scalar($params[$key] ?? null) ? (string) $params[$key] : null,
+            $paramKeys,
+        );
+
+        if ($preset === ['min' => null, 'max' => null]) {
             return;
         }
-
-        $preset = [
-            'min' => isset($params[$paramKeys['min']]) ? (string) $params[$paramKeys['min']] : null,
-            'max' => isset($params[$paramKeys['max']]) ? (string) $params[$paramKeys['max']] : null,
-        ];
 
         $this->selected = (string) array_search($preset, $buckets, true);
     }

@@ -24,7 +24,7 @@ Available filter types:
 
 - **TextFilter**: Live search text input.
 - **CheckboxFilter**: Multiple-choice checkboxes.
-- **RadioFilter**: Single-choice radio buttons.
+- **RadioFilter**: Single-choice radio buttons. With `buckets` it is a range list of numeric ranges and needs no `condition`.
 - **SelectFilter**: Dropdown selection, with optional search.
 - **DateFilter**: Date filtering using Flatpickr.
 - **RangeFilter**: Single range slider.
@@ -77,6 +77,21 @@ Available filter types:
 }}
 </code-snippet>
 @endverbatim
+
+@verbatim
+<code-snippet name="Range list (radio filter with numeric buckets)" lang="antlers">
+{{ livewire:lf-radio-filter
+    blueprint="cars.car"
+    field="price"
+    buckets="0-12000|12000-16000|16000-20000|20000-"
+    modifier="gte|lt"
+}}
+</code-snippet>
+@endverbatim
+
+- A bucket is `min-max`; leave a side empty for an open end (`20000-`, `-12000`). Each bucket is a radio option with its count, next to an "All" option.
+- A bucket sets the field's `gte`/`lte` params like the DualRangeFilter. Both ends are inclusive by default, so a value on a shared edge matches both buckets; `modifier="gte|lt"` makes the upper end exclusive. The modifier takes `gt` or `gte`, then `lt` or `lte`.
+- Labels are generated ("Under 12000", "12000 to 16000", "Over 20000"). Pass `options` keyed by bucket to set your own.
 
 @verbatim
 <code-snippet name="Toggle filter" lang="antlers">

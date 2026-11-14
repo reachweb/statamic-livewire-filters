@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Facades\Reach\StatamicLivewireFilters\Tests\Factories\EntryFactory;
 use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Tests\DispatchesParamsUpdated;
@@ -319,11 +320,36 @@ class LfRadioFilterTest extends TestCase
     }
 
     #[Test]
-    public function it_rejects_a_malformed_bucket()
+    public function it_labels_a_bucket_from_options_keyed_by_bucket()
     {
-        $this->expectExceptionMessage('Invalid range list bucket [100]');
+        Livewire::test(LfRadioFilter::class, [
+            'field' => 'price',
+            'blueprint' => 'pages.pages',
+            'buckets' => '0-100|100-200|200-',
+            'options' => ['0-100' => 'Up to €100', '200-' => '€200 or more', '300-' => 'Not a bucket'],
+        ])
+            ->assertSet('options', ['0-100' => 'Up to €100', '100-200' => '100 to 200', '200-' => '€200 or more'])
+            ->set('selected', '200-')
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '200', 'max' => null]);
+    }
 
-        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100']);
+    public static function invalidRangeLists(): array
+    {
+        return [
+            'bucket without a dash' => ['0-100|100', 'any', 'Invalid range list bucket [100]'],
+            'bucket with min above max' => ['0-100|200-100', 'any', 'Invalid range list bucket [200-100]'],
+            'modifier the counts cannot compare' => ['0-100|100-', 'is|lte', 'Invalid range list modifier [is|lte]'],
+            'modifier with one comparison' => ['0-100|100-', 'gte', 'Invalid range list modifier [gte]'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('invalidRangeLists')]
+    public function it_rejects_an_invalid_bucket_or_modifier(string $buckets, string $modifier, string $message)
+    {
+        $this->expectExceptionMessage($message);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => $buckets, 'modifier' => $modifier]);
     }
 
     #[Test]
@@ -350,7 +376,15 @@ class LfRadioFilterTest extends TestCase
             ->dispatch('preset-params', ['price:gte' => '200'])
             ->assertSet('selected', '200-')
             ->dispatch('preset-params', ['price:gte' => '150', 'price:lte' => '200'])
-            ->assertSet('selected', '');
+            ->assertSet('selected', '')
+            // A tampered event can carry anything; a non-scalar bound counts as missing.
+            ->dispatch('preset-params', ['price:gte' => ['200'], 'price:lte' => '100'])
+            ->assertOk()
+            ->assertSet('selected', '')
+            ->dispatch('preset-params', ['price:gte' => '200', 'price:lte' => ['x']])
+            ->assertSet('selected', '200-')
+            ->dispatch('preset-params', ['price:gte' => ['200']])
+            ->assertSet('selected', '200-');
 
         Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-', 'modifier' => 'gte|lt'])
             ->dispatch('preset-params', ['price:gte' => '0', 'price:lt' => '100'])
