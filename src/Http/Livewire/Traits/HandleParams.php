@@ -181,8 +181,14 @@ trait HandleParams
     {
         $paramKeys = ParamKey::build($field, 'dual_range', $modifier);
 
-        $this->params[$paramKeys['min']] = $payload['min'];
-        $this->params[$paramKeys['max']] = $payload['max'];
+        // A null bound (an open-ended range list bucket) removes that side of the range.
+        foreach (['min', 'max'] as $bound) {
+            if (($payload[$bound] ?? null) === null) {
+                unset($this->params[$paramKeys[$bound]]);
+            } else {
+                $this->params[$paramKeys[$bound]] = $payload[$bound];
+            }
+        }
 
         $this->dispatchParamsUpdated();
     }
@@ -722,11 +728,20 @@ trait HandleParams
         if ($condition === 'dual_range') {
             $paramKeys = ParamKey::build($field, $condition, $modifier);
 
-            return is_array($payload)
-                && isset($payload['min'], $payload['max'])
-                && isset($this->params[$paramKeys['min']], $this->params[$paramKeys['max']])
-                && $this->params[$paramKeys['min']] == $payload['min']
-                && $this->params[$paramKeys['max']] == $payload['max'];
+            if (! is_array($payload)) {
+                return false;
+            }
+
+            // A null bound (an open-ended range list bucket) removes its param, so it matches an unset one.
+            foreach ($paramKeys as $bound => $key) {
+                $value = $payload[$bound] ?? null;
+
+                if ($value === null ? isset($this->params[$key]) : ! isset($this->params[$key]) || $this->params[$key] != $value) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         $paramKey = ParamKey::build($field, $condition, $modifier);

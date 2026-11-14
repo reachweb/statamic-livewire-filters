@@ -232,8 +232,11 @@ trait IsLivewireFilter
             ? [$paramKey['min'] => $payload['min'] ?? null, $paramKey['max'] => $payload['max'] ?? null]
             : [$paramKey => is_array($payload) ? implode('|', Arr::flatten($payload)) : $payload];
 
-        return collect($sentParams)
-            ->contains(fn ($value, $key) => ! array_key_exists($key, $sweptParams) || $sweptParams[$key] != $value);
+        // A null bound (an open-ended range list bucket) sets no param, so it only shows a miss
+        // when the sweep removed a value under its key: that value came from an older selection.
+        return collect($sentParams)->contains(fn ($value, $key) => $value === null
+            ? isset($sweptParams[$key])
+            : ! array_key_exists($key, $sweptParams) || $sweptParams[$key] != $value);
     }
 
     public function clearFilters($boundsSelection = null)

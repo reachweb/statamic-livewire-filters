@@ -91,6 +91,23 @@ class CustomQueryStringTest extends TestCase
     }
 
     #[Test]
+    public function it_keeps_a_zero_value_from_the_url()
+    {
+        $this->withStandardFakeViews();
+
+        $this->viewShouldReturnRaw('default', '{{ livewire-collection:pages }}');
+
+        $this->viewShouldReturnRaw('statamic-livewire-filters::livewire.livewire-collection', '<div>{{ entries }} {{ title }} {{ /entries }}</div>');
+
+        $this->makeEntry($this->collection, 'zero')->set('title', 'Area 0')->save();
+
+        $html = $this->get('/filters/title/0')->assertOk()->getContent();
+
+        $this->assertStringContainsString('Area 0', $html);
+        $this->assertStringNotContainsString('I Love Guitars', $html);
+    }
+
+    #[Test]
     public function it_can_load_parameters_from_the_url()
     {
         $this->withStandardFakeViews();

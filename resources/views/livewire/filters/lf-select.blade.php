@@ -5,6 +5,10 @@
         wire:model.live="selected"
     >
         <option value="" @selected($selected === '')>{{ $this->placeholder !== '' ? $this->placeholder : __('statamic-livewire-filters::ui.all') }}</option>
+        {{-- Range list bounds without a bucket: shown as chosen but not offered, so the first option can clear them. --}}
+        @if (is_string($selected) && isset($this->unmatched_range_option[$selected]))
+            <option wire:key="{{ $field }}-unmatched-range" value="{{ $selected }}" selected disabled hidden>{{ $this->unmatched_range_option[$selected] }}</option>
+        @endif
         @php($counts = $this->counts)
         @php($disabled = array_flip($this->disabled_options))
         @foreach ($this->visible_options as $value => $label)

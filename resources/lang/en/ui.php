@@ -17,6 +17,10 @@ return [
     'search_options' => 'Search options',
     'select_date' => 'Select date',
     'no_results' => 'No results found',
+    'range_under' => 'Under :max',
+    'range_between' => ':min to :max',
+    'range_over' => 'Over :min',
+    'range_custom' => 'Custom range',
 
     // Conditions
     'any' => ':',

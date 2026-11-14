@@ -3,6 +3,7 @@
         allOptions: @js($this->filter_options),
         options: [],
         counts: @js($this->counts),
+        unmatchedRangeOption: @js($this->unmatched_range_option),
         zeroCount: @js($this->zero_count_mode),
         query: '',
         isOpen: false,
@@ -38,7 +39,7 @@
             }
         },
         updateSelectedLabel() {
-            this.selectedLabel = this.allOptions[this.selected] || this.selected;
+            this.selectedLabel = this.allOptions[this.selected] || this.unmatchedRangeOption[this.selected] || this.selected;
         },
         // Disabled options keep tabindex=-1, which $focus still treats as focusable, so arrow keys skip them here.
         focusOption(step) {

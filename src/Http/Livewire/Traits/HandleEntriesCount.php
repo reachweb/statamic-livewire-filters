@@ -8,6 +8,8 @@ use Livewire\Attributes\On;
 use Reach\StatamicLivewireFilters\Exceptions\InvalidZeroCountModeException;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 use Statamic\Entries\EntryCollection;
+use Statamic\Facades\Entry;
+use Statamic\Stache\Query\EntryQueryBuilder as StacheEntryQueryBuilder;
 
 trait HandleEntriesCount
 {
@@ -128,6 +130,12 @@ trait HandleEntriesCount
             return;
         }
 
+        if ($buckets = $this->rangeBuckets()) {
+            $this->countFieldValuesIntoBuckets($fieldValues, $buckets);
+
+            return;
+        }
+
         $singleTaxonomyPrefix = $this->singleTaxonomyPrefix();
 
         foreach ($fieldValues as $fieldValue) {
@@ -144,6 +152,49 @@ trait HandleEntriesCount
                 }
             }
         }
+    }
+
+    /**
+     * Range list filters override this with their buckets, keyed by option.
+     *
+     * @return array<string, array{min: ?string, max: ?string}>
+     */
+    protected function rangeBuckets(): array
+    {
+        return [];
+    }
+
+    /**
+     * Buckets may overlap (`0-100|100-200` with gte/lte both hold 100), so a value
+     * counts toward every bucket whose comparisons it passes, like the entries query.
+     */
+    protected function countFieldValuesIntoBuckets($fieldValues, array $buckets): void
+    {
+        [$minComparison, $maxComparison] = $this->boundsComparisons();
+        $minInclusive = $minComparison === 'gte';
+        $maxInclusive = $maxComparison === 'lte';
+
+        // The Stache's where() compares every value uncast, so an entry without a value passes
+        // `<` and `<=` and is listed by a bucket with an open min. SQL never matches one.
+        $countsLikeStache = Entry::query() instanceof StacheEntryQueryBuilder;
+
+        $counts = $this->statamic_field['counts'];
+
+        foreach ($fieldValues as $value) {
+            if (! $countsLikeStache && ! is_numeric($value)) {
+                continue;
+            }
+
+            foreach ($buckets as $key => ['min' => $min, 'max' => $max]) {
+                // Uncast, like Statamic's own where() comparisons, so counts match the entries query.
+                if (($min === null || ($minInclusive ? $value >= $min : $value > $min))
+                    && ($max === null || ($maxInclusive ? $value <= $max : $value < $max))) {
+                    $counts[$key]++;
+                }
+            }
+        }
+
+        $this->statamic_field['counts'] = $counts;
     }
 
     protected function singleTaxonomyPrefix(): ?string

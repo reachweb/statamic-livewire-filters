@@ -20,6 +20,20 @@ trait HandleFieldValuesQuery
         return $this->getStatamicField($blueprint)->handle();
     }
 
+    /**
+     * The comparisons the filter's params use for the low and the high end of its range.
+     *
+     * @return array{0: string, 1: string}
+     */
+    protected function boundsComparisons(): array
+    {
+        if ($this->condition !== 'dual_range') {
+            return [$this->condition, $this->condition];
+        }
+
+        return array_map(fn ($key) => ParamKey::parse($key)->condition, array_values($this->getParamKey()));
+    }
+
     protected function removeCurrentFieldFromParams($params, $fieldHandle)
     {
         $baseParams = [];

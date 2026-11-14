@@ -88,7 +88,8 @@ class CustomQueryString
                 // Additional sanitization
                 return preg_replace('/[<>\'";]/', '', $value);
             })
-            ->filter()
+            // Only empty values go: a `0`, such as the min of a range, is a value.
+            ->filter(fn ($value) => $value !== null && $value !== '')
             ->all();
     }
 

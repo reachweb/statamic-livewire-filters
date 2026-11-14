@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Reach\StatamicLivewireFilters\Support\ParamKey;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 
 trait HandleFieldBounds
@@ -321,15 +320,6 @@ trait HandleFieldBounds
         }
 
         return [$this->fieldMin, $this->fieldMax];
-    }
-
-    protected function boundsComparisons(): array
-    {
-        if ($this->condition !== 'dual_range') {
-            return [$this->condition, $this->condition];
-        }
-
-        return array_map(fn ($key) => ParamKey::parse($key)->condition, array_values($this->getParamKey()));
     }
 
     protected function boundIncludesAllValues($value, string $comparison): bool

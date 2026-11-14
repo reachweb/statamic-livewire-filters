@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfDualRangeFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRangeFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
@@ -485,6 +486,70 @@ class ClearAllRelayTest extends TestCase
 
         $collection->call('clearAll');
         $filter->dispatch('clear-all-filters', ...$this->clearAllEventParams($collection))->assertNotDispatched('clear-filter');
+    }
+
+    /** An open-ended range list bucket sets one param only; the missing bound is not a param the sweep missed. */
+    #[Test]
+    public function an_open_ended_range_list_bucket_the_sweep_removed_needs_no_relay()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfRadioFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'buckets' => '0-5|5-'])
+            ->set('selected', '5-');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:gte' => '5']);
+
+        $collection->call('clearAll')->assertSet('params', []);
+        $clearAll = $this->clearAllEventParams($collection);
+        $filter->dispatch('clear-all-filters', ...$clearAll)->assertSet('selected', '')->assertNotDispatched('clear-filter');
+
+        // A bucket picked after the sweep is one the sweep missed, so it still relays.
+        $filter->set('selected', '5-')
+            ->dispatch('clear-all-filters', $clearAll[0], [])
+            ->assertDispatched('clear-filter', field: 'max_items', condition: 'dual_range');
+    }
+
+    /**
+     * The open-ended bucket shares its min with the swept one, so only the swept max shows
+     * that the sweep removed an older selection.
+     */
+    #[Test]
+    public function an_open_ended_range_list_bucket_picked_during_a_clear_all_does_not_stick()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfRadioFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'buckets' => '0-5|0-'])
+            ->set('selected', '0-5');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+
+        $collection->call('clearAll');
+        $clearAll = $this->clearAllEventParams($collection);
+
+        $filter->set('selected', '0-');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:gte' => '0']);
+
+        $filter->dispatch('clear-all-filters', ...$clearAll)->assertSet('selected', '');
+        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'clear-filter'), 'the filter should relay');
+        $collection->assertSet('params', []);
+    }
+
+    /** Each bucket replaces the last one's params, an open min included, and "All" removes both. */
+    #[Test]
+    public function range_list_buckets_and_the_all_option_reach_the_collection()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfRadioFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'buckets' => '-5|5-6|6-']);
+
+        $filter->set('selected', '5-6');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:gte' => '5', 'max_items:lte' => '6'])->assertSet('entriesCount', 1);
+
+        $filter->set('selected', '-5');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:lte' => '5'])->assertSet('entriesCount', 1);
+
+        $filter->set('selected', '');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', [])->assertSet('entriesCount', 2);
     }
 
     /**
