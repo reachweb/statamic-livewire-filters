@@ -4,6 +4,8 @@
         options: [],
         counts: @js($this->counts),
         zeroCount: @js($this->zero_count_mode),
+        available: @js($availableOptions ?? null),
+        unavailable: @js($unavailable ?? 'hide'),
         query: '',
         isOpen: false,
         openedWithKeyboard: false,
@@ -27,11 +29,21 @@
         isZeroCount(value) {
             return this.zeroCount !== 'show' && this.counts[value] === 0 && ! this.selectedOptions.some((selected) => String(selected) === value);
         },
+        // Options the `depends_on` parent's value doesn't offer; a selected one stays usable.
+        isUnavailable(value) {
+            return this.available !== null && ! this.available.includes(value) && ! this.selectedOptions.some((selected) => String(selected) === value);
+        },
+        isHidden(value) {
+            return (this.zeroCount === 'hide' && this.isZeroCount(value)) || (this.unavailable === 'hide' && this.isUnavailable(value));
+        },
+        isDisabled(value) {
+            return (this.zeroCount === 'disable' && this.isZeroCount(value)) || (this.unavailable === 'disable' && this.isUnavailable(value));
+        },
         getFilteredOptions(query) {
             this.query = query
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
                 String(label ?? value).toLowerCase().includes(query.toLowerCase())
-                && ! (this.zeroCount === 'hide' && this.isZeroCount(value))
+                && ! this.isHidden(value)
             )
             if (this.options.length === 0) {
                 this.$refs.noResultsMessage?.classList.remove('hidden')
@@ -54,8 +66,9 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="getFilteredOptions(''); $watch('selectedOptions', () => { updateSelectedLabels(); if (zeroCount === 'hide') getFilteredOptions(query); });"
+    x-init="getFilteredOptions(''); $watch('selectedOptions', () => { updateSelectedLabels(); if (zeroCount === 'hide' || unavailable === 'hide') getFilteredOptions(query); });"
     x-on:counts-updated="counts = Object.values($event.detail)[0]; if (zeroCount === 'hide') getFilteredOptions(query);"
+    x-on:available-options-updated="available = Object.values($event.detail)[0]; if (unavailable === 'hide') getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selectedOptions"
     wire:model.live="selected"
@@ -129,7 +142,7 @@
                     <li role="option">
                         <label
                             class="flex items-center gap-2 px-4 py-2 text-sm text-lf-text"
-                            x-bind:class="zeroCount === 'disable' && isZeroCount(value) ? 'opacity-50' : null"
+                            x-bind:class="isDisabled(value) ? 'opacity-50' : null"
                             x-bind:for="'checkboxOption' + value"
                         >
                             <div class="relative flex items-center">
@@ -138,7 +151,7 @@
                                     x-on:change="handleOptionToggle($el)" 
                                     x-on:keydown.enter.prevent="$el.checked = ! $el.checked; handleOptionToggle($el)"
                                     x-bind:checked="selectedOptions.includes(value)"
-                                    x-bind:disabled="zeroCount === 'disable' && isZeroCount(value)"
+                                    x-bind:disabled="isDisabled(value)"
                                     x-bind:value="value" 
                                     x-bind:id="'checkboxOption' + value"
                                 />

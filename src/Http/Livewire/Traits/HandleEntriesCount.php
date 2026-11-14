@@ -30,18 +30,33 @@ trait HandleEntriesCount
     #[Computed]
     public function visibleOptions(): array
     {
-        if ($this->zeroCountMode() !== 'hide') {
-            return $this->filter_options;
-        }
+        $hidden = [
+            ...($this->zeroCountMode() === 'hide' ? $this->zeroCountOptions() : []),
+            ...$this->unavailableOptions('hide'),
+        ];
 
-        return array_diff_key($this->filter_options, array_flip($this->zeroCountOptions()));
+        return $hidden === [] ? $this->filter_options : array_diff_key($this->filter_options, array_flip($hidden));
     }
 
     /** @return list<string|int> The option keys to render disabled with `zero_count="disable"`. */
     #[Computed]
     public function disabledOptions(): array
     {
-        return $this->zeroCountMode() === 'disable' ? $this->zeroCountOptions() : [];
+        return [
+            ...($this->zeroCountMode() === 'disable' ? $this->zeroCountOptions() : []),
+            ...$this->unavailableOptions('disable'),
+        ];
+    }
+
+    /**
+     * Option keys a composing trait hides or disables besides the zero counts; see HandleDependentOptions.
+     *
+     * @param  'hide'|'disable'  $mode
+     * @return list<string|int>
+     */
+    protected function unavailableOptions(string $mode): array
+    {
+        return [];
     }
 
     /** The mode the views apply; without counts there is nothing to hide or disable. */
@@ -102,6 +117,12 @@ trait HandleEntriesCount
             return;
         }
 
+        $this->refreshCounts($params);
+    }
+
+    /** @param  array<string, mixed>  $params  The collection's params, from its encrypted query. */
+    protected function refreshCounts(array $params): void
+    {
         $fieldHandle = $this->resolveCountFieldHandle();
 
         $baseParams = $this->removeCurrentFieldFromParams($params, $fieldHandle);
@@ -136,22 +157,37 @@ trait HandleEntriesCount
             return;
         }
 
+        foreach ($this->optionValuesIn($fieldValues) as $value) {
+            $this->statamic_field['counts'][$value]++;
+        }
+    }
+
+    /**
+     * The option keys found in the plucked field values, once per occurrence.
+     *
+     * @return list<string|int|float|bool>
+     */
+    protected function optionValuesIn($fieldValues): array
+    {
+        $values = [];
         $singleTaxonomyPrefix = $this->singleTaxonomyPrefix();
 
         foreach ($fieldValues as $fieldValue) {
             // Multi-select values (checkboxes, entries, terms) are flattened one level; nested
-            // arrays and objects (e.g. Carbon dates) are skipped, as such offsets throw in isset()
+            // arrays and objects (e.g. Carbon dates) are skipped, as such offsets throw in array_key_exists()
             foreach (is_array($fieldValue) ? $fieldValue : [$fieldValue] as $value) {
                 // Single-taxonomy options use bare slugs, but entries may store "taxonomy::slug"
                 if ($singleTaxonomyPrefix && is_string($value) && str_starts_with($value, $singleTaxonomyPrefix)) {
                     $value = substr($value, strlen($singleTaxonomyPrefix));
                 }
 
-                if (is_scalar($value) && isset($this->statamic_field['counts'][$value])) {
-                    $this->statamic_field['counts'][$value]++;
+                if (is_scalar($value) && array_key_exists($value, $this->statamic_field['options'])) {
+                    $values[] = $value;
                 }
             }
         }
+
+        return $values;
     }
 
     /**
