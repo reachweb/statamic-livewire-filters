@@ -5,6 +5,8 @@
         counts: @js($this->counts),
         unmatchedRangeOption: @js($this->unmatched_range_option),
         zeroCount: @js($this->zero_count_mode),
+        available: @js($availableOptions ?? null),
+        unavailable: @js($unavailable ?? 'hide'),
         query: '',
         isOpen: false,
         openedWithKeyboard: false,
@@ -23,14 +25,21 @@
         isZeroCount(value) {
             return this.zeroCount !== 'show' && this.counts[value] === 0 && this.selected != value;
         },
+        // Options the `depends_on` parent's value doesn't offer; the selected one stays usable.
+        isUnavailable(value) {
+            return this.available !== null && ! this.available.includes(value) && this.selected != value;
+        },
+        isHidden(value) {
+            return (this.zeroCount === 'hide' && this.isZeroCount(value)) || (this.unavailable === 'hide' && this.isUnavailable(value));
+        },
         isDisabled(value) {
-            return this.zeroCount === 'disable' && this.isZeroCount(value);
+            return (this.zeroCount === 'disable' && this.isZeroCount(value)) || (this.unavailable === 'disable' && this.isUnavailable(value));
         },
         getFilteredOptions(query) {
             this.query = query
             this.options = Object.entries(this.allOptions).filter(([value, label]) =>
                 String(label ?? value).toLowerCase().includes(query.toLowerCase())
-                && ! (this.zeroCount === 'hide' && this.isZeroCount(value))
+                && ! this.isHidden(value)
             )
             if (this.options.length === 0) {
                 this.$refs.noResultsMessage?.classList.remove('hidden')
@@ -59,8 +68,9 @@
             this.$nextTick(() => this.openUpwards = (window.innerHeight - this.$refs.dropdownButton.getBoundingClientRect().bottom) < this.$refs.dropdown.getBoundingClientRect().height);
         },
     }" 
-    x-init="getFilteredOptions(''); $watch('selected', () => { updateSelectedLabel(); if (zeroCount === 'hide') getFilteredOptions(query); });"
+    x-init="getFilteredOptions(''); $watch('selected', () => { updateSelectedLabel(); if (zeroCount === 'hide' || unavailable === 'hide') getFilteredOptions(query); });"
     x-on:counts-updated="counts = Object.values($event.detail)[0]; if (zeroCount === 'hide') getFilteredOptions(query);"
+    x-on:available-options-updated="available = Object.values($event.detail)[0]; if (unavailable === 'hide') getFilteredOptions(query);"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
     x-modelable="selected"
     wire:model.live="selected"

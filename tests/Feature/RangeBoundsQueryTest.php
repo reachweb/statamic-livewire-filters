@@ -15,7 +15,7 @@ class RangeBoundsQueryTest extends TestCase
     {
         $params = ['category:is' => 'catamaran'];
         $selections = ['range-component' => 2, 'dual-range-component' => 4];
-        $token = RangeBoundsQuery::encode('yachts', $params, 'collection-component', 3, $selections);
+        $token = RangeBoundsQuery::encode('yachts', $params, 'collection-component', 3, $selections, ['category:is']);
         $expectedParams = array_merge($params, ['from' => 'yachts']);
 
         $this->assertSame([
@@ -23,6 +23,7 @@ class RangeBoundsQueryTest extends TestCase
             'source' => 'collection-component',
             'revision' => 3,
             'selections' => $selections,
+            'filters' => ['category:is'],
         ], RangeBoundsQuery::decodeForCollection($token, 'yachts'));
         $this->assertSame($expectedParams, RangeBoundsQuery::paramsForCollection($token, 'yachts'));
     }
@@ -43,6 +44,7 @@ class RangeBoundsQueryTest extends TestCase
             'source' => null,
             'revision' => 0,
             'selections' => [],
+            'filters' => [],
         ], RangeBoundsQuery::decodeForCollection($token, 'yachts'));
         $this->assertSame($expectedParams, RangeBoundsQuery::paramsForCollection($token, 'yachts'));
     }
@@ -82,6 +84,8 @@ class RangeBoundsQueryTest extends TestCase
             'boolean selection revision' => [['selections' => ['range-component' => true]]],
             'zero selection revision' => [['selections' => ['range-component' => 0]]],
             'negative selection revision' => [['selections' => ['range-component' => -1]]],
+            'null filters' => [['filters' => null]],
+            'string filters' => [['filters' => 'category:is']],
         ];
     }
 }

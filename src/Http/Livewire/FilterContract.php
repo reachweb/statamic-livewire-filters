@@ -20,7 +20,8 @@ namespace Reach\StatamicLivewireFilters\Http\Livewire;
  *    applied at mount instead (IsLivewireFilter calls setPresetValues() with
  *    CustomQueryString::urlParams()), so the first render shows them.
  *  - `params-updated` with `(params, boundsQuery)`: only filters that show
- *    counts or dynamic bounds listen (HandleEntriesCount, HandleFieldBounds).
+ *    counts, dynamic bounds or dependent options listen (HandleEntriesCount,
+ *    HandleFieldBounds, HandleDependentOptions).
  *    They ignore the plain `params`, which a client controls, and read the
  *    filter state only from the encrypted `boundsQuery` (RangeBoundsQuery).
  *

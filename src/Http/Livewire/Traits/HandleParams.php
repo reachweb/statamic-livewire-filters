@@ -813,16 +813,19 @@ trait HandleParams
         $this->markCollectionStateChanged();
 
         if (config('statamic-livewire-filters.enable_filter_values_count')
-            || config('statamic-livewire-filters.enable_dynamic_range_bounds')) {
+            || config('statamic-livewire-filters.enable_dynamic_range_bounds')
+            || config('statamic-livewire-filters.enable_dependent_filters')) {
             $params = $this->effectiveQueryParams();
 
-            // Counts and bounds listeners require the token and use only its params.
+            // Counts, bounds and dependent-options listeners require the token and use only its params.
             $this->dispatch('params-updated', $params, RangeBoundsQuery::encode(
                 $this->collections,
                 $params,
                 $this->getId(),
                 ++$this->boundsQueryRevision,
                 $this->boundsSelectionRevisions,
+                // What a clear-all would remove: a dependent filter ignores these to see what its parent alone offers.
+                array_values(array_filter(array_keys($params), fn ($key) => is_string($key) && $this->isClearAllRemovableParamKey($key))),
             ));
         }
 
