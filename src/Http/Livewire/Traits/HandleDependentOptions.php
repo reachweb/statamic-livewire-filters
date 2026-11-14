@@ -150,6 +150,16 @@ trait HandleDependentOptions
             return;
         }
 
+        $dropped = array_values(array_diff($selected, $kept));
+        $options = $this->filter_options;
+
+        // The filter only loses its checkmarks, so a site can tell the visitor what went and why.
+        $this->dispatch('dependent-selection-cleared',
+            field: $this->field,
+            values: $dropped,
+            labels: array_map(fn ($value) => (string) ($options[$value] ?? $value), $dropped),
+        );
+
         if (! is_array($this->selected) || $kept === []) {
             $this->clear();
 

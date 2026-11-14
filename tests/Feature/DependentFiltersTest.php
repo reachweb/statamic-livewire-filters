@@ -125,7 +125,8 @@ class DependentFiltersTest extends TestCase
             ->assertSet('selected', 'q3')
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'bmw', 'car_model:is' => 'q3']))
             ->assertSet('selected', '')
-            ->assertDispatched('clear-filter', field: 'car_model', condition: 'is');
+            ->assertDispatched('clear-filter', field: 'car_model', condition: 'is')
+            ->assertDispatched('dependent-selection-cleared', field: 'car_model', values: ['q3'], labels: ['Q3']);
     }
 
     public static function singleValueFilters(): array
@@ -160,6 +161,7 @@ class DependentFiltersTest extends TestCase
             ->assertSet('availableOptions', ['a3'])
             ->assertSet('selected', 'q3')
             ->assertNotDispatched('clear-filter')
+            ->assertNotDispatched('dependent-selection-cleared')
             ->assertSee('Q3');
     }
 
@@ -173,7 +175,8 @@ class DependentFiltersTest extends TestCase
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'bmw', 'fuel:is' => 'diesel', 'car_model:in' => 'a3|x1']))
             ->assertSet('availableOptions', ['x5'])
             ->assertSet('selected', ['x1'])
-            ->assertDispatched('filter-updated', field: 'car_model', condition: 'in', payload: ['x1'], modifier: 'any');
+            ->assertDispatched('filter-updated', field: 'car_model', condition: 'in', payload: ['x1'], modifier: 'any')
+            ->assertDispatched('dependent-selection-cleared', field: 'car_model', values: ['a3'], labels: ['A3']);
     }
 
     #[Test]
