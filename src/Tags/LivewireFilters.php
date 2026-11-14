@@ -2,6 +2,8 @@
 
 namespace Reach\StatamicLivewireFilters\Tags;
 
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
+use Reach\StatamicLivewireFilters\Support\Seo;
 use Statamic\Tags\Tags;
 
 class LivewireFilters extends Tags
@@ -57,6 +59,47 @@ class LivewireFilters extends Tags
     })();
 </script>
 HTML;
+    }
+
+    /**
+     * Canonical and robots tags for filtered listing pages. With `canonical="false"`
+     * only the robots tag is output, for layouts that already have a canonical.
+     */
+    public function seo(): string
+    {
+        $request = request();
+        $params = Seo::livewireParams($request);
+        $laterPage = Seo::laterPage($request, $params);
+        $pageCanonical = $request->url().($laterPage ? '?'.http_build_query($laterPage) : '');
+
+        // Every custom query string filter URL shares the base page's static cache
+        // entry, so only page-dependent tags are safe here (the page query keeps its
+        // own entry). Filter signals are sent as headers, see `seo_filter_headers`.
+        if (CustomQueryString::enabled()) {
+            return $laterPage ? $this->seoTags($pageCanonical) : '';
+        }
+
+        $filters = Seo::filters($params);
+
+        if ($filters === []) {
+            return $this->seoTags($pageCanonical);
+        }
+
+        // Only the first page of an indexable filter is indexed. Its later pages
+        // point to the base page like any other filtered page.
+        if (! $laterPage && Seo::indexableFilters($filters, $params)) {
+            return $this->seoTags($request->url().'?'.http_build_query(['params' => Seo::canonicalParams($filters, $params)]));
+        }
+
+        return $this->seoTags($request->url(), noindex: true);
+    }
+
+    protected function seoTags(string $canonical, bool $noindex = false): string
+    {
+        return implode("\n", array_filter([
+            $this->params->bool('canonical', true) ? '<link rel="canonical" href="'.e($canonical).'">' : null,
+            $noindex ? '<meta name="robots" content="noindex,follow">' : null,
+        ]));
     }
 
     public function loadMore(): string

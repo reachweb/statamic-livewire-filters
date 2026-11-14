@@ -18,6 +18,8 @@ class HandleFiltersQueryString
      */
     protected const RESERVED_INPUT_KEYS = ['url', '_token', '_method', 'fingerprint', 'serialized', 'effects'];
 
+    public const FILTER_URL_ATTRIBUTE = 'statamic-livewire-filters.filter_url';
+
     public function handle(Request $request, Closure $next): mixed
     {
         if (Nocache::matches($request)) {
@@ -75,6 +77,9 @@ class HandleFiltersQueryString
                     $request->files->all(),
                     $request->server->all()
                 );
+
+                // Marks a rewritten filter URL for the SEO headers.
+                $request->attributes->set(self::FILTER_URL_ATTRIBUTE, true);
             }
         }
 

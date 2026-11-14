@@ -75,4 +75,18 @@ return [
     'custom_query_string_aliases' => [
         //
     ],
+
+    // Filter keys (custom query string alias, params key or field handle) whose single-value URLs
+    // stay indexable with a self canonical in {{ livewire-filters:seo }} and the SEO headers
+    'seo_indexable_filters' => [
+        //
+    ],
+
+    // Send X-Robots-Tag and canonical Link headers for custom query string filter URLs. Their pages
+    // share one static cache entry, so these signals can't live in the cached <head>
+    'seo_filter_headers' => false,
+
+    // Query string names that carry the page number for the SEO tag and headers. A collection's
+    // own page_name is also read from the URL in Livewire query string mode
+    'seo_page_names' => ['page'],
 ];

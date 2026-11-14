@@ -2,6 +2,7 @@
 
 namespace Reach\StatamicLivewireFilters;
 
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Livewire\Livewire;
 use Reach\StatamicLivewireFilters\Console\Commands\UpdateLivewireFilters;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
@@ -17,6 +18,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfTextFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfToggleFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfUrlHandler;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection as LivewireCollectionComponent;
+use Reach\StatamicLivewireFilters\Http\Middleware\AddFilterSeoHeaders;
 use Reach\StatamicLivewireFilters\Http\Middleware\HandleFiltersQueryString;
 use Reach\StatamicLivewireFilters\Scopes\Multiselect;
 use Reach\StatamicLivewireFilters\Support\CountQueryPool;
@@ -73,6 +75,9 @@ class ServiceProvider extends AddonServiceProvider
         Livewire::component('lf-tags', LfTags::class);
         Livewire::component('lf-url-handler', LfUrlHandler::class);
         Livewire::component('lf-count', LfCount::class);
+
+        // Global, so the headers land after the half measure cache captured the response.
+        $this->app->make(HttpKernel::class)->pushMiddleware(AddFilterSeoHeaders::class);
 
         RestoreNocacheMemoPath::register();
 
