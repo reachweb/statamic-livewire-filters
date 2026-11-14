@@ -8,6 +8,9 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
+use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Support\CustomQueryString;
 use Reach\StatamicLivewireFilters\Tests\DispatchesParamsUpdated;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -320,6 +323,43 @@ class LfRadioFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_labels_open_negative_decimal_and_single_value_buckets()
+    {
+        // 9-10 only parses when the bounds are compared as numbers.
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '-50|-50-0|0-0|0.5-1.5|9-10|10-'])
+            ->assertSet('options', [
+                '-50' => 'Under 50',
+                '-50-0' => '-50 to 0',
+                '0-0' => '0 to 0',
+                '0.5-1.5' => '0.5 to 1.5',
+                '9-10' => '9 to 10',
+                '10-' => 'Over 10',
+            ])
+            ->set('selected', '-50')
+            ->assertHasNoErrors()
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => null, 'max' => '50'])
+            ->dispatch('preset-params', ['price:gte' => '0.5', 'price:lte' => '1.5'])
+            ->assertSet('selected', '0.5-1.5')
+            ->dispatch('preset-params', ['price:lte' => '50'])
+            ->assertSet('selected', '-50');
+    }
+
+    #[Test]
+    public function the_select_filter_takes_buckets_and_keeps_its_own_view()
+    {
+        Livewire::test(LfSelectFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->assertSet('view', 'lf-select')
+            ->assertSet('condition', 'dual_range')
+            ->assertSeeInOrder(['Under 100', '100 to 200', 'Over 200'])
+            ->set('selected', '200-')
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '200', 'max' => null])
+            // The select's placeholder option clears the filter through its relay.
+            ->set('selected', '')
+            ->assertHasNoErrors()
+            ->assertDispatched('clear-filter', field: 'price', condition: 'dual_range');
+    }
+
+    #[Test]
     public function it_labels_a_bucket_from_options_keyed_by_bucket()
     {
         Livewire::test(LfRadioFilter::class, [
@@ -340,6 +380,9 @@ class LfRadioFilterTest extends TestCase
             'bucket with min above max' => ['0-100|200-100', 'any', 'Invalid range list bucket [200-100]'],
             'modifier the counts cannot compare' => ['0-100|100-', 'is|lte', 'Invalid range list modifier [is|lte]'],
             'modifier with one comparison' => ['0-100|100-', 'gte', 'Invalid range list modifier [gte]'],
+            'modifier with the ends swapped' => ['0-100|100-', 'lt|gte', 'Invalid range list modifier [lt|gte]'],
+            'bucket without a bound' => ['0-100|-', 'any', 'Invalid range list bucket [-]'],
+            'bucket that is not a number' => ['a-b', 'any', 'Invalid range list bucket [a-b]'],
         ];
     }
 
@@ -365,6 +408,43 @@ class LfRadioFilterTest extends TestCase
             ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: '')
             ->set('selected', '300-400')
             ->assertHasErrors('selected');
+    }
+
+    #[Test]
+    public function it_clears_the_filter_for_an_unknown_or_tampered_bucket_when_validation_is_off()
+    {
+        Config::set('statamic-livewire-filters.validate_filter_values', false);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->set('selected', '300-400')
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: '')
+            ->set('selected', ['0-100'])
+            ->assertOk()
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: '');
+    }
+
+    #[Test]
+    public function it_restores_a_bucket_with_a_zero_bound_from_the_custom_query_string()
+    {
+        Config::set('statamic-livewire-filters.custom_query_string', 'filters');
+
+        $this->assertSame(
+            ['price:gte' => '0', 'title:is' => 'x'],
+            CustomQueryString::sanitize(['price:gte' => '0', 'item_options:is' => '', 'title:is' => 'x']),
+        );
+
+        $url = ['params' => ['price:gte' => '0', 'price:lte' => '100']];
+
+        $html = Livewire::withQueryParams($url)
+            ->test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->assertSet('selected', '0-100')
+            ->html();
+
+        $this->assertMatchesRegularExpression('/value="0-100"\s+checked/', $html);
+
+        Livewire::withQueryParams($url)
+            ->test(LivewireCollection::class, ['params' => ['from' => 'pages']])
+            ->assertSet('params', ['price:gte' => '0', 'price:lte' => '100']);
     }
 
     #[Test]
@@ -405,6 +485,29 @@ class LfRadioFilterTest extends TestCase
             ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
             ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === ['0-100' => 1, '100-200' => 1, '200-' => 1])
             ->assertSeeHtml('<span class="text-lf-muted ml-1">(1)</span>');
+
+        // gt|lte keeps 100 in the lower bucket only, and 250 is the one value above 200.
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-', 'modifier' => 'gt|lte'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === ['0-100' => 2, '100-200' => 0, '200-' => 1]);
+    }
+
+    #[Test]
+    public function it_counts_an_entry_without_a_value_in_the_buckets_that_list_it()
+    {
+        Config::set('statamic-livewire-filters.enable_filter_values_count', true);
+
+        $this->makeEntry($this->collection, 'd')->set('title', 'I Have No Price')->set('item_options', 'option3')->save();
+
+        // The Stache lists an entry without a price for `price:lte`, but not once a min is set.
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages', 'price:lte' => '100']])
+            ->assertSet('entriesCount', 3);
+        Livewire::test(LivewireCollection::class, ['params' => ['from' => 'pages', 'price:gte' => '0', 'price:lte' => '100']])
+            ->assertSet('entriesCount', 2);
+
+        Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '-100|0-100|100-'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments([]))
+            ->assertViewHas('statamic_field', fn ($field) => $field['counts'] === ['-100' => 3, '0-100' => 2, '100-' => 2]);
     }
 
     #[Test]

@@ -25,7 +25,7 @@ Available filter types:
 - **TextFilter**: Live search text input.
 - **CheckboxFilter**: Multiple-choice checkboxes.
 - **RadioFilter**: Single-choice radio buttons. With `buckets` it is a range list of numeric ranges and needs no `condition`.
-- **SelectFilter**: Dropdown selection, with optional search.
+- **SelectFilter**: Dropdown selection, with optional search. It takes `buckets` like the RadioFilter.
 - **DateFilter**: Date filtering using Flatpickr.
 - **RangeFilter**: Single range slider.
 - **DualRangeFilter**: Min/max range selection using noUiSlider.
@@ -89,7 +89,7 @@ Available filter types:
 </code-snippet>
 @endverbatim
 
-- A bucket is `min-max`; leave a side empty for an open end (`20000-`, `-12000`). Each bucket is a radio option with its count, next to an "All" option.
+- A bucket is `min-max`; leave a side empty for an open end (`20000-`, `-12000`). Each bucket is a radio option next to an "All" option, with its count when `enable_filter_values_count` is on.
 - A bucket sets the field's `gte`/`lte` params like the DualRangeFilter. Both ends are inclusive by default, so a value on a shared edge matches both buckets; `modifier="gte|lt"` makes the upper end exclusive. The modifier takes `gt` or `gte`, then `lt` or `lte`.
 - Labels are generated ("Under 12000", "12000 to 16000", "Over 20000"). Pass `options` keyed by bucket to set your own.
 

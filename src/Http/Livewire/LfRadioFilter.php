@@ -3,9 +3,10 @@
 namespace Reach\StatamicLivewireFilters\Http\Livewire;
 
 use Illuminate\Validation\Rule;
-use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
+use Reach\StatamicLivewireFilters\Exceptions\InvalidRangeListBucketException;
+use Reach\StatamicLivewireFilters\Exceptions\InvalidRangeListModifierException;
 
 class LfRadioFilter extends LivewireFilter
 {
@@ -36,7 +37,7 @@ class LfRadioFilter extends LivewireFilter
 
         // The counts only know these comparisons, so anything else must fail here, not in a counts request.
         if ($this->modifier !== null && $this->modifier !== 'any' && ! preg_match('/^gte?\|lte?$/', (string) $this->modifier)) {
-            throw new InvalidArgumentException("Invalid range list modifier [{$this->modifier}]. Use gt or gte for the min and lt or lte for the max, such as gte|lt.");
+            throw new InvalidRangeListModifierException($this->modifier);
         }
 
         $labels = array_map(fn ($bucket) => $this->bucketLabel($bucket), $this->rangeBuckets());
@@ -89,14 +90,14 @@ class LfRadioFilter extends LivewireFilter
             $bucket = trim($bucket);
 
             if (! preg_match("/^($number)?-($number)?$/", $bucket, $matches) || $bucket === '-') {
-                throw new InvalidArgumentException("Invalid range list bucket [{$bucket}]. Use min-max, min- or -max.");
+                throw new InvalidRangeListBucketException($bucket);
             }
 
             $min = ($matches[1] ?? '') === '' ? null : $matches[1];
             $max = ($matches[2] ?? '') === '' ? null : $matches[2];
 
             if ($min !== null && $max !== null && $min > $max) {
-                throw new InvalidArgumentException("Invalid range list bucket [{$bucket}]. The min is greater than the max.");
+                throw new InvalidRangeListBucketException($bucket, 'The min is greater than the max.');
             }
 
             $buckets[$bucket] = ['min' => $min, 'max' => $max];
@@ -107,7 +108,8 @@ class LfRadioFilter extends LivewireFilter
 
     protected function bucketLabel(array $bucket): string
     {
-        if ($bucket['min'] === null || ($bucket['min'] == 0 && $bucket['max'] !== null)) {
+        // A range from 0 reads "Under max", except 0-0, which is a single value.
+        if ($bucket['min'] === null || ($bucket['min'] == 0 && $bucket['max'] !== null && $bucket['max'] != 0)) {
             return __('statamic-livewire-filters::ui.range_under', ['max' => $bucket['max']]);
         }
 
@@ -120,12 +122,14 @@ class LfRadioFilter extends LivewireFilter
 
     protected function payload(): mixed
     {
-        if (! $this->rangeBuckets() || $this->selected === '') {
+        $buckets = $this->rangeBuckets();
+
+        if (! $buckets || $this->selected === '') {
             return $this->selected;
         }
 
-        // An unknown bucket (validation turned off) clears the filter instead of sending a bad range.
-        return $this->rangeBuckets()[$this->selected] ?? '';
+        // Anything but a known bucket (validation turned off) clears the filter instead of sending a bad range.
+        return is_string($this->selected) || is_int($this->selected) ? ($buckets[$this->selected] ?? '') : '';
     }
 
     // A URL selects the bucket whose bounds match its min/max params exactly.

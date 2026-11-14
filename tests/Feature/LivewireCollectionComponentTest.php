@@ -910,6 +910,22 @@ class LivewireCollectionComponentTest extends TestCase
     }
 
     #[Test]
+    public function it_treats_a_repeated_open_ended_dual_range_payload_as_a_render_free_no_op()
+    {
+        Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '200', 'max' => null], modifier: 'any')
+            ->assertSet('params', ['price:gte' => '200'])
+            ->assertDispatched('entries-updated')
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => '200', 'max' => null], modifier: 'any')
+            ->assertNotDispatched('tags-updated')
+            ->assertNotDispatched('entries-updated')
+            // A bound the params still hold is a change, not a repeat.
+            ->dispatch('filter-updated', field: 'price', condition: 'dual_range', payload: ['min' => null, 'max' => '300'], modifier: 'any')
+            ->assertSet('params', ['price:lte' => '300'])
+            ->assertDispatched('entries-updated');
+    }
+
+    #[Test]
     public function it_treats_a_second_removal_of_the_same_tag_as_a_render_free_no_op()
     {
         Livewire::test(LivewireCollectionComponent::class, ['params' => ['from' => 'clothes']])

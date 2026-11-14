@@ -728,11 +728,20 @@ trait HandleParams
         if ($condition === 'dual_range') {
             $paramKeys = ParamKey::build($field, $condition, $modifier);
 
-            return is_array($payload)
-                && isset($payload['min'], $payload['max'])
-                && isset($this->params[$paramKeys['min']], $this->params[$paramKeys['max']])
-                && $this->params[$paramKeys['min']] == $payload['min']
-                && $this->params[$paramKeys['max']] == $payload['max'];
+            if (! is_array($payload)) {
+                return false;
+            }
+
+            // A null bound (an open-ended range list bucket) removes its param, so it matches an unset one.
+            foreach ($paramKeys as $bound => $key) {
+                $value = $payload[$bound] ?? null;
+
+                if ($value === null ? isset($this->params[$key]) : ! isset($this->params[$key]) || $this->params[$key] != $value) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         $paramKey = ParamKey::build($field, $condition, $modifier);

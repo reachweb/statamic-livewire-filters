@@ -509,6 +509,50 @@ class ClearAllRelayTest extends TestCase
     }
 
     /**
+     * The open-ended bucket shares its min with the swept one, so only the swept max shows
+     * that the sweep removed an older selection.
+     */
+    #[Test]
+    public function an_open_ended_range_list_bucket_picked_during_a_clear_all_does_not_stick()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfRadioFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'buckets' => '0-5|0-'])
+            ->set('selected', '0-5');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+
+        $collection->call('clearAll');
+        $clearAll = $this->clearAllEventParams($collection);
+
+        $filter->set('selected', '0-');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:gte' => '0']);
+
+        $filter->dispatch('clear-all-filters', ...$clearAll)->assertSet('selected', '');
+        $this->assertSame(1, $this->forwardToCollection($filter, $collection, 'clear-filter'), 'the filter should relay');
+        $collection->assertSet('params', []);
+    }
+
+    /** Each bucket replaces the last one's params, an open min included, and "All" removes both. */
+    #[Test]
+    public function range_list_buckets_and_the_all_option_reach_the_collection()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'clothes']]);
+        $filter = Livewire::test(LfRadioFilter::class, ['field' => 'max_items', 'blueprint' => 'clothes.clothes', 'buckets' => '-5|5-6|6-']);
+
+        $filter->set('selected', '5-6');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:gte' => '5', 'max_items:lte' => '6'])->assertSet('entriesCount', 1);
+
+        $filter->set('selected', '-5');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', ['max_items:lte' => '5'])->assertSet('entriesCount', 1);
+
+        $filter->set('selected', '');
+        $this->forwardToCollection($filter, $collection, 'filter-updated');
+        $collection->assertSet('params', [])->assertSet('entriesCount', 2);
+    }
+
+    /**
      * Livewire holds back the view's filter-updated while the collection's clearAll() is in
      * flight, but not the filter's own commit, so the tick lands after the sweep.
      */
