@@ -16,16 +16,17 @@ for package in "${packages[@]}"; do
     fi
 done
 if ((${#missing[@]})); then
-    if [[ ! -f /etc/apt/sources.list.d/php.list ]]; then
-        # Debian 12 ships PHP 8.2; the lockfile requires PHP 8.4.
+    # Debian 12 ships PHP 8.2; the lockfile requires PHP 8.4. Sury's packages must match the
+    # running release, so a list left by an older base image is rewritten.
+    php_source="deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ $(. /etc/os-release && echo "$VERSION_CODENAME") main"
+    if [[ "$(cat /etc/apt/sources.list.d/php.list 2>/dev/null)" != "$php_source" ]]; then
         sudo apt-get update -qq
         sudo apt-get install -y ca-certificates curl
         keyring=$(mktemp)
         trap 'rm -f "$keyring"' EXIT
         curl -fsSL https://packages.sury.org/debsuryorg-archive-keyring.deb -o "$keyring"
         sudo dpkg -i "$keyring"
-        echo 'deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ bookworm main' |
-            sudo tee /etc/apt/sources.list.d/php.list >/dev/null
+        echo "$php_source" | sudo tee /etc/apt/sources.list.d/php.list >/dev/null
     fi
     sudo apt-get update -qq
     sudo apt-get install -y "${missing[@]}"
