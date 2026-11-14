@@ -13,6 +13,10 @@ Full documentation: [livewirefilters.com](https://livewirefilters.com).
 - In custom query-string mode, all filter URLs of a page share one static cache entry, so the tag only outputs the canonical of pages above 1 there. Turn on the new `seo_filter_headers` config to send `X-Robots-Tag` and canonical `Link` headers for filter URLs instead, including the self canonical for `seo_indexable_filters`. The headers are added after Statamic's static cache stores the response, so they never leak into the cached page under half or full measure.
 - Range list: `LfRadioFilter` takes a `buckets` parameter, such as `buckets="0-100|100-200|200-"`, and renders each bucket as a radio option ("Under 100", "100 to 200", "Over 200") with its entry count, plus an "All" option. A bucket filters the field with the `dual_range` condition's `gte`/`lte` pair (or the comparisons in `modifier`); an open side leaves that param out. Pass `options` keyed by bucket, such as `'0-100' => 'Up to €100'`, to replace a generated label. A malformed bucket, a bucket whose min is above its max, and a `modifier` other than `gt` or `gte` followed by `lt` or `lte` throw an `InvalidArgumentException`. The new view is `lf-range-list.blade.php`; it follows `zero_count` and shows a bucket from the URL as `checked` in the server HTML.
 
+### Fixed
+
+- In custom query string mode, a filter value of `0` in the URL, such as `/filters/price-from/0`, is no longer dropped when the page loads. Before, the collection and the filters ignored it, so a range that starts at 0 lost its lower bound after a reload.
+
 ## [4.6.3] - 2026-11-04
 
 ### Changed
