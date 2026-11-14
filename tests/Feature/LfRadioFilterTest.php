@@ -448,6 +448,23 @@ class LfRadioFilterTest extends TestCase
     }
 
     #[Test]
+    public function it_checks_no_option_for_url_bounds_without_a_bucket_so_all_can_clear_them()
+    {
+        Config::set('statamic-livewire-filters.enable_query_string', true);
+
+        $filter = Livewire::withQueryParams(['params' => ['price:gte' => '150', 'price:lte' => '200']])
+            ->test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
+            ->assertSet('selected', LfRadioFilter::UNMATCHED_RANGE);
+
+        // A checked "All" could not send an update: the browser fires no change for a checked radio.
+        $this->assertDoesNotMatchRegularExpression('/value="[^"]*"\s+checked/', $filter->html());
+
+        $filter->set('selected', '')
+            ->assertHasNoErrors()
+            ->assertDispatched('filter-updated', field: 'price', condition: 'dual_range', payload: '');
+    }
+
+    #[Test]
     public function it_selects_the_bucket_matching_preset_bounds()
     {
         Livewire::test(LfRadioFilter::class, ['field' => 'price', 'blueprint' => 'pages.pages', 'buckets' => '0-100|100-200|200-'])
@@ -456,11 +473,11 @@ class LfRadioFilterTest extends TestCase
             ->dispatch('preset-params', ['price:gte' => '200'])
             ->assertSet('selected', '200-')
             ->dispatch('preset-params', ['price:gte' => '150', 'price:lte' => '200'])
-            ->assertSet('selected', '')
+            ->assertSet('selected', LfRadioFilter::UNMATCHED_RANGE)
             // A tampered event can carry anything; a non-scalar bound counts as missing.
-            ->dispatch('preset-params', ['price:gte' => ['200'], 'price:lte' => '100'])
+            ->dispatch('preset-params', ['price:gte' => ['200'], 'price:lte' => '200'])
             ->assertOk()
-            ->assertSet('selected', '')
+            ->assertSet('selected', LfRadioFilter::UNMATCHED_RANGE)
             ->dispatch('preset-params', ['price:gte' => '200', 'price:lte' => ['x']])
             ->assertSet('selected', '200-')
             ->dispatch('preset-params', ['price:gte' => ['200']])

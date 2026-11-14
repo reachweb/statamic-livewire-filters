@@ -26,6 +26,9 @@ class LfRadioFilter extends LivewireFilter
     #[Locked]
     public $buckets;
 
+    /** What `$selected` holds while the collection has range list bounds that match no bucket. */
+    public const UNMATCHED_RANGE = 'custom';
+
     public $selected = '';
 
     // Runs before the trait mount hooks, so initiateField() sees the bucket options.
@@ -153,6 +156,10 @@ class LfRadioFilter extends LivewireFilter
             return;
         }
 
-        $this->selected = (string) array_search($preset, $buckets, true);
+        $bucket = array_search($preset, $buckets, true);
+
+        // Bounds no bucket has (an old link, a tag preset) keep a value no option has: "All" is
+        // then not checked over a filtered list, and choosing it sends the update that clears them.
+        $this->selected = $bucket === false ? self::UNMATCHED_RANGE : (string) $bucket;
     }
 }
