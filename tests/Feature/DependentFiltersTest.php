@@ -13,6 +13,7 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LfCheckboxFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfRadioFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LfSelectFilter;
 use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
+use Reach\StatamicLivewireFilters\Support\CountQueryPool;
 use Reach\StatamicLivewireFilters\Support\RangeBoundsQuery;
 use Reach\StatamicLivewireFilters\Tests\PreventSavingStacheItemsToDisk;
 use Reach\StatamicLivewireFilters\Tests\TestCase;
@@ -160,6 +161,121 @@ class DependentFiltersTest extends TestCase
             ->assertSet('selected', 'q3')
             ->assertNotDispatched('clear-filter')
             ->assertSee('Q3');
+    }
+
+    #[Test]
+    public function a_parent_change_only_drops_what_the_parent_itself_lacks()
+    {
+        // X1 is a petrol BMW: the diesel filter hides it, but BMW still offers it. BMW has no A3 at all.
+        Livewire::test(LfCheckboxFilter::class, $this->modelArguments())
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:in' => 'audi|bmw']))
+            ->set('selected', ['a3', 'x1'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'bmw', 'fuel:is' => 'diesel', 'car_model:in' => 'a3|x1']))
+            ->assertSet('availableOptions', ['x5'])
+            ->assertSet('selected', ['x1'])
+            ->assertDispatched('filter-updated', field: 'car_model', condition: 'in', payload: ['x1'], modifier: 'any');
+    }
+
+    #[Test]
+    public function what_the_parent_offers_stays_within_the_tags_constraints_and_the_visible_entries()
+    {
+        // Here fuel:is is set on the tag, not by a visitor filter, so it still applies: BMW has no diesel X1.
+        // M3 only exists in a draft entry.
+        Livewire::test(LfCheckboxFilter::class, $this->modelArguments())
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:in' => 'audi|bmw', 'fuel:is' => 'diesel'], filterKeys: ['car_brand:in']))
+            ->set('selected', ['x1', 'm3', 'x5'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(
+                ['car_brand:is' => 'bmw', 'fuel:is' => 'diesel', 'title:contains' => 'nothing', 'car_model:in' => 'x1|m3|x5'],
+                filterKeys: ['car_brand:is', 'title:contains', 'car_model:in'],
+            ))
+            ->assertSet('availableOptions', [])
+            ->assertSet('selected', ['x5']);
+    }
+
+    #[Test]
+    public function it_asks_what_the_parent_offers_without_the_other_filters_and_their_scope()
+    {
+        $queries = [];
+        $this->mock(CountQueryPool::class)->shouldReceive('getFieldValues')
+            ->andReturnUsing(function ($collections, $baseParams) use (&$queries) {
+                $queries[] = $baseParams;
+
+                return collect(['x5']);
+            });
+
+        Livewire::test(LfCheckboxFilter::class, [...$this->modelArguments(), 'selected' => ['x1']])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:in' => 'audi|bmw', 'car_model:in' => 'x1']))
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(
+                ['car_brand:is' => 'bmw', 'query_scope' => 'multiselect', 'multiselect:fuel' => 'diesel', 'car_model:in' => 'x1'],
+            ))
+            ->assertSet('selected', []);
+
+        $this->assertEquals(['car_brand:is' => 'bmw', 'from' => 'cars'], end($queries));
+
+        // With no other filter active it repeats the options query, which the pool answers from its cache.
+        $queries = [];
+
+        Livewire::test(LfCheckboxFilter::class, [...$this->modelArguments(), 'selected' => ['x1']])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:in' => 'audi|bmw', 'car_model:in' => 'x1']))
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'bmw', 'car_model:in' => 'x1']));
+
+        $this->assertCount(3, $queries);
+        $this->assertSame($queries[1], $queries[2]);
+    }
+
+    #[Test]
+    public function the_collection_lists_the_visitors_filters_in_its_query()
+    {
+        $collection = Livewire::test(LivewireCollection::class, ['params' => ['from' => 'cars', 'fuel:is' => 'diesel', 'sort' => 'title:asc']])
+            ->dispatch('filter-updated', field: 'car_brand', condition: 'is', payload: 'bmw', modifier: 'any');
+
+        $token = collect($collection->effects['dispatches'])->firstWhere('name', 'params-updated')['params'][1];
+
+        $this->assertSame(['car_brand:is'], RangeBoundsQuery::decodeForCollection($token, 'cars')['filters']);
+    }
+
+    #[Test]
+    public function a_filter_with_several_parents_is_narrowed_and_reset_by_any_of_them()
+    {
+        // Fuel is the last filter of a brand, model, fuel chain.
+        $arguments = ['field' => 'fuel', 'blueprint' => 'cars.cars', 'condition' => 'is'];
+
+        Livewire::test(LfRadioFilter::class, [...$arguments, 'depends_on' => 'car_brand|car_model'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'audi', 'car_model:is' => 'a3']))
+            ->assertSet('availableOptions', ['petrol', 'diesel'])
+            ->set('selected', 'petrol')
+            // The brand changed and the model filter has not cleared its A3 yet: no Citroen is an A3.
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'citroen', 'car_model:is' => 'a3', 'fuel:is' => 'petrol']))
+            ->assertSet('selected', '')
+            ->assertDispatched('clear-filter', field: 'fuel', condition: 'is')
+            // With the model cleared, the brand alone still narrows the options.
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'citroen']))
+            ->assertSet('availableOptions', ['diesel']);
+
+        // With the model as its only parent, a cleared model shows every option again.
+        Livewire::test(LfRadioFilter::class, [...$arguments, 'depends_on' => 'car_model'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'citroen']))
+            ->assertSet('availableOptions', null);
+    }
+
+    #[Test]
+    #[DataProvider('validationStates')]
+    public function a_tampered_nested_selection_does_not_break_the_render_or_a_parent_change(bool $validate)
+    {
+        Config::set('statamic-livewire-filters.validate_filter_values', $validate);
+
+        Livewire::test(LfCheckboxFilter::class, [...$this->modelArguments(), 'unavailable' => 'disable'])
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'audi']))
+            ->set('selected', [['x1']])
+            ->assertOk()
+            ->dispatch('params-updated', ...$this->paramsUpdatedArguments(['car_brand:is' => 'bmw']))
+            ->assertOk()
+            ->assertSet('availableOptions', ['x1', 'x5']);
+    }
+
+    public static function validationStates(): array
+    {
+        return ['validation on' => [true], 'validation off' => [false]];
     }
 
     #[Test]
@@ -384,8 +500,14 @@ class DependentFiltersTest extends TestCase
         ];
     }
 
-    protected function paramsUpdatedArguments(array $params, string $collection = 'cars'): array
+    /**
+     * Like the collection, the query lists the params a clear-all would remove; pass
+     * $filterKeys when some of them are constraints of the tag instead.
+     */
+    protected function paramsUpdatedArguments(array $params, string $collection = 'cars', ?array $filterKeys = null): array
     {
-        return [$params, RangeBoundsQuery::encode($collection, $params)];
+        $filterKeys ??= array_values(array_filter(array_keys($params), fn ($key) => str_contains($key, ':')));
+
+        return [$params, RangeBoundsQuery::encode($collection, $params, filterKeys: $filterKeys)];
     }
 }

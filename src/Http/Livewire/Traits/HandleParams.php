@@ -824,6 +824,8 @@ trait HandleParams
                 $this->getId(),
                 ++$this->boundsQueryRevision,
                 $this->boundsSelectionRevisions,
+                // What a clear-all would remove: a dependent filter ignores these to see what its parent alone offers.
+                array_values(array_filter(array_keys($params), fn ($key) => is_string($key) && $this->isClearAllRemovableParamKey($key))),
             ));
         }
 

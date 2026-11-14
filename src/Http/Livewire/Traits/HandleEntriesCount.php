@@ -70,14 +70,23 @@ trait HandleEntriesCount
     // stay usable, or a visitor could not see or uncheck an option the other filters narrowed to zero.
     protected function zeroCountOptions(): array
     {
-        // `selected` comes from the client, so a tampered nested array must not reach strval().
-        $selected = array_map('strval', array_filter((array) $this->selected, 'is_scalar'));
+        $selected = $this->selectedOptionKeys();
 
         return array_keys(array_filter(
             $this->counts(),
             fn ($count, $value) => $count === 0 && ! in_array((string) $value, $selected, true),
             ARRAY_FILTER_USE_BOTH,
         ));
+    }
+
+    /**
+     * `selected` comes from the client, so a tampered nested array must not reach strval().
+     *
+     * @return list<string>
+     */
+    protected function selectedOptionKeys(): array
+    {
+        return array_values(array_map('strval', array_filter((array) $this->selected, 'is_scalar')));
     }
 
     #[Computed]

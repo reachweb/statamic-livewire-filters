@@ -8,7 +8,11 @@ use JsonException;
 
 class RangeBoundsQuery
 {
-    public static function encode($collections, array $params, ?string $source = null, int $revision = 0, array $selections = []): string
+    /**
+     * @param  array<int, string>  $filterKeys  The param keys that hold visitor filter state, as opposed to
+     *                                          the constraints of the tag and its hooks; see HandleDependentOptions.
+     */
+    public static function encode($collections, array $params, ?string $source = null, int $revision = 0, array $selections = [], array $filterKeys = []): string
     {
         return Crypt::encryptString(json_encode([
             'purpose' => 'range-bounds',
@@ -17,6 +21,7 @@ class RangeBoundsQuery
             'source' => $source,
             'revision' => $revision,
             'selections' => $selections,
+            'filters' => array_values($filterKeys),
         ], JSON_THROW_ON_ERROR));
     }
 
@@ -69,11 +74,18 @@ class RangeBoundsQuery
             }
         }
 
+        $filters = array_key_exists('filters', $query) ? $query['filters'] : [];
+
+        if (! is_array($filters)) {
+            return null;
+        }
+
         return [
             'params' => array_merge($query['params'], ['from' => $collections]),
             'source' => $source,
             'revision' => $source === null ? 0 : $revision,
             'selections' => $selections,
+            'filters' => array_values(array_filter($filters, 'is_string')),
         ];
     }
 }

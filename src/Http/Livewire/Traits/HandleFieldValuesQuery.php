@@ -58,25 +58,39 @@ trait HandleFieldValuesQuery
             $baseParams[$key] = $value;
         }
 
-        // Drop the scope registration when no remaining params use it
-        if ($this->condition === 'query_scope' && isset($baseParams['query_scope'])) {
-            $hasRemainingParams = collect($baseParams)->keys()->contains(
-                fn ($key) => str_starts_with($key, $this->modifier.':')
-            );
-
-            if (! $hasRemainingParams) {
-                $scopes = explode('|', $baseParams['query_scope']);
-                $scopes = array_filter($scopes, fn ($scope) => $scope !== $this->modifier);
-
-                if (empty($scopes)) {
-                    unset($baseParams['query_scope']);
-                } else {
-                    $baseParams['query_scope'] = implode('|', $scopes);
-                }
-            }
+        if ($this->condition === 'query_scope') {
+            $baseParams = $this->removeScopeRegistrationIfUnused($baseParams, $this->modifier);
         }
 
         return $baseParams;
+    }
+
+    /**
+     * Drops the scope registration when no remaining params use it.
+     */
+    protected function removeScopeRegistrationIfUnused(array $params, string $scope): array
+    {
+        if (! isset($params['query_scope'])) {
+            return $params;
+        }
+
+        $hasRemainingParams = collect($params)->keys()->contains(
+            fn ($key) => str_starts_with($key, $scope.':')
+        );
+
+        if ($hasRemainingParams) {
+            return $params;
+        }
+
+        $scopes = array_filter(explode('|', $params['query_scope']), fn ($registered) => $registered !== $scope);
+
+        if (empty($scopes)) {
+            unset($params['query_scope']);
+        } else {
+            $params['query_scope'] = implode('|', $scopes);
+        }
+
+        return $params;
     }
 
     /**
