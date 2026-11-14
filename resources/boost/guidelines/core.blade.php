@@ -188,11 +188,14 @@ Add SEO head tags for filtered listings to the layout `<head>`:
 </code-snippet>
 @endverbatim
 
-- Filtered pages (any filter, including `sort`) and pages above 1 get `noindex,follow` and a canonical to the base page, without filter segments or the `params[...]` query. Collection settings such as `page_name` and blocked params don't count as filters.
-- A first page whose filters are all single-valued and listed in `seo_indexable_filters` stays indexable with a self canonical. The canonical is rebuilt from the recognized filters in a fixed order, so unknown params, segments and param order don't change it.
+- Filtered pages (any filter, including `sort`) get `noindex,follow` and a canonical to the base page, without filter segments, the `params[...]` query or the page number. Only `field:condition` style keys, `sort`, `order_by` and `taxonomy` count as filters. Collection settings such as `page_name`, view variables and blocked params don't.
+- Unfiltered pages above 1 stay indexable. Their canonical keeps the page number (`/cars?page=2`), so search engines can reach the entries on later pages.
+- A first page whose filters are all single-valued and listed in `seo_indexable_filters` stays indexable with a self canonical. The canonical is rebuilt from the recognized filters in a fixed order, so unknown params, segments and param order don't change it. Later pages of that filter get `noindex,follow`.
+- A field handle in `seo_indexable_filters` covers every condition Statamic applies to that field. List the full `params` key (`brand:is`) to allow one condition only. A key with an unknown condition never matches a field handle, because the query ignores it.
 - Filters a tag presets (for example `sort="title"`) also appear in the Livewire mode URL. List them in `seo_indexable_filters` when those URLs should stay indexable.
-- Livewire query string mode and no URL mode: the tag outputs `<link rel="canonical">` and `<meta name="robots">`.
-- Custom query string mode: every filter URL of a page shares the base page's static cache entry, so the tag only outputs tags for pages above 1, which are cached separately; page 1 has no canonical tag. With `seo_filter_headers` on, filter URLs get `X-Robots-Tag: noindex, follow` and `Link: <url>; rel="canonical"` headers instead. Headers aren't stored in the cached page, so they stay correct with half and full static caching.
+- Livewire query string mode and no URL mode: the tag outputs `<link rel="canonical">` on every page that uses the layout, and `<meta name="robots">` on filtered pages.
+- A page must not have two different canonicals. When the layout already outputs one (SEO Pro, a hand-written tag), use `{{ livewire-filters:seo canonical="false" }}` to output only the robots tag. `seo_indexable_filters` then only decides the robots tag, so the other canonical has to point to the filter URL itself for that URL to be indexed.
+- Custom query string mode: every filter URL of a page shares the base page's static cache entry, so the tag only outputs the canonical of pages above 1 (`/cars?page=2`), which are cached separately; page 1 has no canonical tag. With `seo_filter_headers` on, filter URLs get `X-Robots-Tag: noindex, follow` and `Link: <url>; rel="canonical"` headers instead. Headers aren't stored in the cached page, so they stay correct with half and full static caching. The `Link` header of an indexable filter URL disagrees with a canonical another tool puts in the shared `<head>`, so remove that one from listing templates.
 
 ### Hooks
 

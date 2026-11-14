@@ -30,14 +30,15 @@ class AddFilterSeoHeaders
         $params = is_array($request->input('params')) ? $request->input('params') : [];
         $filters = Seo::filters($params);
         $indexable = Seo::indexableFilters($filters, $params);
-        $page = Seo::page($request);
+        $laterPage = Seo::laterPage($request) !== [];
 
-        if (! $indexable || $page > 1) {
+        // Only the first page of an indexable filter is indexed.
+        if (! $indexable || $laterPage) {
             $response->headers->set('X-Robots-Tag', 'noindex, follow');
         }
 
         // Later pages get their canonical from the head, which is cached per query string.
-        if ($page === 1) {
+        if (! $laterPage) {
             // The request URL is already rewritten to the base page. The self canonical is
             // rebuilt from the parsed filters, so unknown or trailing segments never reach it.
             $canonical = $indexable

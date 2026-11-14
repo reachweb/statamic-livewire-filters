@@ -11,6 +11,21 @@ use Reach\StatamicLivewireFilters\Http\Livewire\LivewireCollection;
  */
 class Seo
 {
+    /** Query params without a colon that change the result when the URL carries them. */
+    protected const BARE_FILTER_KEYS = ['sort', 'order_by', 'taxonomy'];
+
+    /** The conditions Statamic's QueriesConditions applies. It ignores a key with any other condition. */
+    protected const CONDITIONS = [
+        'is', 'equals', 'not', 'isnt', 'aint', '¯\\_(ツ)_/¯',
+        'is_empty', 'is_blank', 'doesnt_exist', 'not_set', 'isnt_set', 'null', 'exists', 'isset',
+        'contains', 'doesnt_contain', 'in', 'not_in',
+        'starts_with', 'begins_with', 'doesnt_start_with', 'doesnt_begin_with', 'ends_with', 'doesnt_end_with',
+        'greater_than', 'gt', 'less_than', 'lt', 'greater_than_or_equal_to', 'gte', 'less_than_or_equal_to', 'lte',
+        'matches', 'match', 'regex', 'doesnt_match',
+        'is_alpha', 'is_alpha_numeric', 'is_numeric', 'is_url', 'is_embeddable', 'is_email',
+        'is_after', 'is_future', 'is_before', 'is_past', 'is_numberwang', 'overlaps', 'doesnt_overlap',
+    ];
+
     /**
      * The `params` query of the Livewire query string mode, the only mode whose
      * filter state the tag reads from the URL.
@@ -23,22 +38,29 @@ class Seo
     }
 
     /**
-     * The active filters among URL params: blocked keys, collection settings
-     * (Livewire syncs the whole params array to the URL) and empty values are dropped.
+     * The active filters among URL params: `field:condition` style keys and the
+     * query params without a colon that change the result. Blocked keys and empty
+     * values are dropped. Other keys are tag settings and view variables, which
+     * Livewire syncs to the URL with the rest of the params array.
      */
     public static function filters(array $params): array
     {
         return collect(BlockedQueryParams::strip($params))
             ->except([...LivewireCollection::TAG_ONLY_PARAMS, 'page_name', 'query_scope'])
+            ->filter(fn ($value, $key) => str_contains((string) $key, ':') || in_array($key, self::BARE_FILTER_KEYS, true))
             ->reject(fn ($value) => $value === '' || $value === null || $value === [])
             ->all();
     }
 
     /**
-     * The highest page number among the `seo_page_names` queries and the
-     * collection's own `page_name`, when the URL carries it.
+     * The page query of a later page, as `[name => number]`: the highest page above 1
+     * among the `seo_page_names` queries and the collection's own `page_name`, when
+     * the URL carries it. Empty on a first page. Values are cast like the collection
+     * casts them, so `?page=2abc` is page 2 here too.
+     *
+     * @return array<string, int>
      */
-    public static function page(Request $request, array $params = []): int
+    public static function laterPage(Request $request, array $params = []): array
     {
         $names = (array) config('statamic-livewire-filters.seo_page_names', ['page']);
 
@@ -47,10 +69,12 @@ class Seo
         }
 
         return collect($names)
-            ->filter(fn ($name) => is_string($name) && is_numeric($request->query($name)))
-            ->map(fn ($name) => (int) $request->query($name))
-            ->push(1)
-            ->max();
+            ->filter(fn ($name) => is_string($name) && is_string($request->query($name)))
+            ->mapWithKeys(fn ($name) => [$name => (int) $request->query($name)])
+            ->filter(fn ($page) => $page > 1)
+            ->sortDesc()
+            ->take(1)
+            ->all();
     }
 
     /**
@@ -73,7 +97,14 @@ class Seo
                 return false;
             }
 
-            $names = [$key, ParamKey::parse((string) $key, $scopes)->field, ...array_keys($aliases, $key, true)];
+            $names = [$key, ...array_keys($aliases, $key, true)];
+            $parsed = ParamKey::parse((string) $key, $scopes);
+
+            // A field handle only covers keys the query applies. One with an unknown
+            // condition is ignored, so its URL shows the same entries as the base page.
+            if (in_array($parsed->condition, ['taxonomy', 'query_scope', ...self::CONDITIONS], true)) {
+                $names[] = $parsed->field;
+            }
 
             if (array_intersect($names, $indexable) === []) {
                 return false;

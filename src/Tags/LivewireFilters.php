@@ -62,39 +62,44 @@ HTML;
     }
 
     /**
-     * Canonical and robots tags for filtered listing pages.
+     * Canonical and robots tags for filtered listing pages. With `canonical="false"`
+     * only the robots tag is output, for layouts that already have a canonical.
      */
     public function seo(): string
     {
         $request = request();
         $params = Seo::livewireParams($request);
-        $page = Seo::page($request, $params);
-        $noindex = '<meta name="robots" content="noindex,follow">';
+        $laterPage = Seo::laterPage($request, $params);
+        $pageCanonical = $request->url().($laterPage ? '?'.http_build_query($laterPage) : '');
 
         // Every custom query string filter URL shares the base page's static cache
         // entry, so only page-dependent tags are safe here (the page query keeps its
         // own entry). Filter signals are sent as headers, see `seo_filter_headers`.
         if (CustomQueryString::enabled()) {
-            return $page > 1 ? $this->canonical($request->url())."\n".$noindex : '';
+            return $laterPage ? $this->seoTags($pageCanonical) : '';
         }
 
         $filters = Seo::filters($params);
-        $selfCanonical = $page === 1 && Seo::indexableFilters($filters, $params);
 
-        $tags = [$this->canonical($selfCanonical
-            ? $request->url().'?'.http_build_query(['params' => Seo::canonicalParams($filters, $params)])
-            : $request->url())];
-
-        if ($page > 1 || ($filters !== [] && ! $selfCanonical)) {
-            $tags[] = $noindex;
+        if ($filters === []) {
+            return $this->seoTags($pageCanonical);
         }
 
-        return implode("\n", $tags);
+        // Only the first page of an indexable filter is indexed. Its later pages
+        // point to the base page like any other filtered page.
+        if (! $laterPage && Seo::indexableFilters($filters, $params)) {
+            return $this->seoTags($request->url().'?'.http_build_query(['params' => Seo::canonicalParams($filters, $params)]));
+        }
+
+        return $this->seoTags($request->url(), noindex: true);
     }
 
-    protected function canonical(string $url): string
+    protected function seoTags(string $canonical, bool $noindex = false): string
     {
-        return '<link rel="canonical" href="'.e($url).'">';
+        return implode("\n", array_filter([
+            $this->params->bool('canonical', true) ? '<link rel="canonical" href="'.e($canonical).'">' : null,
+            $noindex ? '<meta name="robots" content="noindex,follow">' : null,
+        ]));
     }
 
     public function loadMore(): string

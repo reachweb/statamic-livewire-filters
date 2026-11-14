@@ -87,6 +87,15 @@ class SeoTest extends TestCase
         return '<link rel="canonical" href="'.e('http://localhost?'.http_build_query(['params' => $params])).'">';
     }
 
+    protected function pageCanonical(string $query): string
+    {
+        return '<link rel="canonical" href="http://localhost?'.$query.'">';
+    }
+
+    protected string $base = '<link rel="canonical" href="http://localhost">';
+
+    protected string $noindex = '<meta name="robots" content="noindex,follow">';
+
     protected string $baseNoindex = '<link rel="canonical" href="http://localhost"><meta name="robots" content="noindex,follow">';
 
     #[Test]
@@ -96,8 +105,8 @@ class SeoTest extends TestCase
         Config::set('statamic-livewire-filters.seo_page_names', ['page', 'p']);
 
         $this->assertSame('', $this->seoHead($this->get('/')));
-        $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?page=2')));
-        $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?p=3')));
+        $this->assertSame($this->pageCanonical('page=2'), $this->seoHead($this->get('/?page=2')));
+        $this->assertSame($this->pageCanonical('p=3'), $this->seoHead($this->get('/?p=3')));
     }
 
     #[Test]
@@ -130,9 +139,12 @@ class SeoTest extends TestCase
         $this->useCustomQueryString(['option']);
         Config::set('statamic-livewire-filters.seo_page_names', ['p']);
 
-        $this->get('/filters/option/option1?p=2')
+        $response = $this->get('/filters/option/option1?p=2')
             ->assertHeader('X-Robots-Tag', 'noindex, follow')
             ->assertHeaderMissing('Link');
+
+        // The head is shared with the unfiltered page 2, so it can only carry that page's canonical.
+        $this->assertSame($this->pageCanonical('p=2'), $this->seoHead($response));
     }
 
     #[Test]
@@ -247,10 +259,10 @@ class SeoTest extends TestCase
     {
         $this->useLivewireQueryString(['item_options', 'title']);
 
-        // Collection settings, stray scopes and tracking params stay out; keys are sorted.
+        // Collection settings, view variables, stray scopes and tracking params stay out; keys are sorted.
         $this->assertSame(
             $this->selfCanonical(['item_options:is' => 'option2', 'title:contains' => 'Entry, c']),
-            $this->seoHead($this->get('/?params[title:contains]=Entry,%20c&params[page_name]=p&params[paginate]=9&params[query_scope]=multiselect&params[item_options:is]=option2&utm_source=mail')),
+            $this->seoHead($this->get('/?params[title:contains]=Entry,%20c&params[page_name]=p&params[paginate]=9&params[image_size]=large&params[query_scope]=multiselect&params[item_options:is]=option2&utm_source=mail')),
         );
     }
 
@@ -274,12 +286,17 @@ class SeoTest extends TestCase
     }
 
     #[Test]
-    public function livewire_mode_rejects_multi_values_and_crafted_scope_keys()
+    public function livewire_mode_rejects_multi_values_and_crafted_keys()
     {
         $this->useLivewireQueryString(['item_options']);
         $this->withoutCollection();
 
         $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?params[item_options:is]=option1|option2')));
+        // The query ignores an unknown condition, so the URL shows the base page's entries.
+        $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?params[item_options:garbage]=x')));
+        $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?params[order_by]=title')));
+        // A key without a condition is no filter, even when it reads like an indexable field.
+        $this->assertSame($this->base, $this->seoHead($this->get('/?params[item_options]=x')));
         // `foo` is no registered scope, so the key is a filter on the `foo` field.
         $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?params[foo:item_options]=x&params[query_scope]=foo')));
         $this->assertSame(
@@ -289,18 +306,41 @@ class SeoTest extends TestCase
     }
 
     #[Test]
-    public function livewire_mode_later_pages_point_to_the_base_page_even_for_indexable_filters()
+    public function livewire_mode_later_pages_keep_a_self_canonical_unless_filtered()
     {
         $this->useLivewireQueryString(['item_options']);
 
+        $this->assertSame($this->pageCanonical('page=2'), $this->seoHead($this->get('/?page=2&utm_source=mail')));
+        $this->assertSame($this->pageCanonical('p=2'), $this->seoHead($this->get('/?params[page_name]=p&p=2')));
+        // The collection casts the page to an integer, so this URL shows page 2.
+        $this->assertSame($this->pageCanonical('page=2'), $this->seoHead($this->get('/?page=2abc')));
+        $this->assertSame($this->base, $this->seoHead($this->get('/?page=1')));
+
+        // Only the first page of an indexable filter is indexed.
         $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?params[item_options:is]=option1&page=2')));
-        $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?params[page_name]=p&p=2')));
     }
 
     #[Test]
-    public function without_a_url_mode_only_the_page_number_affects_indexing()
+    public function without_a_url_mode_only_the_page_number_changes_the_canonical()
     {
-        $this->assertSame('<link rel="canonical" href="http://localhost">', $this->seoHead($this->get('/?params[item_options:is]=option1')));
-        $this->assertSame($this->baseNoindex, $this->seoHead($this->get('/?page=2')));
+        $this->assertSame($this->base, $this->seoHead($this->get('/?params[item_options:is]=option1')));
+        $this->assertSame($this->pageCanonical('page=2'), $this->seoHead($this->get('/?page=2')));
+    }
+
+    #[Test]
+    public function canonical_false_only_outputs_the_robots_tag()
+    {
+        $this->viewShouldReturnRaw('layout', '<html><head><seo>{{ livewire-filters:seo canonical="false" }}</seo></head><body>{{ template_content }}</body></html>');
+        $this->useLivewireQueryString(['item_options']);
+
+        $this->assertSame('', $this->seoHead($this->get('/')));
+        $this->assertSame('', $this->seoHead($this->get('/?page=2')));
+        $this->assertSame('', $this->seoHead($this->get('/?params[item_options:is]=option2')));
+        $this->assertSame($this->noindex, $this->seoHead($this->get('/?params[title:contains]=Entry')));
+
+        $this->useCustomQueryString();
+        Config::set('statamic-livewire-filters.enable_query_string', false);
+
+        $this->assertSame('', $this->seoHead($this->get('/?page=2')));
     }
 }
